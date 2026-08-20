@@ -28,6 +28,21 @@
 - UI copy defaults to Simplified Chinese. Stable protocol values remain English code strings.
 - Use SVG for the board and DOM for text-heavy controls, dialogs, logs and accessibility-sensitive UI.
 
+## Frontend stack constraints
+
+`apps/web` has one required frontend stack. Future agents must preserve it unless an ADR explicitly replaces it:
+
+- React + TypeScript is the component and application framework.
+- Tailwind CSS v4 is the default styling system. Use utility classes in product components and keep shared theme tokens in `src/styles.css`.
+- shadcn/ui is the owned component layer under `src/components/ui`; generated components are repository code and may be themed locally.
+- Radix UI primitives own modal, focus, keyboard, popover, tabs, tooltip and other non-trivial interaction behavior. Do not hand-roll focus traps, modal semantics or outside-click handling.
+- Use `cn` from `src/lib/utils.ts` to compose conditional Tailwind classes.
+- Custom global CSS is reserved for theme tokens, base document styles, the SVG board/playfield renderer and behavior Tailwind cannot express clearly. Do not add new page-level business UI as large global selector blocks.
+- UI dependencies remain in `apps/web`; `game-core` and `protocol` must never import Tailwind, shadcn, Radix or React.
+- New shared controls belong in `src/components/ui`; game-specific compositions belong in `src/components`.
+
+See ADR-0005 before changing the frontend stack or introducing another component library.
+
 ## Domain modularity
 
 `packages/game-core` is one package for now, but it must contain explicit domain modules rather than one connected rules blob:

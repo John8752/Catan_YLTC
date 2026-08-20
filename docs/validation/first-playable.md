@@ -6,8 +6,9 @@
 - Runtime: Node.js 22, pnpm 9
 - Browser automation: Playwright 1.62.1, Chromium 151
 - Canonical replay seed: `20260820`
-- Canonical replay SHA-256: `fb593cf29bc69e29ca5ce03f87106574607fb2c412a53d7582294b093c2ab9c7`
-- Implementation commit: `f03eef4` (`feat(release): complete first playable quality gate`)
+- Canonical replay SHA-256: `4423673ed971e975dc34bfaee2d75430129a0f2487bc4252822101ca594420c9`
+- Baseline implementation commit: `f03eef4` (`feat(release): complete first playable quality gate`)
+- Validated change commits: `b6d4a95` (frontend stack), `8d9ac2d` (multi-response trade), `f094fbd` (table UI)
 - Validation date: 2026-08-20
 
 ## Evidence
@@ -17,12 +18,14 @@
 - Seat behavior: refreshing a participant restores that participant's seat; opening a second tab starts at the welcome screen and does not invent a new role.
 - Privacy: server/protocol tests cover seat credentials, opponent-hand redaction, development-card redaction and private history details.
 - Responsive: the active game was checked at 390×844 with no horizontal overflow. The captured run also exercised the seven/robber control surface.
+- Table UI: the desktop capture keeps the board, bottom private player dock and internally scrolling public sidebar in one viewport; the mobile capture keeps the same zones in natural document flow.
 - Manual desktop smoke: three independently isolated headed browser sessions completed create/join/start, all setup placements and the first production turn with no console errors.
 
 Browser artifacts are intentionally local-only under `output/playwright/`:
 
 - `setup-start.png`
 - `main-turn.png`
+- `e2e-desktop.png`
 - `e2e-mobile.png`
 
 ## Quality gates
@@ -35,4 +38,4 @@ pnpm validate:full
 pnpm validate:full
 ```
 
-Result: frozen install passed, then `pnpm validate:full` passed twice consecutively. A negotiated three-human full match remains a product usability exercise; rule completeness and the win path are release-blocking and covered by the canonical full-match replay.
+Result: the original release baseline passed the frozen install and two consecutive full gates. The frontend-stack, trade and table changes listed above passed `pnpm validate:full` together on 2026-08-20. A negotiated three-human full match remains a product usability exercise; rule completeness and the win path are release-blocking and covered by the canonical full-match replay.

@@ -5,6 +5,7 @@ import {
   createRoom,
   getRoom,
   joinRoom,
+  leaveRoom,
   rerollRoomMap,
   startRoom,
   submitGameCommand,
@@ -170,7 +171,15 @@ export function App() {
     setSelectedRobberHexId(hexId);
   }
 
-  function handleLeave() {
+  async function handleLeave() {
+    if (session === null) return;
+    await runBusy(async () => {
+      await leaveRoom(session);
+      clearCurrentSession();
+    });
+  }
+
+  function clearCurrentSession() {
     playerSessionStore.clear();
     setSession(null);
     setRoom(null);
@@ -206,7 +215,7 @@ export function App() {
       <main className="loading-table">
         <span className="brand-mark" aria-hidden="true">⬡</span>
         <p>{error ?? "正在重新铺好桌面…"}</p>
-        <button className="quiet-button" type="button" onClick={handleLeave}>返回入口</button>
+        <button className="quiet-button" type="button" onClick={clearCurrentSession}>清除失效会话并返回</button>
       </main>
     );
   }

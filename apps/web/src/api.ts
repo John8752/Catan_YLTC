@@ -2,6 +2,7 @@ import type {
   ApiErrorResponse,
   GameCommand,
   GameCommandResponse,
+  LeaveRoomResponse,
   PlayerSessionResponse,
   RoomServerMessage,
   RoomSettingsView,
@@ -63,6 +64,14 @@ export async function rerollRoomMap(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ seatToken: session.seatToken, expectedRevision }),
+  });
+}
+
+export async function leaveRoom(session: PlayerSession): Promise<LeaveRoomResponse> {
+  return request<LeaveRoomResponse>(`/api/rooms/${encodeURIComponent(session.roomId)}/leave`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ seatToken: session.seatToken }),
   });
 }
 

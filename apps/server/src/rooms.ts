@@ -15,6 +15,7 @@ import {
 } from "@catan/game-core";
 import {
   type GameCommandResponse,
+  type LeaveRoomResponse,
   projectGameForPlayer,
   type PlayerSessionResponse,
   type RoomView,
@@ -29,7 +30,7 @@ interface RoomMember {
 
 interface RoomRecord {
   readonly id: string;
-  readonly hostPlayerId: string;
+  hostPlayerId: string;
   seed: number;
   revision: number;
   readonly members: RoomMember[];
@@ -61,6 +62,7 @@ export type RoomErrorCode =
   | "INVALID_ROOM_SETTINGS"
   | "ROOM_CAPACITY_TOO_SMALL"
   | "STALE_ROOM_REVISION"
+  | "CANNOT_LEAVE_STARTED_GAME"
   | "GAME_NOT_STARTED"
   | "STALE_REVISION"
   | GameCommandErrorCode;
@@ -123,7 +125,9 @@ export class RoomRegistry {
       throw new RoomError("ROOM_FULL", `This room is limited to ${room.settings.playerLimit} players`);
     }
 
-    const color = PLAYER_COLORS[room.members.length];
+    const color = PLAYER_COLORS.find(
+      (candidate) => !room.members.some((member) => member.color === candidate),
+    );
 
     if (color === undefined) {
       throw new RoomError("ROOM_FULL", "No player color is available");
@@ -182,6 +186,36 @@ export class RoomRegistry {
     room.revision += 1;
     this.notify(room);
     return this.projectRoom(room, room.hostPlayerId);
+  }
+
+  leaveRoom(roomId: string, seatToken: string): LeaveRoomResponse {
+    const room = this.requireRoom(roomId);
+    const member = this.requireCredential(room, seatToken);
+    if (room.game !== null) {
+      throw new RoomError(
+        "CANNOT_LEAVE_STARTED_GAME",
+        "Players cannot release their seat after the game starts",
+      );
+    }
+
+    const memberIndex = room.members.findIndex((candidate) => candidate.id === member.id);
+    room.members.splice(memberIndex, 1);
+    this.removeSubscriptions(room.id, member.id);
+
+    if (room.members.length === 0) {
+      this.rooms.delete(room.id);
+      this.subscriptions.delete(room.id);
+      return { roomDeleted: true, newHostPlayerId: null };
+    }
+
+    if (room.hostPlayerId === member.id) {
+      const nextHost = room.members[0];
+      if (nextHost === undefined) throw new Error("Room has no host candidate");
+      room.hostPlayerId = nextHost.id;
+    }
+    room.revision += 1;
+    this.notify(room);
+    return { roomDeleted: false, newHostPlayerId: room.hostPlayerId };
   }
 
   startRoom(roomId: string, seatToken: string): RoomView {
@@ -369,6 +403,16 @@ export class RoomRegistry {
     for (const subscription of roomSubscriptions) {
       subscription.listener(this.projectRoom(room, subscription.playerId));
     }
+  }
+
+  private removeSubscriptions(roomId: string, playerId: string): void {
+    const roomSubscriptions = this.subscriptions.get(roomId);
+    if (roomSubscriptions === undefined) return;
+
+    for (const subscription of roomSubscriptions) {
+      if (subscription.playerId === playerId) roomSubscriptions.delete(subscription);
+    }
+    if (roomSubscriptions.size === 0) this.subscriptions.delete(roomId);
   }
 }
 

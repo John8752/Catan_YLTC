@@ -49,6 +49,8 @@ Map topology is independent from map content. Vertices, edges, adjacency and coa
 - The default victory target is 10 points. The host may select any whole-number target from 5 through 15 before the game starts.
 - Only the host may change settings or reroll the map. Every mutation uses the current room revision, is broadcast to all members and is rejected after the game starts.
 - The rule profile remains `base-3-4`; two-player and 5–6-player options are not presented as working settings until their own rule profiles exist.
+- Before the game starts, an explicit leave releases that player's seat immediately. If the host leaves, ownership transfers to the earliest remaining seated player; if the last player leaves, the room is deleted.
+- A vacated player color becomes available to the next joining player. Existing members keep their colors and relative seat order.
 
 ## Initial placement
 
@@ -137,6 +139,7 @@ Random deck order and stolen resources are injected outcomes and appear in the p
 
 - Refreshing or reconnecting restores the same seat and the latest player-safe snapshot while the server process remains alive.
 - A disconnected player is not removed and their turn is not skipped. The game waits for them.
+- Closing a tab is a disconnection, not an explicit leave. After the game starts, seats cannot be explicitly released because the deterministic match state still references every seated player.
 - Every accepted command has a unique command ID, expected revision and actor credential.
 - Repeating an accepted command ID returns the original result rather than applying it twice.
 - Public history shows rolls, exact production grants by player, builds, trade responses and completed exchanges, robber movement, awards and turn changes without exposing total private hand composition, stolen resource identity or unplayed development cards.

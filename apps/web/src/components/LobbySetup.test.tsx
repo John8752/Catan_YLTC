@@ -30,6 +30,7 @@ describe("lobby setup", () => {
   it("exposes player limit and victory target controls to the host", () => {
     const room = lobbyRoom();
     const onSettingsChange = vi.fn();
+    const onLeave = vi.fn();
     render(
       <RoomPanel
         room={room}
@@ -38,7 +39,7 @@ describe("lobby setup", () => {
         busy={false}
         onStart={vi.fn()}
         onSettingsChange={onSettingsChange}
-        onLeave={vi.fn()}
+        onLeave={onLeave}
       />,
     );
 
@@ -48,6 +49,11 @@ describe("lobby setup", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "获胜分数" }), { target: { value: "12" } });
     expect(onSettingsChange).toHaveBeenCalledWith({ playerLimit: 4, victoryPointsToWin: 12 });
     expect(screen.getByText("基础版 3–4 人")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "离开房间" }));
+    expect(screen.getByRole("dialog", { name: "确认离开房间？" }).textContent).toContain("房主将自动转交给 周");
+    fireEvent.click(screen.getByRole("button", { name: "确认离开" }));
+    expect(onLeave).toHaveBeenCalledOnce();
   });
 
   it("shows settings to guests without allowing them to edit", () => {

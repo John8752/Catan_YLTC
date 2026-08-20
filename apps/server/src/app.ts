@@ -23,6 +23,10 @@ const rerollRoomMapSchema = z.object({
   expectedRevision: z.number().int().positive(),
 });
 
+const leaveRoomSchema = z.object({
+  seatToken: z.string().min(1),
+});
+
 const gameCommandSchema = z.object({
   seatToken: z.string().min(1),
   commandId: z.string().min(1).max(100),
@@ -138,6 +142,15 @@ export async function buildApp(registry = new RoomRegistry()) {
       return reply.code(200).send(
         registry.rerollMap(request.params.roomId, body.seatToken, body.expectedRevision),
       );
+    } catch (error) {
+      return sendError(reply, error);
+    }
+  });
+
+  app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/leave", async (request, reply) => {
+    try {
+      const body = leaveRoomSchema.parse(request.body);
+      return reply.code(200).send(registry.leaveRoom(request.params.roomId, body.seatToken));
     } catch (error) {
       return sendError(reply, error);
     }

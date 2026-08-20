@@ -10,6 +10,71 @@ afterEach(async () => {
 });
 
 describe("room API", () => {
+  it("releases lobby seats, transfers host ownership and deletes an empty room", async () => {
+    const app = await buildApp();
+    apps.push(app);
+    const host = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "林" },
+    })).json<PlayerSessionResponse>();
+    const second = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/join`,
+      payload: { playerName: "周" },
+    })).json<PlayerSessionResponse>();
+    const third = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/join`,
+      payload: { playerName: "陈" },
+    })).json<PlayerSessionResponse>();
+
+    const secondLeave = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/leave`,
+      payload: { seatToken: second.seatToken },
+    });
+    expect(secondLeave.statusCode).toBe(200);
+    expect(secondLeave.json()).toEqual({ roomDeleted: false, newHostPlayerId: host.playerId });
+
+    const replacement = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/join`,
+      payload: { playerName: "赵" },
+    })).json<PlayerSessionResponse>();
+    expect(replacement.room.members.find((member) => member.id === replacement.playerId)?.color).toBe("ocean");
+
+    const hostLeave = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/leave`,
+      payload: { seatToken: host.seatToken },
+    });
+    expect(hostLeave.json()).toEqual({ roomDeleted: false, newHostPlayerId: third.playerId });
+    const promotedRoom = (await app.inject({
+      method: "GET",
+      url: `/api/rooms/${host.roomId}?seatToken=${encodeURIComponent(third.seatToken)}`,
+    })).json<RoomView>();
+    expect(promotedRoom.hostPlayerId).toBe(third.playerId);
+    expect(promotedRoom.members.find((member) => member.id === third.playerId)?.isHost).toBe(true);
+
+    await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/leave`,
+      payload: { seatToken: replacement.seatToken },
+    });
+    const finalLeave = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/leave`,
+      payload: { seatToken: third.seatToken },
+    });
+    expect(finalLeave.json()).toEqual({ roomDeleted: true, newHostPlayerId: null });
+    const deletedRoom = await app.inject({
+      method: "GET",
+      url: `/api/rooms/${host.roomId}?seatToken=${encodeURIComponent(third.seatToken)}`,
+    });
+    expect(deletedRoom.statusCode).toBe(404);
+  });
+
   it("lets the host configure and reroll the authoritative lobby preview", async () => {
     const seeds = [111, 222];
     const app = await buildApp(new RoomRegistry({ nextSeed: () => seeds.shift() ?? 333 }));
@@ -141,6 +206,16 @@ describe("room API", () => {
     expect(startResponse.statusCode).toBe(200);
     expect(room.game?.map.hexes).toHaveLength(19);
     expect(room.game?.phase.kind).toBe("setup");
+
+    const startedLeaveResponse = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/leave`,
+      payload: { seatToken: host.seatToken },
+    });
+    expect(startedLeaveResponse.statusCode).toBe(400);
+    expect(startedLeaveResponse.json()).toMatchObject({
+      error: { code: "CANNOT_LEAVE_STARTED_GAME" },
+    });
 
     const vertexId = room.game?.interaction.vertexIds[0];
     const expectedRevision = room.game?.revision;

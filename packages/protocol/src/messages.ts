@@ -31,6 +31,15 @@ export interface RerollRoomMapRequest {
   readonly expectedRevision: number;
 }
 
+export interface LeaveRoomRequest {
+  readonly seatToken: string;
+}
+
+export interface LeaveRoomResponse {
+  readonly roomDeleted: boolean;
+  readonly newHostPlayerId: string | null;
+}
+
 export type RoomServerMessage =
   | {
       readonly type: "room_state";

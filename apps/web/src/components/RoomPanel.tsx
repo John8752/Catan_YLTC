@@ -4,6 +4,16 @@ import { Activity, Crown, LogOut, Route, Settings2, ShieldCheck, Trophy, Users }
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card.js";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog.js";
 import { ScrollArea } from "@/components/ui/scroll-area.js";
 import { Separator } from "@/components/ui/separator.js";
 import { cn } from "@/lib/utils.js";
@@ -18,7 +28,7 @@ export interface RoomPanelProps {
     playerLimit: 3 | 4;
     victoryPointsToWin: number;
   }) => void;
-  readonly onLeave: () => void;
+  readonly onLeave: () => void | Promise<void>;
 }
 
 const PLAYER_COLORS = {
@@ -197,14 +207,52 @@ export function RoomPanel({
           ) : null}
         </CardContent>
 
-        <CardFooter className="border-t border-[#5f4b31]/15 px-5 py-3">
-          <Button variant="ghost" className="w-full text-[#3f5b55] hover:bg-white/45" onClick={onLeave}>
-            <LogOut className="size-4" />离开当前标签页会话
-          </Button>
-        </CardFooter>
+        {room.game === null ? (
+          <CardFooter className="border-t border-[#5f4b31]/15 px-5 py-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full text-[#3f5b55] hover:bg-white/45"
+                  disabled={busy}
+                >
+                  <LogOut className="size-4" />离开房间
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="border-[#f7e6bf]/30 bg-[#f8ecd2] text-[#263d39] sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>确认离开房间？</DialogTitle>
+                  <DialogDescription className="leading-relaxed text-[#66716b]">
+                    {leaveDescription(room, isHost)}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">继续留在房间</Button>
+                  </DialogClose>
+                  <Button
+                    type="button"
+                    className="bg-[#a94f3a] text-white hover:bg-[#93432f]"
+                    disabled={busy}
+                    onClick={onLeave}
+                  >
+                    {busy ? "正在离开…" : "确认离开"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardFooter>
+        ) : null}
       </Card>
     </aside>
   );
+}
+
+function leaveDescription(room: RoomView, isHost: boolean): string {
+  if (!isHost) return "离开后你的座位会立即释放，你可以稍后使用房间码重新加入。";
+  const nextHost = room.members.find((member) => member.id !== room.hostPlayerId);
+  if (nextHost === undefined) return "你是房间中的最后一名玩家。离开后，这个房间会立即关闭。";
+  return `离开后，房主将自动转交给 ${nextHost.name}，你的座位会立即释放。`;
 }
 
 function SettingRow({

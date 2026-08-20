@@ -122,7 +122,13 @@ export type GameEvent =
       readonly cardType: string;
     }
   | { readonly type: "development_card_played"; readonly playerId: PlayerId; readonly cardId: string; readonly cardType: string }
-  | { readonly type: "free_road_built"; readonly playerId: PlayerId; readonly edgeId: EdgeId };
+  | { readonly type: "free_road_built"; readonly playerId: PlayerId; readonly edgeId: EdgeId }
+  | {
+      readonly type: "award_changed";
+      readonly award: "longest-road" | "largest-army";
+      readonly holderId: PlayerId | null;
+    }
+  | { readonly type: "game_won"; readonly playerId: PlayerId };
 
 export type GameCommandResult =
   | {

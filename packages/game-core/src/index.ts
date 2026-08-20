@@ -1,3 +1,4 @@
+export * from "./awards/index.js";
 export * from "./buildables/index.js";
 export * from "./development/index.js";
 export * from "./engine/index.js";

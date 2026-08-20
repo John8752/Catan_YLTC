@@ -9,6 +9,7 @@ import {
   legalSettlementVertices,
   maritimeRatio,
   type BuildingState,
+  type AwardsState,
   type DevelopmentCardState,
   type GamePhase,
   type GameState,
@@ -59,6 +60,7 @@ export interface GameView {
   readonly openTrade: TradeOfferState | null;
   readonly developmentDeckCount: number;
   readonly developmentCardPlayedThisTurn: boolean;
+  readonly awards: AwardsState;
 }
 
 export type GameInteractionView =
@@ -188,6 +190,7 @@ export function projectGameForPlayer(state: GameState, viewerId: string): GameVi
     openTrade: state.openTrade,
     developmentDeckCount: state.developmentDeck.length,
     developmentCardPlayedThisTurn: state.developmentCardPlayedThisTurn,
+    awards: state.awards,
   };
 }
 

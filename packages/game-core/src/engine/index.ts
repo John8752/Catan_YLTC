@@ -3,5 +3,7 @@ export * from "./commands.js";
 export * from "./create-game.js";
 export * from "./development-command.js";
 export * from "./execute.js";
+export * from "./finalize.js";
+export * from "./replay.js";
 export * from "./state.js";
 export * from "./trade-command.js";

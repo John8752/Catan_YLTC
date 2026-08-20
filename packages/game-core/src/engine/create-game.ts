@@ -87,6 +87,7 @@ export function createBaseGame(input: CreateGameInput): GameState {
     robberResumeStep: null,
     freeRoadsRemaining: 0,
     developmentResumeStep: null,
+    awards: emptyAwards(),
   };
 
   assertGameInvariant(state);
@@ -135,3 +136,4 @@ export function assertGameInvariant(state: GameState): void {
     throw new Error("An edge cannot contain multiple roads");
   }
 }
+import { emptyAwards } from "../awards/index.js";

@@ -1,4 +1,5 @@
 import type { BuildingState, RoadState } from "../buildables/index.js";
+import { finalizeAcceptedTransition } from "./finalize.js";
 import {
   createSeededRandom,
   type EdgeId,
@@ -26,6 +27,15 @@ export function executeGameCommand(
   actorId: PlayerId,
   command: GameCommand,
   random: RandomSource = createSeededRandom(state.seed ^ state.revision),
+): GameCommandResult {
+  return finalizeAcceptedTransition(dispatchGameCommand(state, actorId, command, random));
+}
+
+function dispatchGameCommand(
+  state: GameState,
+  actorId: PlayerId,
+  command: GameCommand,
+  random: RandomSource,
 ): GameCommandResult {
   switch (command.type) {
     case "PlaceInitialSettlement":

@@ -149,7 +149,16 @@ export function App() {
             <p>把房间码 <strong>{room.id}</strong> 发给朋友。第三位玩家加入后，房主即可生成岛屿。</p>
           </section>
         ) : (
-          <Board game={room.game} busy={busy} buildMode={buildMode} onCommand={handleGameCommand} />
+          <>
+            <Board game={room.game} busy={busy} buildMode={buildMode} onCommand={handleGameCommand} />
+            {room.game.phase.kind === "finished" ? (
+              <section className="winner-banner" role="status">
+                <p className="eyebrow">对局结束</p>
+                <h2>{winnerName(room.game)} 获胜</h2>
+                <p>率先完成了岛屿建设目标。</p>
+              </section>
+            ) : null}
+          </>
         )}
       </div>
       <RoomPanel
@@ -183,4 +192,10 @@ function closeSocket(socket: WebSocket): void {
   }
 
   socket.close();
+}
+
+function winnerName(game: NonNullable<RoomView["game"]>): string {
+  if (game.phase.kind !== "finished") return "玩家";
+  const winnerId = game.phase.winnerId;
+  return game.players.find((player) => player.id === winnerId)?.name ?? "玩家";
 }

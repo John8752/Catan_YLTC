@@ -75,4 +75,6 @@ export interface GameState {
   readonly robberResumeStep: "roll" | "action" | null;
   readonly freeRoadsRemaining: number;
   readonly developmentResumeStep: "roll" | "action" | null;
+  readonly awards: AwardsState;
 }
+import type { AwardsState } from "../awards/index.js";

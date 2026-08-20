@@ -58,9 +58,14 @@ export function RoomPanel({
                 </small>
               </div>
               {gamePlayer === undefined ? null : (
-                <span className="resource-count" title="资源卡与发展卡数量">
-                  {gamePlayer.resourceCardCount} 资源 · {gamePlayer.developmentCardCount} 发展
-                </span>
+                <div className="player-score-block">
+                  <strong>{gamePlayer.visibleVictoryPoints} 分</strong>
+                  <span className="resource-count" title="资源卡与发展卡数量">
+                    {gamePlayer.resourceCardCount} 资源 · {gamePlayer.developmentCardCount} 发展
+                  </span>
+                  {room.game?.awards.longestRoad.holderId === gamePlayer.id ? <small>最长道路</small> : null}
+                  {room.game?.awards.largestArmy.holderId === gamePlayer.id ? <small>最大骑士力</small> : null}
+                </div>
               )}
             </div>
           );

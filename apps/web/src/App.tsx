@@ -1,0 +1,168 @@
+import type { RoomView } from "@catan/protocol";
+import { useEffect, useState } from "react";
+import {
+  connectToRoom,
+  createRoom,
+  getRoom,
+  joinRoom,
+  startRoom,
+  type PlayerSession,
+} from "./api.js";
+import { Board } from "./components/Board.js";
+import { RoomPanel } from "./components/RoomPanel.js";
+import { Welcome } from "./components/Welcome.js";
+import { clearLegacySharedSession, createPlayerSessionStore } from "./player-session.js";
+
+clearLegacySharedSession(window.localStorage);
+const playerSessionStore = createPlayerSessionStore(window.sessionStorage);
+
+export function App() {
+  const [session, setSession] = useState<PlayerSession | null>(() => readSession());
+  const [room, setRoom] = useState<RoomView | null>(null);
+  const [connectionState, setConnectionState] = useState<"connecting" | "live" | "offline">(
+    "offline",
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session === null) {
+      return;
+    }
+
+    let active = true;
+    setConnectionState("connecting");
+    void getRoom(session)
+      .then((nextRoom) => {
+        if (active) setRoom(nextRoom);
+      })
+      .catch((caught: unknown) => {
+        if (active) setError(errorMessage(caught));
+      });
+
+    const socket = connectToRoom(session, (message) => {
+      if (!active) return;
+
+      if (message.type === "room_state") {
+        setRoom(message.room);
+        setError(null);
+      } else {
+        setError(message.message);
+      }
+    });
+    socket.addEventListener("open", () => active && setConnectionState("live"));
+    socket.addEventListener("close", () => active && setConnectionState("offline"));
+
+    return () => {
+      active = false;
+      closeSocket(socket);
+    };
+  }, [session]);
+
+  async function handleCreate(playerName: string) {
+    await runBusy(async () => {
+      const response = await createRoom(playerName);
+      storeSession({ roomId: response.roomId, playerId: response.playerId });
+      setRoom(response.room);
+    });
+  }
+
+  async function handleJoin(roomId: string, playerName: string) {
+    await runBusy(async () => {
+      const response = await joinRoom(roomId, playerName);
+      storeSession({ roomId: response.roomId, playerId: response.playerId });
+      setRoom(response.room);
+    });
+  }
+
+  async function handleStart() {
+    if (session === null) return;
+    await runBusy(async () => setRoom(await startRoom(session)));
+  }
+
+  function handleLeave() {
+    playerSessionStore.clear();
+    setSession(null);
+    setRoom(null);
+    setError(null);
+  }
+
+  async function runBusy(action: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+
+    try {
+      await action();
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function storeSession(nextSession: PlayerSession) {
+    playerSessionStore.write(nextSession);
+    setSession(nextSession);
+  }
+
+  if (session === null) {
+    return <Welcome busy={busy} error={error} onCreate={handleCreate} onJoin={handleJoin} />;
+  }
+
+  if (room === null) {
+    return (
+      <main className="loading-table">
+        <span className="brand-mark" aria-hidden="true">⬡</span>
+        <p>{error ?? "正在重新铺好桌面…"}</p>
+        <button className="quiet-button" type="button" onClick={handleLeave}>返回入口</button>
+      </main>
+    );
+  }
+
+  return (
+    <main className="game-layout">
+      <div className="game-brand" aria-label="Catan YLTC">
+        <span aria-hidden="true">⬡</span>
+        <strong>Catan YLTC</strong>
+      </div>
+      <div className="playfield">
+        {room.game === null ? (
+          <section className="waiting-island">
+            <div className="island-orbit" aria-hidden="true"><span>⬡</span></div>
+            <p className="eyebrow">桌面已经打开</p>
+            <h1>等待同行者落座</h1>
+            <p>把房间码 <strong>{room.id}</strong> 发给朋友。第三位玩家加入后，房主即可生成岛屿。</p>
+          </section>
+        ) : (
+          <Board game={room.game} />
+        )}
+      </div>
+      <RoomPanel
+        room={room}
+        playerId={session.playerId}
+        connectionState={connectionState}
+        busy={busy}
+        onStart={handleStart}
+        onLeave={handleLeave}
+      />
+      {error === null ? null : <p className="toast-error" role="alert">{error}</p>}
+    </main>
+  );
+}
+
+function readSession(): PlayerSession | null {
+  return playerSessionStore.read();
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "发生了未知错误";
+}
+
+function closeSocket(socket: WebSocket): void {
+  if (socket.readyState === WebSocket.CONNECTING) {
+    socket.addEventListener("open", () => socket.close(), { once: true });
+    return;
+  }
+
+  socket.close();
+}

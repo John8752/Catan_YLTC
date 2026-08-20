@@ -1,0 +1,26 @@
+{
+  "name": "@catan/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@catan/protocol": "workspace:*",
+    "@vitejs/plugin-react": "^6.0.5",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vite": "^8.2.1"
+  },
+  "devDependencies": {
+    "@catan/game-core": "workspace:*",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

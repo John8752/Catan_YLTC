@@ -1,5 +1,5 @@
-import type { AxialCoordinate, HexTile, TerrainType } from "./model.js";
-import { createSeededRandom, shuffled } from "./random.js";
+import { createSeededRandom, shuffled } from "../primitives/index.js";
+import type { AxialCoordinate, HexTile, TerrainType } from "./types.js";
 
 const TERRAIN_DECK: readonly TerrainType[] = [
   "lumber",

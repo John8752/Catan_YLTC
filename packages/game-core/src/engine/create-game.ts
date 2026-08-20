@@ -1,10 +1,6 @@
-import { createStandardBoard } from "./board.js";
-import {
-  emptyResourceHand,
-  type GameState,
-  type PlayerSeed,
-  type TerrainType,
-} from "./model.js";
+import { createStandardBoard, type TerrainType } from "../map/index.js";
+import { emptyResourceHand } from "../resources/index.js";
+import type { GameState, PlayerSeed } from "./state.js";
 
 const EXPECTED_TERRAIN_COUNTS: Readonly<Record<TerrainType, number>> = {
   brick: 3,

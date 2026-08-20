@@ -1,7 +1,7 @@
-export const RESOURCE_TYPES = ["brick", "lumber", "wool", "grain", "ore"] as const;
-
-export type ResourceType = (typeof RESOURCE_TYPES)[number];
-export type TerrainType = ResourceType | "desert";
+import type { HexTile } from "../map/index.js";
+import type { GameId, PlayerId } from "../primitives/index.js";
+import type { ResourceHand } from "../resources/index.js";
+import type { RuleProfile } from "../rulesets/index.js";
 
 export const PLAYER_COLORS = [
   "terracotta",
@@ -13,22 +13,6 @@ export const PLAYER_COLORS = [
 ] as const;
 
 export type PlayerColor = (typeof PLAYER_COLORS)[number];
-export type RuleProfile = "base-3-4" | "two-player" | "extended-5-6";
-export type GameId = string;
-export type PlayerId = string;
-
-export type ResourceHand = Record<ResourceType, number>;
-
-export interface AxialCoordinate {
-  readonly q: number;
-  readonly r: number;
-}
-
-export interface HexTile extends AxialCoordinate {
-  readonly id: string;
-  readonly terrain: TerrainType;
-  readonly numberToken: number | null;
-}
 
 export interface PlayerSeed {
   readonly id: PlayerId;
@@ -66,18 +50,4 @@ export interface GameState {
   readonly board: readonly HexTile[];
   readonly players: readonly PlayerState[];
   readonly phase: GamePhase;
-}
-
-export function emptyResourceHand(): ResourceHand {
-  return {
-    brick: 0,
-    lumber: 0,
-    wool: 0,
-    grain: 0,
-    ore: 0,
-  };
-}
-
-export function resourceCardCount(hand: ResourceHand): number {
-  return RESOURCE_TYPES.reduce((total, resource) => total + hand[resource], 0);
 }

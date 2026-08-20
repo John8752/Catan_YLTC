@@ -1,5 +1,5 @@
 import type { GameCommand, GameView } from "@catan/protocol";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button.js";
 import { cn } from "@/lib/utils.js";
 import { TradeControls } from "./TradeControls.js";
@@ -13,29 +13,30 @@ export interface GameControlsProps {
   readonly busy: boolean;
   readonly onCommand: (command: GameCommand) => void;
   readonly buildMode: "road" | "settlement" | "city" | null;
+  readonly selectedRobberHexId: string | null;
   readonly onBuildModeChange: (mode: "road" | "settlement" | "city" | null) => void;
 }
 
-export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChange }: GameControlsProps) {
+export function GameControls({
+  game,
+  busy,
+  onCommand,
+  buildMode,
+  selectedRobberHexId,
+  onBuildModeChange,
+}: GameControlsProps) {
   const [discard, setDiscard] = useState<Record<Resource, number>>(emptySelection);
-  const [robberHexId, setRobberHexId] = useState("");
-  const [victimId, setVictimId] = useState("");
 
   useEffect(() => {
     setDiscard(emptySelection());
-    setRobberHexId("");
-    setVictimId("");
   }, [game.revision]);
 
-  const selectedTarget = useMemo(
-    () => game.interaction.kind === "robber"
-      ? game.interaction.targets.find((target) => target.hexId === robberHexId)
-      : undefined,
-    [game.interaction, robberHexId],
-  );
-  const selectedVictim = selectedTarget?.victimIds.includes(victimId)
-    ? victimId
-    : (selectedTarget?.victimIds[0] ?? null);
+  const selectedTarget = game.interaction.kind === "robber"
+    ? game.interaction.targets.find((target) => target.hexId === selectedRobberHexId)
+    : undefined;
+  const selectedTargetHex = selectedTarget === undefined
+    ? undefined
+    : game.map.hexes.find((hex) => hex.id === selectedTarget.hexId);
 
   if (game.interaction.kind === "turn-roll") {
     return (
@@ -119,38 +120,42 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
   }
 
   if (game.interaction.kind === "robber") {
-    return (
-      <form
-        className="resolution-form xl:grid-cols-2 xl:items-end"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (robberHexId !== "") {
-            onCommand({ type: "MoveRobber", hexId: robberHexId, victimId: selectedVictim });
-          }
-        }}
-      >
-        <label>
-          <span>强盗目的地</span>
-          <select value={robberHexId} onChange={(event) => { setRobberHexId(event.target.value); setVictimId(""); }}>
-            <option value="">请选择地块</option>
-            {game.interaction.targets.map((target) => {
-              const hex = game.map.hexes.find((candidate) => candidate.id === target.hexId);
-              return <option key={target.hexId} value={target.hexId}>{hexLabel(hex?.terrain, hex?.numberToken)}</option>;
+    if (selectedTarget !== undefined && selectedTarget.victimIds.length > 1) {
+      return (
+        <section className="robber-victim-picker" aria-label="选择偷取玩家">
+          <div>
+            <strong>选择要偷取的玩家</strong>
+            <p>目的地：{hexLabel(
+              selectedTargetHex?.terrain,
+              selectedTargetHex?.numberToken,
+            )}</p>
+          </div>
+          <div className="robber-victim-buttons">
+            {selectedTarget.victimIds.map((id) => {
+              const playerName = game.players.find((player) => player.id === id)?.name ?? id;
+              return (
+                <Button
+                  key={id}
+                  type="button"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => onCommand({ type: "MoveRobber", hexId: selectedTarget.hexId, victimId: id })}
+                >
+                  偷取 {playerName}
+                </Button>
+              );
             })}
-          </select>
-        </label>
-        {selectedTarget !== undefined && selectedTarget.victimIds.length > 0 ? (
-          <label>
-            <span>偷取玩家</span>
-            <select value={selectedVictim ?? ""} onChange={(event) => setVictimId(event.target.value)}>
-              {selectedTarget.victimIds.map((id) => (
-                <option key={id} value={id}>{game.players.find((player) => player.id === id)?.name ?? id}</option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <Button type="submit" disabled={busy || robberHexId === ""}>移动强盗</Button>
-      </form>
+          </div>
+          <small>也可以在棋盘上改选其他地块。</small>
+        </section>
+      );
+    }
+
+    return (
+      <section className="robber-map-prompt" aria-label="移动强盗">
+        <strong>在棋盘上选择强盗目的地</strong>
+        <p>点击地块中心亮起的目标点。没有可偷取玩家时会直接移动；有多名玩家时再选择一人。</p>
+      </section>
     );
   }
 

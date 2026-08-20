@@ -10,6 +10,7 @@ export interface PlayerDockProps {
   readonly busy: boolean;
   readonly onCommand: (command: GameCommand) => void;
   readonly buildMode: "road" | "settlement" | "city" | null;
+  readonly selectedRobberHexId: string | null;
   readonly onBuildModeChange: (mode: "road" | "settlement" | "city" | null) => void;
 }
 
@@ -21,7 +22,14 @@ const RESOURCE_PRESENTATION = {
   ore: { label: "矿", mark: "◆", className: "from-[#78878c] to-[#59686e]" },
 } as const;
 
-export function PlayerDock({ game, busy, onCommand, buildMode, onBuildModeChange }: PlayerDockProps) {
+export function PlayerDock({
+  game,
+  busy,
+  onCommand,
+  buildMode,
+  selectedRobberHexId,
+  onBuildModeChange,
+}: PlayerDockProps) {
   return (
     <Card className="player-dock gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-3 shadow-2xl backdrop-blur-sm lg:col-start-1 lg:row-start-3">
       <div className="grid items-stretch gap-3 xl:grid-cols-[auto_minmax(270px,.75fr)_minmax(430px,1.25fr)]">
@@ -68,6 +76,7 @@ export function PlayerDock({ game, busy, onCommand, buildMode, onBuildModeChange
             busy={busy}
             onCommand={onCommand}
             buildMode={buildMode}
+            selectedRobberHexId={selectedRobberHexId}
             onBuildModeChange={onBuildModeChange}
           />
         </section>

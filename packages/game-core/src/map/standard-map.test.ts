@@ -10,6 +10,7 @@ describe("standard map topology", () => {
     expect(map.edges).toHaveLength(72);
     expect(map.edges.filter((edge) => edge.adjacentHexIds.length === 1)).toHaveLength(30);
     expect(map.ports).toHaveLength(9);
+    expect(map.hexes.find((hex) => hex.id === map.robberHexId)?.terrain).toBe("desert");
   });
 
   it("keeps adjacency symmetric and references canonical locations", () => {

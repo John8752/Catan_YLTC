@@ -29,6 +29,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buildMode, setBuildMode] = useState<"road" | "settlement" | "city" | null>(null);
+  const [selectedRobberHexId, setSelectedRobberHexId] = useState<string | null>(null);
   const { activeEffect, completeActiveEffect } = useGameEffectQueue(room?.game ?? null);
 
   useEffect(() => {
@@ -80,6 +81,7 @@ export function App() {
 
   useEffect(() => {
     setBuildMode(null);
+    setSelectedRobberHexId(null);
   }, [room?.game?.revision]);
 
   async function handleCreate(playerName: string) {
@@ -88,6 +90,7 @@ export function App() {
       storeSession({ roomId: response.roomId, playerId: response.playerId, seatToken: response.seatToken });
       setRoom(response.room);
       setBuildMode(null);
+      setSelectedRobberHexId(null);
     });
   }
 
@@ -96,6 +99,8 @@ export function App() {
       const response = await joinRoom(roomId, playerName);
       storeSession({ roomId: response.roomId, playerId: response.playerId, seatToken: response.seatToken });
       setRoom(response.room);
+      setBuildMode(null);
+      setSelectedRobberHexId(null);
     });
   }
 
@@ -117,11 +122,31 @@ export function App() {
     });
   }
 
+  function handleRobberHexSelect(hexId: string) {
+    if (room?.game?.interaction.kind !== "robber" || busy) return;
+    const target = room.game.interaction.targets.find((candidate) => candidate.hexId === hexId);
+    if (target === undefined) return;
+
+    if (target.victimIds.length <= 1) {
+      setSelectedRobberHexId(null);
+      void handleGameCommand({
+        type: "MoveRobber",
+        hexId,
+        victimId: target.victimIds[0] ?? null,
+      });
+      return;
+    }
+
+    setSelectedRobberHexId(hexId);
+  }
+
   function handleLeave() {
     playerSessionStore.clear();
     setSession(null);
     setRoom(null);
     setError(null);
+    setBuildMode(null);
+    setSelectedRobberHexId(null);
   }
 
   async function runBusy(action: () => Promise<void>) {
@@ -172,7 +197,14 @@ export function App() {
           </section>
         ) : (
           <>
-            <Board game={room.game} busy={busy} buildMode={buildMode} onCommand={handleGameCommand} />
+            <Board
+              game={room.game}
+              busy={busy}
+              buildMode={buildMode}
+              selectedRobberHexId={selectedRobberHexId}
+              onCommand={handleGameCommand}
+              onRobberHexSelect={handleRobberHexSelect}
+            />
             {room.game.phase.kind === "finished" ? (
               <section className="winner-banner" role="status">
                 <p className="eyebrow">对局结束</p>
@@ -189,6 +221,7 @@ export function App() {
           busy={busy}
           onCommand={handleGameCommand}
           buildMode={buildMode}
+          selectedRobberHexId={selectedRobberHexId}
           onBuildModeChange={setBuildMode}
         />
       )}

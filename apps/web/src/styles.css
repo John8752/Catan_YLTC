@@ -226,6 +226,18 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .token circle { fill: #f6e7c3; stroke: rgba(75,49,26,.3); stroke-width: 1.5; }
 .token text { fill: #3c3529; font-family: Georgia, serif; font-size: 15px; font-weight: 800; }
 .token.hot text { fill: #9f3227; }.token.hot circle { stroke: #b5523f; stroke-width: 2.5; }
+.robber-layer { isolation: isolate; }
+.robber-piece { pointer-events: none; filter: drop-shadow(0 4px 3px rgba(8,24,23,.52)); }
+.robber-shadow { fill: rgba(8,24,23,.38); }
+.robber-body,.robber-head { fill: #26312f; stroke: #f2dca6; stroke-width: 1.5; }
+.robber-highlight { fill: none; stroke: #66726e; stroke-width: 1.4; stroke-linecap: round; opacity: .9; }
+.robber-target { cursor: pointer; outline: none; }
+.robber-target-hit { fill: transparent; }
+.robber-target-ring { fill: rgba(255,235,158,.16); stroke: #ffe28a; stroke-width: 2; stroke-dasharray: 3 3; filter: drop-shadow(0 0 5px rgba(255,221,91,.84)); transform-box: fill-box; transform-origin: center; animation: robber-target-pulse 1.25s ease-in-out infinite; }
+.robber-target-dot { fill: #fff0a8; stroke: #75491f; stroke-width: 1.7; }
+.robber-target:hover .robber-target-ring,.robber-target:focus-visible .robber-target-ring,.robber-target.is-selected .robber-target-ring { fill: rgba(255,228,116,.42); stroke-width: 3; stroke-dasharray: none; }
+.robber-target:hover .robber-target-dot,.robber-target:focus-visible .robber-target-dot,.robber-target.is-selected .robber-target-dot { fill: #fffdf0; transform: scale(1.35); transform-box: fill-box; transform-origin: center; }
+.robber-target.is-selected .robber-target-ring { stroke: #fffdf0; filter: drop-shadow(0 0 8px rgba(255,246,194,1)); }
 .board-edges line { stroke: rgba(250,239,208,.32); stroke-width: 5; stroke-linecap: round; pointer-events: stroke; }
 .board-vertices circle { fill: rgba(255,247,218,.78); stroke: rgba(68,48,31,.6); stroke-width: 1.5; }
 .board-edges .is-selectable { stroke: #fff2a8; stroke-width: 10; cursor: pointer; filter: drop-shadow(0 0 5px rgba(255,221,91,.9)); }
@@ -251,6 +263,11 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .board-instruction { margin: .35rem 0 0; color: #f4e6c5; font-weight: 700; text-align: center; }
 .resolution-form { display: grid; gap: .65rem; }.resolution-form label { display: grid; gap: .25rem; font-size: .78rem; }.resolution-form input,.resolution-form select { min-width: 0; padding: .48rem; border: 1px solid rgba(75,58,38,.24); border-radius: 8px; background: #fffaf0; color: #312b24; }.discard-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: .3rem; }.discard-grid input { width: 100%; }.dice-result { font-weight: 800; color: #6d422b; }
 .action-stack { display: grid; gap: .55rem; }.build-buttons { display: grid; grid-template-columns: repeat(3,1fr); gap: .35rem; }.build-button { border: 1px solid rgba(91,67,38,.25); border-radius: 8px; padding: .52rem .25rem; background: #f4e7ca; color: #4f3b28; font-weight: 750; cursor: pointer; }.build-button.is-active { color: #fff; background: #9a5239; box-shadow: 0 0 0 2px rgba(154,82,57,.2); }
+.robber-map-prompt,.robber-victim-picker { display: grid; gap: .35rem; color: #31453f; }
+.robber-map-prompt p,.robber-victim-picker p { margin: 0; color: #69716b; font-size: .76rem; line-height: 1.45; }
+.robber-victim-picker { grid-template-columns: minmax(0,1fr) auto; align-items: center; }
+.robber-victim-picker small { grid-column: 1 / -1; }
+.robber-victim-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem; }
 .trade-details { border: 1px solid rgba(78,57,35,.18); border-radius: 9px; padding: .45rem; }.trade-details summary { cursor: pointer; font-weight: 800; }.trade-forms,.trade-form,.trade-card { display: grid; gap: .45rem; }.trade-forms { margin-top: .55rem; }.trade-form { padding-top: .45rem; border-top: 1px dashed rgba(78,57,35,.2); }.resource-amount { display: grid; grid-template-columns: 3rem 1fr 3.3rem; gap: .3rem; align-items: center; }.resource-amount select,.resource-amount input { min-width: 0; padding: .35rem; border: 1px solid rgba(78,57,35,.22); border-radius: 7px; background: #fffaf0; }.trade-card { padding: .55rem; border-radius: 9px; background: #f4e7ca; }
 .development-details { border: 1px solid rgba(78,57,35,.18); border-radius: 9px; padding: .45rem; }.development-details summary { cursor: pointer; font-weight: 800; }.development-stack { display: grid; gap: .4rem; margin-top: .5rem; }.development-card { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .35rem; align-items: center; padding: .4rem; border-radius: 8px; background: #efe1ba; }.development-card select { min-width: 4rem; padding: .3rem; }.card-selects { display: flex; gap: .25rem; }
 .player-score-block { display: grid; justify-items: end; gap: .08rem; }.player-score-block small { color: #9a5239; font-weight: 800; }.winner-banner { position: absolute; inset: 50% auto auto 50%; z-index: 5; transform: translate(-50%,-50%); width: min(28rem,86%); padding: 1.4rem; border: 2px solid rgba(255,239,184,.75); border-radius: 18px; text-align: center; color: #fff8df; background: rgba(39,57,53,.94); box-shadow: 0 20px 55px rgba(0,0,0,.42); }.winner-banner h2 { margin: .2rem 0; font-family: Georgia,serif; font-size: 2rem; }
@@ -324,6 +341,11 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   24% { opacity: 1; }
   70% { opacity: 1; }
   100% { transform: translate3d(var(--flight-end-x),calc(var(--flight-end-y) - 28px),0) translate(-50%,-50%) scale(1); opacity: 0; }
+}
+
+@keyframes robber-target-pulse {
+  0%,100% { opacity: .72; transform: scale(.92); }
+  50% { opacity: 1; transform: scale(1.08); }
 }
 
 @media (min-width: 1024px) {

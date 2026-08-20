@@ -17,9 +17,18 @@ export interface BoardProps {
   readonly busy?: boolean;
   readonly onCommand?: (command: GameCommand) => void;
   readonly buildMode?: "road" | "settlement" | "city" | null;
+  readonly selectedRobberHexId?: string | null;
+  readonly onRobberHexSelect?: (hexId: string) => void;
 }
 
-export function Board({ game, busy = false, onCommand, buildMode = null }: BoardProps) {
+export function Board({
+  game,
+  busy = false,
+  onCommand,
+  buildMode = null,
+  selectedRobberHexId = null,
+  onRobberHexSelect,
+}: BoardProps) {
   const selectableVertices = new Set([
     ...game.interaction.vertexIds,
     ...(game.interaction.kind === "turn-action" && buildMode === "settlement" ? game.interaction.settlementVertexIds : []),
@@ -29,6 +38,7 @@ export function Board({ game, busy = false, onCommand, buildMode = null }: Board
     ...game.interaction.edgeIds,
     ...(game.interaction.kind === "turn-action" && buildMode === "road" ? game.interaction.roadEdgeIds : []),
   ]);
+  const robberHex = game.map.hexes.find((hex) => hex.id === game.map.robberHexId);
 
   return (
     <section className="board-shell" data-board-root="true" aria-labelledby="board-title">
@@ -80,6 +90,51 @@ export function Board({ game, busy = false, onCommand, buildMode = null }: Board
                       </g>
                     )}
                   </g>
+                </g>
+              );
+            })}
+          </g>
+          <g className="robber-layer" aria-label="强盗位置与可选目的地">
+            {robberHex === undefined ? null : (
+              <g
+                className="robber-piece"
+                data-robber-piece="true"
+                data-robber-hex-id={robberHex.id}
+                transform={`translate(${axialToPixel(robberHex.q, robberHex.r).x} ${axialToPixel(robberHex.q, robberHex.r).y})`}
+                role="img"
+                aria-label={`强盗位于${terrainLabel(robberHex.terrain)}`}
+              >
+                <title>强盗位于{terrainLabel(robberHex.terrain)}</title>
+                <ellipse className="robber-shadow" cy="16" rx="13" ry="5" />
+                <path className="robber-body" d="M-12 13Q-10-1-5-5Q0-8 5-5Q10-1 12 13Q0 18-12 13Z" />
+                <circle className="robber-head" cy="-10" r="6" />
+                <path className="robber-highlight" d="M-6-2Q0-6 6-2M-7 4Q0 1 7 4" />
+              </g>
+            )}
+            {game.interaction.kind !== "robber" ? null : game.interaction.targets.map((target) => {
+              const hex = game.map.hexes.find((candidate) => candidate.id === target.hexId);
+              if (hex === undefined) return null;
+              const center = axialToPixel(hex.q, hex.r);
+              const selected = target.hexId === selectedRobberHexId;
+              const activate = () => {
+                if (!busy) onRobberHexSelect?.(target.hexId);
+              };
+              return (
+                <g
+                  className={selected ? "robber-target is-selected" : "robber-target"}
+                  data-robber-target={target.hexId}
+                  key={target.hexId}
+                  transform={`translate(${center.x} ${center.y})`}
+                  role="button"
+                  tabIndex={busy ? -1 : 0}
+                  aria-disabled={busy}
+                  aria-label={`将强盗移动到${terrainLabel(hex.terrain)}${hex.numberToken === null ? "" : `，点数 ${hex.numberToken}`}`}
+                  onClick={activate}
+                  onKeyDown={(event) => activateOnKeyboard(event, activate)}
+                >
+                  <circle className="robber-target-hit" r="29" />
+                  <circle className="robber-target-ring" r="16" />
+                  <circle className="robber-target-dot" r="5" />
                 </g>
               );
             })}
@@ -275,6 +330,10 @@ function terrainMark(terrain: GameView["map"]["hexes"][number]["terrain"]): stri
     ore: "◆",
     desert: "☀",
   }[terrain];
+}
+
+function terrainLabel(terrain: GameView["map"]["hexes"][number]["terrain"]): string {
+  return TERRAIN_LABELS[terrain];
 }
 
 function phaseLabel(game: GameView): string {

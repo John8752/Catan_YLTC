@@ -1,4 +1,4 @@
-import { createStandardBoard, type TerrainType } from "../map/index.js";
+import { createStandardMap, type TerrainType } from "../map/index.js";
 import { emptyResourceHand } from "../resources/index.js";
 import type { GameState, PlayerSeed } from "./state.js";
 
@@ -59,7 +59,7 @@ export function createBaseGame(input: CreateGameInput): GameState {
     ruleProfile: "base-3-4",
     seed: input.seed,
     revision: 1,
-    board: createStandardBoard(input.seed),
+    map: createStandardMap(input.seed),
     players: input.players.map((player) => ({
       ...player,
       resources: emptyResourceHand(),
@@ -77,18 +77,18 @@ export function createBaseGame(input: CreateGameInput): GameState {
 }
 
 export function assertGameInvariant(state: GameState): void {
-  if (state.board.length !== 19) {
-    throw new Error(`Expected 19 board hexes, received ${state.board.length}`);
+  if (state.map.hexes.length !== 19) {
+    throw new Error(`Expected 19 board hexes, received ${state.map.hexes.length}`);
   }
 
-  const coordinateKeys = new Set(state.board.map((tile) => `${tile.q},${tile.r}`));
+  const coordinateKeys = new Set(state.map.hexes.map((tile) => `${tile.q},${tile.r}`));
 
-  if (coordinateKeys.size !== state.board.length) {
+  if (coordinateKeys.size !== state.map.hexes.length) {
     throw new Error("Board coordinates must be unique");
   }
 
   for (const [terrain, expectedCount] of Object.entries(EXPECTED_TERRAIN_COUNTS)) {
-    const actualCount = state.board.filter((tile) => tile.terrain === terrain).length;
+    const actualCount = state.map.hexes.filter((tile) => tile.terrain === terrain).length;
 
     if (actualCount !== expectedCount) {
       throw new Error(`Expected ${expectedCount} ${terrain} tiles, received ${actualCount}`);

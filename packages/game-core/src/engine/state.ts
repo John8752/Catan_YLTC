@@ -1,4 +1,4 @@
-import type { HexTile } from "../map/index.js";
+import type { GameMap } from "../map/index.js";
 import type { GameId, PlayerId } from "../primitives/index.js";
 import type { ResourceHand } from "../resources/index.js";
 import type { RuleProfile } from "../rulesets/index.js";
@@ -47,7 +47,7 @@ export interface GameState {
   readonly ruleProfile: RuleProfile;
   readonly seed: number;
   readonly revision: number;
-  readonly board: readonly HexTile[];
+  readonly map: GameMap;
   readonly players: readonly PlayerState[];
   readonly phase: GamePhase;
 }

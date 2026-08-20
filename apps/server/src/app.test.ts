@@ -41,7 +41,7 @@ describe("room API", () => {
     const room = startResponse.json<RoomView>();
 
     expect(startResponse.statusCode).toBe(200);
-    expect(room.game?.board).toHaveLength(19);
+    expect(room.game?.map.hexes).toHaveLength(19);
     expect(room.game?.phase.kind).toBe("setup");
   });
 

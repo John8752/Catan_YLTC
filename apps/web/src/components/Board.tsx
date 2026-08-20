@@ -39,7 +39,7 @@ export function Board({ game }: BoardProps) {
             </filter>
           </defs>
           <g filter="url(#tile-shadow)">
-            {game.board.map((tile) => {
+            {game.map.hexes.map((tile) => {
               const center = axialToPixel(tile.q, tile.r);
               const label = TERRAIN_LABELS[tile.terrain];
 
@@ -68,6 +68,56 @@ export function Board({ game }: BoardProps) {
               );
             })}
           </g>
+          <g className="board-edges" aria-label="道路位置">
+            {game.map.edges.map((edge) => {
+              const [firstId, secondId] = edge.vertexIds;
+              const first = game.map.vertices.find((vertex) => vertex.id === firstId);
+              const second = game.map.vertices.find((vertex) => vertex.id === secondId);
+
+              if (first === undefined || second === undefined) return null;
+
+              return (
+                <line
+                  key={edge.id}
+                  data-edge-id={edge.id}
+                  x1={first.x * HEX_SIZE}
+                  y1={first.y * HEX_SIZE}
+                  x2={second.x * HEX_SIZE}
+                  y2={second.y * HEX_SIZE}
+                />
+              );
+            })}
+          </g>
+          <g className="board-vertices" aria-label="建筑位置">
+            {game.map.vertices.map((vertex) => (
+              <circle
+                key={vertex.id}
+                data-vertex-id={vertex.id}
+                cx={vertex.x * HEX_SIZE}
+                cy={vertex.y * HEX_SIZE}
+                r="4.5"
+              />
+            ))}
+          </g>
+          <g className="board-ports" aria-label="港口">
+            {game.map.ports.map((port) => {
+              const [firstId, secondId] = port.vertexIds;
+              const first = game.map.vertices.find((vertex) => vertex.id === firstId);
+              const second = game.map.vertices.find((vertex) => vertex.id === secondId);
+
+              if (first === undefined || second === undefined) return null;
+              const x = ((first.x + second.x) / 2) * HEX_SIZE * 1.14;
+              const y = ((first.y + second.y) / 2) * HEX_SIZE * 1.14;
+              const label = port.kind === "generic" ? "3:1" : `2:1 ${terrainMark(port.resource)}`;
+
+              return (
+                <g key={port.id} data-port-id={port.id} transform={`translate(${x} ${y})`}>
+                  <circle r="15" />
+                  <text y="4" textAnchor="middle">{label}</text>
+                </g>
+              );
+            })}
+          </g>
         </svg>
       </div>
     </section>
@@ -88,7 +138,7 @@ function hexPoints(size: number): string {
   }).join(" ");
 }
 
-function terrainMark(terrain: GameView["board"][number]["terrain"]): string {
+function terrainMark(terrain: GameView["map"]["hexes"][number]["terrain"]): string {
   return {
     brick: "▧",
     lumber: "♠",

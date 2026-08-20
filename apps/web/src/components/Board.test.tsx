@@ -18,6 +18,9 @@ describe("Board", () => {
     const markup = renderToStaticMarkup(<Board game={projectGameForPlayer(game, "player_1")} />);
 
     expect(markup.match(/data-hex-id=/g)).toHaveLength(19);
+    expect(markup.match(/data-vertex-id=/g)).toHaveLength(54);
+    expect(markup.match(/data-edge-id=/g)).toHaveLength(72);
+    expect(markup.match(/data-port-id=/g)).toHaveLength(9);
     expect(markup).toContain("群岛初现");
   });
 });

@@ -2,7 +2,7 @@ import {
   resourceCardCount,
   type GamePhase,
   type GameState,
-  type HexTile,
+  type GameMap,
   type PlayerColor,
   type ResourceHand,
   type RuleProfile,
@@ -25,7 +25,7 @@ export interface GameView {
   readonly ruleProfile: RuleProfile;
   readonly seed: number;
   readonly revision: number;
-  readonly board: readonly HexTile[];
+  readonly map: GameMap;
   readonly players: readonly PublicPlayerView[];
   readonly phase: GamePhase;
   readonly you: PrivatePlayerView;
@@ -72,7 +72,7 @@ export function projectGameForPlayer(state: GameState, viewerId: string): GameVi
     ruleProfile: state.ruleProfile,
     seed: state.seed,
     revision: state.revision,
-    board: state.board,
+    map: state.map,
     players,
     phase: state.phase,
     you: {

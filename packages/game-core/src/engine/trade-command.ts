@@ -16,7 +16,15 @@ import type { GameState, PlayerState } from "./state.js";
 
 type TradeCommand = Extract<
   GameCommand,
-  { type: "OpenTradeOffer" | "AcceptTradeOffer" | "CancelTradeOffer" | "MaritimeTrade" }
+  {
+    type:
+      | "OpenTradeOffer"
+      | "AcceptTradeOffer"
+      | "DeclineTradeOffer"
+      | "CompleteTradeOffer"
+      | "CancelTradeOffer"
+      | "MaritimeTrade";
+  }
 >;
 
 export function executeTradeCommand(
@@ -32,7 +40,11 @@ export function executeTradeCommand(
     case "OpenTradeOffer":
       return openOffer(state, actorId, command.offerId, command.give, command.receive);
     case "AcceptTradeOffer":
-      return acceptOffer(state, actorId, command.offerId);
+      return respondToOffer(state, actorId, command.offerId, "accepted");
+    case "DeclineTradeOffer":
+      return respondToOffer(state, actorId, command.offerId, "declined");
+    case "CompleteTradeOffer":
+      return completeOffer(state, actorId, command.offerId, command.partnerId);
     case "CancelTradeOffer":
       return cancelOffer(state, actorId, command.offerId);
     case "MaritimeTrade":
@@ -68,20 +80,58 @@ function openOffer(
   if (!hasResources(proposer.resources, give)) return insufficient(state);
 
   return accepted(
-    { ...state, revision: state.revision + 1, openTrade: { offerId, proposerId: actorId, give, receive } },
+    {
+      ...state,
+      revision: state.revision + 1,
+      openTrade: { offerId, proposerId: actorId, give, receive, responses: [] },
+    },
     { type: "trade_offered", offerId, playerId: actorId },
   );
 }
 
-function acceptOffer(state: GameState, actorId: PlayerId, offerId: string): GameCommandResult {
+function respondToOffer(
+  state: GameState,
+  actorId: PlayerId,
+  offerId: string,
+  response: "accepted" | "declined",
+): GameCommandResult {
   const offer = state.openTrade;
   if (offer === null || offer.offerId !== offerId) return reject(state, "TRADE_NOT_FOUND", "Trade offer not found");
-  if (offer.proposerId === actorId) return reject(state, "INVALID_TRADE", "The proposer cannot accept their own offer");
+  if (offer.proposerId === actorId) return reject(state, "INVALID_TRADE", "The proposer cannot answer their own offer");
   if (state.phase.kind !== "turn" || state.phase.activePlayerId !== offer.proposerId) {
     return reject(state, "INVALID_TRADE", "The offer is no longer active");
   }
+  const responder = requirePlayer(state, actorId);
+  if (response === "accepted" && !hasResources(responder.resources, offer.receive)) {
+    return insufficient(state);
+  }
+  const responses = [
+    ...offer.responses.filter((candidate) => candidate.playerId !== actorId),
+    { playerId: actorId, response },
+  ];
+  return accepted(
+    { ...state, revision: state.revision + 1, openTrade: { ...offer, responses } },
+    { type: "trade_response_recorded", offerId, playerId: actorId, response },
+  );
+}
+
+function completeOffer(
+  state: GameState,
+  actorId: PlayerId,
+  offerId: string,
+  partnerId: PlayerId,
+): GameCommandResult {
+  const offer = state.openTrade;
+  if (offer === null || offer.offerId !== offerId) return reject(state, "TRADE_NOT_FOUND", "Trade offer not found");
+  if (offer.proposerId !== actorId) return reject(state, "INVALID_TRADE", "Only the proposer selects a trade partner");
+  if (state.phase.kind !== "turn" || state.phase.activePlayerId !== actorId) {
+    return reject(state, "INVALID_TRADE", "The offer is no longer active");
+  }
+  if (!offer.responses.some((candidate) => candidate.playerId === partnerId && candidate.response === "accepted")) {
+    return reject(state, "INVALID_TRADE", "The selected player has not accepted this offer");
+  }
   const proposer = requirePlayer(state, offer.proposerId);
-  const accepter = requirePlayer(state, actorId);
+  const accepter = requirePlayer(state, partnerId);
   if (!hasResources(proposer.resources, offer.give) || !hasResources(accepter.resources, offer.receive)) {
     return insufficient(state);
   }
@@ -103,7 +153,14 @@ function acceptOffer(state: GameState, actorId: PlayerId, offerId: string): Game
   });
   return accepted(
     { ...state, revision: state.revision + 1, players, openTrade: null },
-    { type: "player_trade_completed", offerId, proposerId: proposer.id, accepterId: accepter.id },
+    {
+      type: "player_trade_completed",
+      offerId,
+      proposerId: proposer.id,
+      accepterId: accepter.id,
+      give: offer.give,
+      receive: offer.receive,
+    },
   );
 }
 

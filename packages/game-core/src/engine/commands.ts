@@ -18,6 +18,8 @@ export type GameCommand =
       readonly receive: ResourceHand;
     }
   | { readonly type: "AcceptTradeOffer"; readonly offerId: string }
+  | { readonly type: "DeclineTradeOffer"; readonly offerId: string }
+  | { readonly type: "CompleteTradeOffer"; readonly offerId: string; readonly partnerId: PlayerId }
   | { readonly type: "CancelTradeOffer"; readonly offerId: string }
   | { readonly type: "MaritimeTrade"; readonly give: ResourceType; readonly receive: ResourceType }
   | { readonly type: "BuyDevelopmentCard" }
@@ -72,6 +74,7 @@ export type GameEvent =
       readonly type: "starting_resources_granted";
       readonly playerId: PlayerId;
       readonly total: number;
+      readonly resources: ResourceHand;
     }
   | { readonly type: "setup_completed"; readonly firstPlayerId: PlayerId }
   | {
@@ -79,7 +82,11 @@ export type GameEvent =
       readonly playerId: PlayerId;
       readonly dice: readonly [number, number];
     }
-  | { readonly type: "resources_produced"; readonly total: number }
+  | {
+      readonly type: "resources_produced";
+      readonly total: number;
+      readonly grants: readonly { readonly playerId: PlayerId; readonly resources: ResourceHand }[];
+    }
   | { readonly type: "resources_discarded"; readonly playerId: PlayerId; readonly total: number }
   | {
       readonly type: "robber_moved";
@@ -101,12 +108,20 @@ export type GameEvent =
       readonly locationId: EdgeId | VertexId;
     }
   | { readonly type: "trade_offered"; readonly offerId: string; readonly playerId: PlayerId }
+  | {
+      readonly type: "trade_response_recorded";
+      readonly offerId: string;
+      readonly playerId: PlayerId;
+      readonly response: "accepted" | "declined";
+    }
   | { readonly type: "trade_cancelled"; readonly offerId: string; readonly playerId: PlayerId }
   | {
       readonly type: "player_trade_completed";
       readonly offerId: string;
       readonly proposerId: PlayerId;
       readonly accepterId: PlayerId;
+      readonly give: ResourceHand;
+      readonly receive: ResourceHand;
     }
   | {
       readonly type: "maritime_trade_completed";

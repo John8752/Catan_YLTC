@@ -6,4 +6,10 @@ export interface TradeOfferState {
   readonly proposerId: PlayerId;
   readonly give: ResourceHand;
   readonly receive: ResourceHand;
+  readonly responses: readonly TradeOfferResponse[];
+}
+
+export interface TradeOfferResponse {
+  readonly playerId: PlayerId;
+  readonly response: "accepted" | "declined";
 }

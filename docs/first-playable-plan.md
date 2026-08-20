@@ -221,7 +221,7 @@ The exhaustive command union should include:
 - `PlaceInitialSettlement`, `PlaceInitialRoad`;
 - `RollDice`, `DiscardResources`, `MoveRobber`;
 - `BuildRoad`, `BuildSettlement`, `BuildCity`;
-- `OpenTradeOffer`, `AcceptTradeOffer`, `CancelTradeOffer`;
+- `OpenTradeOffer`, `AcceptTradeOffer`, `DeclineTradeOffer`, `CompleteTradeOffer`, `CancelTradeOffer`;
 - `MaritimeTrade`;
 - `BuyDevelopmentCard`, `PlayKnight`, `PlayRoadBuilding`, `PlayMonopoly`, `PlayResourceChoice`;
 - `EndTurn`.

@@ -103,7 +103,7 @@ describe("recorded command replay", () => {
     expect(replayed.state).toEqual(state);
     expect(replayed.events.some((event) => event.type === "game_won")).toBe(true);
     expect(createHash("sha256").update(JSON.stringify(replayed)).digest("hex")).toBe(
-      "fb593cf29bc69e29ca5ce03f87106574607fb2c412a53d7582294b093c2ab9c7",
+      "4423673ed971e975dc34bfaee2d75430129a0f2487bc4252822101ca594420c9",
     );
   });
 });

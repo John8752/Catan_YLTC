@@ -87,12 +87,13 @@ Every build validates phase, active player, cost, bank transfer, piece supply, o
 ### Player trade
 
 - Only the active player can open an offer during the action stage.
-- The offer states non-empty resources given by the active player and non-empty resources requested from one accepting opponent.
+- The offer states non-empty resources given by the active player and non-empty resources requested from one opponent; it is broadcast to every other seated player.
 - The active player cannot offer the same resource on both sides or offer cards they do not hold.
-- An opponent may accept only if they hold the requested resources at acceptance time.
-- Acceptance performs one atomic two-way transfer. Stale or unaffordable acceptance is rejected without partial transfer.
+- Every opponent may independently accept or decline. A player may change their response while the offer remains open.
+- Acceptance records intent only and transfers no resources. The proposer sees all pending, accepted and declined responses, then chooses exactly one accepted player.
+- Completion revalidates both hands and performs one atomic two-way transfer. A stale or unaffordable completion is rejected without partial transfer.
 - The active player may cancel the offer. A counteroffer is represented by cancelling/rejecting and opening a new offer, keeping the first implementation deterministic and auditable.
-- Other players' hand composition remains hidden; only the public offer and final public trade participants are visible.
+- Other players' hand composition remains hidden; the public offer, responses, selected participants and exact completed exchange are visible.
 
 ### Maritime trade
 
@@ -130,7 +131,7 @@ Random deck order and stolen resources are injected outcomes and appear in the p
 - A disconnected player is not removed and their turn is not skipped. The game waits for them.
 - Every accepted command has a unique command ID, expected revision and actor credential.
 - Repeating an accepted command ID returns the original result rather than applying it twice.
-- Public history shows rolls, builds, trades, robber movement, awards and turn changes without exposing private hands, stolen resource identity or unplayed development cards.
+- Public history shows rolls, exact production grants by player, builds, trade responses and completed exchanges, robber movement, awards and turn changes without exposing total private hand composition, stolen resource identity or unplayed development cards.
 
 ## Rule acceptance boundary
 

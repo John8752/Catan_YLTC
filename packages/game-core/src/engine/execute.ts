@@ -54,6 +54,8 @@ function dispatchGameCommand(
       return executeBuildCommand(state, actorId, command);
     case "OpenTradeOffer":
     case "AcceptTradeOffer":
+    case "DeclineTradeOffer":
+    case "CompleteTradeOffer":
     case "CancelTradeOffer":
     case "MaritimeTrade":
       return executeTradeCommand(state, actorId, command);
@@ -166,6 +168,7 @@ function placeInitialSettlement(
       type: "starting_resources_granted",
       playerId: actorId,
       total: totalHand(grant),
+      resources: grant,
     });
   }
 
@@ -259,6 +262,10 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
 
   const claims = calculateProductionClaims(state.map, state.buildings, total);
   const production = resolveProductionClaims(state.bank, claims);
+  const grants = state.players.flatMap((player) => {
+    const resources = production.grants.get(player.id);
+    return resources === undefined || totalHand(resources) === 0 ? [] : [{ playerId: player.id, resources }];
+  });
   const players = state.players.map((player) => {
     const grant = production.grants.get(player.id);
     return grant === undefined
@@ -277,7 +284,11 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
     },
     [
       { type: "dice_rolled", playerId: actorId, dice },
-      { type: "resources_produced", total: claims.reduce((sum, claim) => sum + claim.amount, 0) },
+      {
+        type: "resources_produced",
+        total: grants.reduce((sum, grant) => sum + totalHand(grant.resources), 0),
+        grants,
+      },
     ],
   );
 }

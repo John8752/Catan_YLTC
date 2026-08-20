@@ -19,11 +19,12 @@ const players: readonly PlayerSeed[] = [
 ];
 
 describe("atomic trading", () => {
-  it("opens and accepts a player offer at accept-time inventory", () => {
+  it("collects multiple responses and lets the proposer select the partner", () => {
     let game = actionState();
     game = withHands(game, {
       player_1: resourceAmounts({ brick: 2 }),
       player_2: resourceAmounts({ ore: 1 }),
+      player_3: resourceAmounts({ ore: 1 }),
     });
     game = accept(executeGameCommand(game, "player_1", {
       type: "OpenTradeOffer",
@@ -43,9 +44,48 @@ describe("atomic trading", () => {
       type: "AcceptTradeOffer",
       offerId: "offer_1",
     }));
+    game = accept(executeGameCommand(game, "player_3", {
+      type: "AcceptTradeOffer",
+      offerId: "offer_1",
+    }));
+    expect(game.openTrade?.responses).toEqual([
+      { playerId: "player_2", response: "accepted" },
+      { playerId: "player_3", response: "accepted" },
+    ]);
+    expect(game.players.find((player) => player.id === "player_1")?.resources).toMatchObject({ brick: 2, ore: 0 });
+
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "CompleteTradeOffer",
+      offerId: "offer_1",
+      partnerId: "player_3",
+    }));
     expect(game.openTrade).toBeNull();
     expect(game.players.find((player) => player.id === "player_1")?.resources).toMatchObject({ brick: 0, ore: 1 });
-    expect(game.players.find((player) => player.id === "player_2")?.resources).toMatchObject({ brick: 2, ore: 0 });
+    expect(game.players.find((player) => player.id === "player_2")?.resources).toMatchObject({ brick: 0, ore: 1 });
+    expect(game.players.find((player) => player.id === "player_3")?.resources).toMatchObject({ brick: 2, ore: 0 });
+  });
+
+  it("records declines and rejects an unaccepted partner", () => {
+    let game = withHands(actionState(), {
+      player_1: resourceAmounts({ brick: 1 }),
+      player_2: resourceAmounts({ ore: 1 }),
+    });
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_declined",
+      give: resourceAmounts({ brick: 1 }),
+      receive: resourceAmounts({ ore: 1 }),
+    }));
+    game = accept(executeGameCommand(game, "player_2", {
+      type: "DeclineTradeOffer",
+      offerId: "offer_declined",
+    }));
+    expect(game.openTrade?.responses).toContainEqual({ playerId: "player_2", response: "declined" });
+    expect(executeGameCommand(game, "player_1", {
+      type: "CompleteTradeOffer",
+      offerId: "offer_declined",
+      partnerId: "player_2",
+    })).toMatchObject({ accepted: false, error: { code: "INVALID_TRADE" } });
   });
 
   it("derives a resource-port ratio and trades atomically with the bank", () => {

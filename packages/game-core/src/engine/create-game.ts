@@ -135,5 +135,14 @@ export function assertGameInvariant(state: GameState): void {
   if (new Set(state.roads.map((road) => road.edgeId)).size !== state.roads.length) {
     throw new Error("An edge cannot contain multiple roads");
   }
+
+  if (state.openTrade !== null) {
+    if (!playerIds.has(state.openTrade.proposerId)) throw new Error("Trade proposer must be a player");
+    const responders = state.openTrade.responses.map((response) => response.playerId);
+    if (new Set(responders).size !== responders.length) throw new Error("Trade responses must be unique per player");
+    if (responders.some((playerId) => !playerIds.has(playerId) || playerId === state.openTrade?.proposerId)) {
+      throw new Error("Trade responders must be other players");
+    }
+  }
 }
 import { emptyAwards } from "../awards/index.js";

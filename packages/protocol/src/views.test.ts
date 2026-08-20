@@ -1,4 +1,4 @@
-import { createBaseGame, resourceAmounts } from "@catan/game-core";
+import { createBaseGame, resourceAmounts, type GameEventRecord } from "@catan/game-core";
 import { describe, expect, it } from "vitest";
 import { projectGameForPlayer } from "./views.js";
 
@@ -108,5 +108,64 @@ describe("player-safe game projections", () => {
       settlementVertexIds: [],
       cityVertexIds: [],
     });
+  });
+
+  it("expands production into exact public grants for every player", () => {
+    const game = createBaseGame({
+      id: "game_production_history",
+      seed: 12,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [{
+      revision: 8,
+      event: {
+        type: "resources_produced",
+        total: 6,
+        grants: [
+          { playerId: "player_1", resources: resourceAmounts({ brick: 1, lumber: 1 }) },
+          { playerId: "player_3", resources: resourceAmounts({ ore: 2 }) },
+        ],
+      },
+    }] satisfies GameEventRecord[];
+
+    expect(projectGameForPlayer(game, "player_2", records).history.map((entry) => entry.message)).toEqual([
+      "林 获得 1 砖、1 木",
+      "陈 获得 2 矿",
+    ]);
+  });
+
+  it("keeps trade responses and the chosen final exchange publicly auditable", () => {
+    const game = createBaseGame({
+      id: "game_trade_history",
+      seed: 13,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [
+      { revision: 5, event: { type: "trade_response_recorded", offerId: "offer_1", playerId: "player_2", response: "accepted" } },
+      {
+        revision: 6,
+        event: {
+          type: "player_trade_completed",
+          offerId: "offer_1",
+          proposerId: "player_1",
+          accepterId: "player_2",
+          give: resourceAmounts({ brick: 2 }),
+          receive: resourceAmounts({ grain: 1 }),
+        },
+      },
+    ] satisfies GameEventRecord[];
+
+    expect(projectGameForPlayer(game, "player_3", records).history.map((entry) => entry.message)).toEqual([
+      "周 同意了交易报价",
+      "林 给 周 2 砖，获得 1 麦",
+    ]);
   });
 });

@@ -6,6 +6,10 @@ Deliver one locally operated, complete `base-3-4` match that three or four human
 
 The authoritative behavior contract is [base-3-4-playable.md](./rules/base-3-4-playable.md). If implementation pressure conflicts with that contract, change the rule document and its tests deliberately; do not silently simplify the product.
 
+## Delivery status
+
+S0–S10 are implemented at `f03eef4`. The release gate includes a reviewed full-match replay digest, dependency-boundary checks, two consecutive full validation passes, a three-context browser flow, reconnect/per-tab seat coverage and a 390×844 responsive check. Exact evidence lives in [validation/first-playable.md](./validation/first-playable.md).
+
 ## Definition of done
 
 The version is done only when all of the following are evidenced:

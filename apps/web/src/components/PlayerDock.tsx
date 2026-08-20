@@ -40,6 +40,7 @@ export function PlayerDock({ game, busy, onCommand, buildMode, onBuildModeChange
               <div
                 className={cn("relative min-w-0 overflow-hidden rounded-xl bg-gradient-to-b px-2 py-2 text-white shadow-md", presentation.className)}
                 key={resource}
+                data-resource-target={`${game.you.id}:${resource}`}
               >
                 <span className="block text-xl leading-none opacity-70" aria-hidden="true">{presentation.mark}</span>
                 <span className="mt-1 block text-[10px] font-bold opacity-85">{presentation.label}</span>

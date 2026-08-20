@@ -19,6 +19,7 @@ import {
   type GameMap,
   type PlayerColor,
   type ResourceHand,
+  type ResourceGrantSource,
   type RoadState,
   RESOURCE_TYPES,
   type ResourceType,
@@ -65,6 +66,16 @@ export interface GameView {
   readonly developmentCardPlayedThisTurn: boolean;
   readonly awards: AwardsState;
   readonly history: readonly GameHistoryEntryView[];
+  readonly effects: readonly PublicGameEffectView[];
+}
+
+export interface PublicGameEffectView {
+  readonly id: string;
+  readonly revision: number;
+  readonly kind: "resource-grant";
+  readonly reason: "production" | "starting-resources";
+  readonly grants: readonly { readonly playerId: string; readonly resources: ResourceHand }[];
+  readonly sources: readonly ResourceGrantSource[];
 }
 
 export interface GameHistoryEntryView {
@@ -207,7 +218,34 @@ export function projectGameForPlayer(
     developmentCardPlayedThisTurn: state.developmentCardPlayedThisTurn,
     awards: state.awards,
     history: eventRecords.flatMap((record) => projectHistoryRecord(state, viewerId, record)),
+    effects: eventRecords.flatMap(projectPublicEffect),
   };
+}
+
+function projectPublicEffect(record: GameEventRecord): readonly PublicGameEffectView[] {
+  const event = record.event;
+  if (event.type === "resources_produced") {
+    if (event.grants.length === 0) return [];
+    return [{
+      id: `${record.revision}:resources-produced`,
+      revision: record.revision,
+      kind: "resource-grant",
+      reason: "production",
+      grants: event.grants,
+      sources: event.sources,
+    }];
+  }
+  if (event.type === "starting_resources_granted" && event.total > 0) {
+    return [{
+      id: `${record.revision}:starting-resources:${event.playerId}`,
+      revision: record.revision,
+      kind: "resource-grant",
+      reason: "starting-resources",
+      grants: [{ playerId: event.playerId, resources: event.resources }],
+      sources: event.sources,
+    }];
+  }
+  return [];
 }
 
 function projectHistoryRecord(

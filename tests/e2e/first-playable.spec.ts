@@ -18,21 +18,39 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await joinRoom(third, "舟", roomCode ?? "");
     await expect(host.getByText("3/4")).toBeVisible();
     await host.getByRole("button", { name: "生成岛屿并开局" }).click();
+    const artifactDir = path.join(process.cwd(), "output", "playwright");
+    await mkdir(artifactDir, { recursive: true });
+    let capturedResourceEffect = false;
 
     for (let placement = 0; placement < 6; placement += 1) {
       const settlementPage = await pageWithAction(pages, "在这里放置定居点");
       await clickFirstActionable(settlementPage, "在这里放置定居点");
+      if (placement >= 3 && !capturedResourceEffect) {
+        const flights = settlementPage.locator("[data-resource-flight]");
+        if (await flights.count() > 0) {
+          await expect(flights.first()).toBeVisible();
+          const targetKey = await flights.first().getAttribute("data-resource-flight");
+          await settlementPage.waitForTimeout(260);
+          await settlementPage.screenshot({ path: path.join(artifactDir, "resource-production-fx.png"), fullPage: true });
+          if (targetKey === null) throw new Error("Resource flight is missing its target key");
+          const target = settlementPage.locator(`[data-resource-target="${targetKey}"]`);
+          await expect(target).toBeVisible();
+          await expect.poll(() => target.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
+          await settlementPage.waitForTimeout(170);
+          await settlementPage.screenshot({ path: path.join(artifactDir, "resource-arrival-fx.png"), fullPage: true });
+          capturedResourceEffect = true;
+        }
+      }
       const roadPage = await pageWithAction(pages, "在这里放置道路");
       expect(roadPage).toBe(settlementPage);
       await clickFirstActionable(roadPage, "在这里放置道路");
     }
+    expect(capturedResourceEffect).toBe(true);
 
     await expect(host.getByRole("button", { name: "掷骰子" })).toBeVisible();
     await host.getByRole("button", { name: "掷骰子" }).click();
     await expect(host.getByLabel(/骰子：\d \+ \d/)).toBeVisible();
     await expect(host.getByRole("img", { name: "由十九块六边形地形组成的游戏棋盘" })).toBeVisible();
-    const artifactDir = path.join(process.cwd(), "output", "playwright");
-    await mkdir(artifactDir, { recursive: true });
     await host.screenshot({ path: path.join(artifactDir, "e2e-desktop.png"), fullPage: true });
 
     await second.reload();

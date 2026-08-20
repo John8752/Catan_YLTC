@@ -31,7 +31,7 @@ export function Board({ game, busy = false, onCommand, buildMode = null }: Board
   ]);
 
   return (
-    <section className="board-shell" aria-labelledby="board-title">
+    <section className="board-shell" data-board-root="true" aria-labelledby="board-title">
       <div className="board-heading">
         <div>
           <p className="eyebrow">种子 {game.seed}</p>
@@ -191,6 +191,7 @@ export function Board({ game, busy = false, onCommand, buildMode = null }: Board
                   key={building.vertexId}
                   className={`piece-color-${player.color}`}
                   data-piece-kind={building.kind}
+                  data-vertex-id={building.vertexId}
                   transform={`translate(${vertex.x * HEX_SIZE} ${vertex.y * HEX_SIZE})`}
                   role="img"
                   aria-label={`${player.name}的${building.kind === "city" ? "城市" : "村庄"}`}

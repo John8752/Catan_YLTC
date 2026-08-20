@@ -19,7 +19,7 @@ import { assertGameInvariant } from "./create-game.js";
 import { executeBuildCommand } from "./build-command.js";
 import { executeTradeCommand } from "./trade-command.js";
 import { executeDevelopmentCommand } from "./development-command.js";
-import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent } from "./commands.js";
+import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent, ResourceGrantSource } from "./commands.js";
 import type { GamePhase, GameState, PlayerState } from "./state.js";
 
 export function executeGameCommand(
@@ -158,7 +158,11 @@ function placeInitialSettlement(
   const events: GameEvent[] = [{ type: "initial_settlement_placed", playerId: actorId, vertexId }];
 
   if (placementCount === 2) {
-    const grant = startingResourceGrant(state, vertexId);
+    const sources = startingResourceSources(state, actorId, vertexId);
+    const grant = sources.reduce((resources, source) => {
+      resources[source.resource] += source.amount;
+      return resources;
+    }, emptyAmounts());
     bank = subtractHand(bank, grant);
     players = updatePlayer(players, actorId, (player) => ({
       ...player,
@@ -169,6 +173,7 @@ function placeInitialSettlement(
       playerId: actorId,
       total: totalHand(grant),
       resources: grant,
+      sources,
     });
   }
 
@@ -266,6 +271,7 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
     const resources = production.grants.get(player.id);
     return resources === undefined || totalHand(resources) === 0 ? [] : [{ playerId: player.id, resources }];
   });
+  const sources = claims.filter((claim) => (production.grants.get(claim.playerId)?.[claim.resource] ?? 0) > 0);
   const players = state.players.map((player) => {
     const grant = production.grants.get(player.id);
     return grant === undefined
@@ -288,6 +294,7 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
         type: "resources_produced",
         total: grants.reduce((sum, grant) => sum + totalHand(grant.resources), 0),
         grants,
+        sources,
       },
     ],
   );
@@ -435,17 +442,23 @@ function randomResourceFromHand(hand: ResourceHand, random: RandomSource): Resou
   throw new Error("Random resource selection escaped the hand");
 }
 
-function startingResourceGrant(state: GameState, vertexId: VertexId): ResourceHand {
+function startingResourceSources(
+  state: GameState,
+  playerId: PlayerId,
+  vertexId: VertexId,
+): readonly ResourceGrantSource[] {
   const vertex = state.map.vertices.find((candidate) => candidate.id === vertexId);
   if (vertex === undefined) throw new Error(`Missing vertex ${vertexId}`);
-  const grant = emptyAmounts();
+  const sources: ResourceGrantSource[] = [];
 
   for (const adjacentHexId of vertex.adjacentHexIds) {
-    const terrain = state.map.hexes.find((hex) => hex.id === adjacentHexId)?.terrain;
-    if (terrain !== undefined && terrain !== "desert") grant[terrain] += 1;
+    const hex = state.map.hexes.find((candidate) => candidate.id === adjacentHexId);
+    if (hex !== undefined && hex.terrain !== "desert") {
+      sources.push({ playerId, resource: hex.terrain, amount: 1, hexId: hex.id, vertexId });
+    }
   }
 
-  return grant;
+  return sources;
 }
 
 function currentSetupPlayer(phase: Extract<GamePhase, { kind: "setup" }>): PlayerId | undefined {

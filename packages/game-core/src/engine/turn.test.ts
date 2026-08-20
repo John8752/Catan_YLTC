@@ -37,9 +37,8 @@ describe("normal turn commands", () => {
       0,
     );
     const dice = diceForTotal(producingHex.numberToken);
-    const rolled = accept(
-      executeGameCommand(setup, "player_1", { type: "RollDice" }, sequenceRandom(dice)),
-    );
+    const rollResult = executeGameCommand(setup, "player_1", { type: "RollDice" }, sequenceRandom(dice));
+    const rolled = accept(rollResult);
 
     if (rolled.lastRoll === null) throw new Error("Roll result was not recorded");
     expect(rolled.lastRoll[0] + rolled.lastRoll[1]).toBe(producingHex.numberToken);
@@ -47,6 +46,13 @@ describe("normal turn commands", () => {
     expect(
       rolled.players.reduce((total, player) => total + resourceCardCount(player.resources), 0),
     ).toBeGreaterThan(beforeCards);
+    if (!rollResult.accepted) throw new Error("Expected accepted roll");
+    const productionEvent = rollResult.events.find((event) => event.type === "resources_produced");
+    expect(productionEvent).toEqual(expect.objectContaining({
+      sources: expect.arrayContaining([
+        expect.objectContaining({ hexId: producingHex.id, resource: producingHex.terrain }),
+      ]),
+    }));
 
     const repeated = executeGameCommand(rolled, "player_1", { type: "RollDice" }, sequenceRandom(dice));
     expect(repeated).toMatchObject({ accepted: false, error: { code: "WRONG_PHASE" } });

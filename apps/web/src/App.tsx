@@ -13,6 +13,8 @@ import { Board } from "./components/Board.js";
 import { PlayerDock } from "./components/PlayerDock.js";
 import { RoomPanel } from "./components/RoomPanel.js";
 import { Welcome } from "./components/Welcome.js";
+import { ResourceEffectLayer } from "./effects/ResourceEffectLayer.js";
+import { useGameEffectQueue } from "./effects/use-game-effect-queue.js";
 import { clearLegacySharedSession, createPlayerSessionStore } from "./player-session.js";
 
 clearLegacySharedSession(window.localStorage);
@@ -27,6 +29,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buildMode, setBuildMode] = useState<"road" | "settlement" | "city" | null>(null);
+  const { activeEffect, completeActiveEffect } = useGameEffectQueue(room?.game ?? null);
 
   useEffect(() => {
     if (session === null) {
@@ -197,6 +200,7 @@ export function App() {
         onStart={handleStart}
         onLeave={handleLeave}
       />
+      <ResourceEffectLayer effect={activeEffect} onComplete={completeActiveEffect} />
       {error === null ? null : <p className="toast-error" role="alert">{error}</p>}
     </main>
   );

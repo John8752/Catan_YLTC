@@ -129,6 +129,11 @@ describe("player-safe game projections", () => {
           { playerId: "player_1", resources: resourceAmounts({ brick: 1, lumber: 1 }) },
           { playerId: "player_3", resources: resourceAmounts({ ore: 2 }) },
         ],
+        sources: [
+          { playerId: "player_1", resource: "brick", amount: 1, hexId: "hex_brick", vertexId: "vertex_1" },
+          { playerId: "player_1", resource: "lumber", amount: 1, hexId: "hex_lumber", vertexId: "vertex_1" },
+          { playerId: "player_3", resource: "ore", amount: 2, hexId: "hex_ore", vertexId: "vertex_3" },
+        ],
       },
     }] satisfies GameEventRecord[];
 
@@ -136,6 +141,11 @@ describe("player-safe game projections", () => {
       "林 获得 1 砖、1 木",
       "陈 获得 2 矿",
     ]);
+    expect(projectGameForPlayer(game, "player_2", records).effects).toContainEqual(expect.objectContaining({
+      id: "8:resources-produced",
+      reason: "production",
+      sources: expect.arrayContaining([expect.objectContaining({ hexId: "hex_ore", amount: 2 })]),
+    }));
   });
 
   it("keeps trade responses and the chosen final exchange publicly auditable", () => {

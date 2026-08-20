@@ -1,12 +1,14 @@
 import type { BuildingState } from "../buildables/index.js";
 import type { GameMap } from "../map/index.js";
-import type { PlayerId } from "../primitives/index.js";
+import type { HexId, PlayerId, VertexId } from "../primitives/index.js";
 import { RESOURCE_TYPES, emptyResourceHand, type ResourceHand, type ResourceType } from "./types.js";
 
 export interface ProductionClaim {
   readonly playerId: PlayerId;
   readonly resource: ResourceType;
   readonly amount: number;
+  readonly hexId: HexId;
+  readonly vertexId: VertexId;
 }
 
 export interface ProductionResolution {
@@ -41,6 +43,8 @@ export function calculateProductionClaims(
         playerId: building.ownerId,
         resource: hex.terrain,
         amount: building.kind === "city" ? 2 : 1,
+        hexId: hex.id,
+        vertexId: building.vertexId,
       });
     }
   }

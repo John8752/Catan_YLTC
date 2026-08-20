@@ -75,6 +75,7 @@ export type GameEvent =
       readonly playerId: PlayerId;
       readonly total: number;
       readonly resources: ResourceHand;
+      readonly sources: readonly ResourceGrantSource[];
     }
   | { readonly type: "setup_completed"; readonly firstPlayerId: PlayerId }
   | {
@@ -86,6 +87,7 @@ export type GameEvent =
       readonly type: "resources_produced";
       readonly total: number;
       readonly grants: readonly { readonly playerId: PlayerId; readonly resources: ResourceHand }[];
+      readonly sources: readonly ResourceGrantSource[];
     }
   | { readonly type: "resources_discarded"; readonly playerId: PlayerId; readonly total: number }
   | {
@@ -161,4 +163,12 @@ export type GameCommandResult =
 export interface GameEventRecord {
   readonly revision: number;
   readonly event: GameEvent;
+}
+
+export interface ResourceGrantSource {
+  readonly playerId: PlayerId;
+  readonly resource: ResourceType;
+  readonly amount: number;
+  readonly hexId: HexId;
+  readonly vertexId: VertexId;
 }

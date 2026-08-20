@@ -40,8 +40,10 @@
 - Custom global CSS is reserved for theme tokens, base document styles, the SVG board/playfield renderer and behavior Tailwind cannot express clearly. Do not add new page-level business UI as large global selector blocks.
 - UI dependencies remain in `apps/web`; `game-core` and `protocol` must never import Tailwind, shadcn, Radix or React.
 - New shared controls belong in `src/components/ui`; game-specific compositions belong in `src/components`.
+- Reward and state-change motion must consume player-safe projected effects from `GameView.effects`; never infer gameplay events by diffing private hands or replay old effects after reconnect.
+- Keep transient game motion in `src/effects`, target semantic `data-*` anchors, and provide a `prefers-reduced-motion` path without decorative travel.
 
-See ADR-0005 before changing the frontend stack or introducing another component library.
+See ADR-0005 before changing the frontend stack or introducing another component library. See ADR-0006 before changing how server events drive client effects.
 
 ## Domain modularity
 

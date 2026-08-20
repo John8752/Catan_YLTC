@@ -94,7 +94,7 @@ export function RoomPanel({
                   <div className={cn(
                     "flex items-center gap-3 rounded-xl px-2.5 py-2.5",
                     member.id === playerId ? "bg-white/55 ring-1 ring-[#5b7f73]/20" : "bg-transparent",
-                  )} key={member.id} data-player-id={member.id} data-current-player={member.id === playerId ? "true" : undefined}>
+                  )} key={member.id} data-player-id={member.id} data-player-target={member.id} data-current-player={member.id === playerId ? "true" : undefined}>
                     <span className={cn("size-3.5 shrink-0 rounded-[5px] shadow-sm ring-2 ring-white/70", PLAYER_COLORS[member.color])} aria-hidden="true" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">

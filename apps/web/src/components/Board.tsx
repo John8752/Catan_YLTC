@@ -16,11 +16,19 @@ export interface BoardProps {
   readonly game: GameView;
   readonly busy?: boolean;
   readonly onCommand?: (command: GameCommand) => void;
+  readonly buildMode?: "road" | "settlement" | "city" | null;
 }
 
-export function Board({ game, busy = false, onCommand }: BoardProps) {
-  const selectableVertices = new Set(game.interaction.vertexIds);
-  const selectableEdges = new Set(game.interaction.edgeIds);
+export function Board({ game, busy = false, onCommand, buildMode = null }: BoardProps) {
+  const selectableVertices = new Set([
+    ...game.interaction.vertexIds,
+    ...(game.interaction.kind === "turn-action" && buildMode === "settlement" ? game.interaction.settlementVertexIds : []),
+    ...(game.interaction.kind === "turn-action" && buildMode === "city" ? game.interaction.cityVertexIds : []),
+  ]);
+  const selectableEdges = new Set([
+    ...game.interaction.edgeIds,
+    ...(game.interaction.kind === "turn-action" && buildMode === "road" ? game.interaction.roadEdgeIds : []),
+  ]);
 
   return (
     <section className="board-shell" aria-labelledby="board-title">
@@ -96,12 +104,16 @@ export function Board({ game, busy = false, onCommand }: BoardProps) {
                   aria-label={selectableEdges.has(edge.id) ? "在这里放置道路" : undefined}
                   onClick={() => {
                     if (selectableEdges.has(edge.id) && !busy) {
-                      onCommand?.({ type: "PlaceInitialRoad", edgeId: edge.id });
+                      onCommand?.(game.interaction.kind === "setup-road"
+                        ? { type: "PlaceInitialRoad", edgeId: edge.id }
+                        : { type: "BuildRoad", edgeId: edge.id });
                     }
                   }}
                   onKeyDown={(event) => activateOnKeyboard(event, () => {
                     if (selectableEdges.has(edge.id) && !busy) {
-                      onCommand?.({ type: "PlaceInitialRoad", edgeId: edge.id });
+                      onCommand?.(game.interaction.kind === "setup-road"
+                        ? { type: "PlaceInitialRoad", edgeId: edge.id }
+                        : { type: "BuildRoad", edgeId: edge.id });
                     }
                   })}
                 />
@@ -122,12 +134,20 @@ export function Board({ game, busy = false, onCommand }: BoardProps) {
                 aria-label={selectableVertices.has(vertex.id) ? "在这里放置定居点" : undefined}
                 onClick={() => {
                   if (selectableVertices.has(vertex.id) && !busy) {
-                    onCommand?.({ type: "PlaceInitialSettlement", vertexId: vertex.id });
+                    onCommand?.(game.interaction.kind === "setup-settlement"
+                      ? { type: "PlaceInitialSettlement", vertexId: vertex.id }
+                      : buildMode === "city"
+                        ? { type: "BuildCity", vertexId: vertex.id }
+                        : { type: "BuildSettlement", vertexId: vertex.id });
                   }
                 }}
                 onKeyDown={(event) => activateOnKeyboard(event, () => {
                   if (selectableVertices.has(vertex.id) && !busy) {
-                    onCommand?.({ type: "PlaceInitialSettlement", vertexId: vertex.id });
+                    onCommand?.(game.interaction.kind === "setup-settlement"
+                      ? { type: "PlaceInitialSettlement", vertexId: vertex.id }
+                      : buildMode === "city"
+                        ? { type: "BuildCity", vertexId: vertex.id }
+                        : { type: "BuildSettlement", vertexId: vertex.id });
                   }
                 })}
               />

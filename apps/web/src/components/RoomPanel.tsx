@@ -9,6 +9,8 @@ export interface RoomPanelProps {
   readonly onStart: () => void;
   readonly onLeave: () => void;
   readonly onGameCommand: (command: GameCommand) => void;
+  readonly buildMode: "road" | "settlement" | "city" | null;
+  readonly onBuildModeChange: (mode: "road" | "settlement" | "city" | null) => void;
 }
 
 export function RoomPanel({
@@ -19,6 +21,8 @@ export function RoomPanel({
   onStart,
   onLeave,
   onGameCommand,
+  buildMode,
+  onBuildModeChange,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
   const canStart = isHost && room.members.length >= 3 && room.game === null;
@@ -92,7 +96,13 @@ export function RoomPanel({
             {room.game.lastRoll === null ? null : (
               <p className="dice-result">骰子：{room.game.lastRoll[0]} + {room.game.lastRoll[1]}</p>
             )}
-            <GameControls game={room.game} busy={busy} onCommand={onGameCommand} />
+            <GameControls
+              game={room.game}
+              busy={busy}
+              onCommand={onGameCommand}
+              buildMode={buildMode}
+              onBuildModeChange={onBuildModeChange}
+            />
             <p>{room.game.interaction.instruction}</p>
           </div>
         </>

@@ -15,6 +15,7 @@ import {
   type ResourceType,
 } from "../resources/index.js";
 import { assertGameInvariant } from "./create-game.js";
+import { executeBuildCommand } from "./build-command.js";
 import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent } from "./commands.js";
 import type { GamePhase, GameState, PlayerState } from "./state.js";
 
@@ -35,6 +36,10 @@ export function executeGameCommand(
       return discardResources(state, actorId, command.resources);
     case "MoveRobber":
       return moveRobber(state, actorId, command.hexId, command.victimId, random);
+    case "BuildRoad":
+    case "BuildSettlement":
+    case "BuildCity":
+      return executeBuildCommand(state, actorId, command);
     case "EndTurn":
       return endTurn(state, actorId);
   }

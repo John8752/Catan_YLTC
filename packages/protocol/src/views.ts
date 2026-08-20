@@ -2,7 +2,10 @@ import {
   resourceCardCount,
   legalInitialRoadEdges,
   legalInitialSettlementVertices,
+  legalCityVertices,
+  legalRoadEdges,
   legalRobberTargets,
+  legalSettlementVertices,
   type BuildingState,
   type GamePhase,
   type GameState,
@@ -75,6 +78,9 @@ export type GameInteractionView =
       readonly instruction: string;
       readonly vertexIds: readonly [];
       readonly edgeIds: readonly [];
+      readonly roadEdgeIds: readonly string[];
+      readonly settlementVertexIds: readonly string[];
+      readonly cityVertexIds: readonly string[];
     }
   | {
       readonly kind: "discard";
@@ -183,6 +189,9 @@ function projectInteraction(state: GameState, viewerId: string): GameInteraction
         instruction: "你可以交易、建造或结束回合",
         vertexIds: [],
         edgeIds: [],
+        roadEdgeIds: legalRoadEdges(state, viewerId),
+        settlementVertexIds: legalSettlementVertices(state, viewerId),
+        cityVertexIds: legalCityVertices(state, viewerId),
       };
     }
     if (state.phase.step === "robber") {

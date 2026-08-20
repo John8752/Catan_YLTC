@@ -8,6 +8,9 @@ export type GameCommand =
   | { readonly type: "RollDice" }
   | { readonly type: "DiscardResources"; readonly resources: ResourceHand }
   | { readonly type: "MoveRobber"; readonly hexId: HexId; readonly victimId: PlayerId | null }
+  | { readonly type: "BuildRoad"; readonly edgeId: EdgeId }
+  | { readonly type: "BuildSettlement"; readonly vertexId: VertexId }
+  | { readonly type: "BuildCity"; readonly vertexId: VertexId }
   | { readonly type: "EndTurn" };
 
 export type GameCommandErrorCode =
@@ -18,7 +21,10 @@ export type GameCommandErrorCode =
   | "ROAD_NOT_ADJACENT"
   | "INVALID_DISCARD"
   | "ROBBER_MUST_MOVE"
-  | "INVALID_VICTIM";
+  | "INVALID_VICTIM"
+  | "NO_PIECES_LEFT"
+  | "INSUFFICIENT_RESOURCES"
+  | "ILLEGAL_PLACEMENT";
 
 export interface GameCommandError {
   readonly code: GameCommandErrorCode;
@@ -61,6 +67,12 @@ export type GameEvent =
       readonly playerId: PlayerId;
       readonly nextPlayerId: PlayerId;
       readonly turnNumber: number;
+    }
+  | {
+      readonly type: "piece_built";
+      readonly playerId: PlayerId;
+      readonly piece: "road" | "settlement" | "city";
+      readonly locationId: EdgeId | VertexId;
     };
 
 export type GameCommandResult =

@@ -34,6 +34,9 @@ const gameCommandSchema = z.object({
       hexId: z.string().min(1),
       victimId: z.string().min(1).nullable(),
     }),
+    z.object({ type: z.literal("BuildRoad"), edgeId: z.string().min(1) }),
+    z.object({ type: z.literal("BuildSettlement"), vertexId: z.string().min(1) }),
+    z.object({ type: z.literal("BuildCity"), vertexId: z.string().min(1) }),
     z.object({ type: z.literal("EndTurn") }),
   ]),
 });

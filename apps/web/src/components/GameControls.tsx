@@ -8,9 +8,11 @@ export interface GameControlsProps {
   readonly game: GameView;
   readonly busy: boolean;
   readonly onCommand: (command: GameCommand) => void;
+  readonly buildMode: "road" | "settlement" | "city" | null;
+  readonly onBuildModeChange: (mode: "road" | "settlement" | "city" | null) => void;
 }
 
-export function GameControls({ game, busy, onCommand }: GameControlsProps) {
+export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChange }: GameControlsProps) {
   const [discard, setDiscard] = useState<Record<Resource, number>>(emptySelection);
   const [robberHexId, setRobberHexId] = useState("");
   const [victimId, setVictimId] = useState("");
@@ -41,9 +43,29 @@ export function GameControls({ game, busy, onCommand }: GameControlsProps) {
 
   if (game.interaction.kind === "turn-action") {
     return (
-      <button className="primary-button" type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
-        {busy ? "提交中…" : "结束回合"}
-      </button>
+      <div className="action-stack">
+        <div className="build-buttons" aria-label="建造选项">
+          {([
+            ["road", "道路", game.interaction.roadEdgeIds.length],
+            ["settlement", "定居点", game.interaction.settlementVertexIds.length],
+            ["city", "城市", game.interaction.cityVertexIds.length],
+          ] as const).map(([mode, label, targets]) => (
+            <button
+              key={mode}
+              className={buildMode === mode ? "build-button is-active" : "build-button"}
+              type="button"
+              disabled={busy || targets === 0}
+              onClick={() => onBuildModeChange(buildMode === mode ? null : mode)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <small>道路：砖+木　定居点：砖+木+羊+麦　城市：2麦+3矿</small>
+        <button className="primary-button" type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
+          {busy ? "提交中…" : "结束回合"}
+        </button>
+      </div>
     );
   }
 

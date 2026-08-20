@@ -25,6 +25,7 @@ export function App() {
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [buildMode, setBuildMode] = useState<"road" | "settlement" | "city" | null>(null);
 
   useEffect(() => {
     if (session === null) {
@@ -60,11 +61,16 @@ export function App() {
     };
   }, [session]);
 
+  useEffect(() => {
+    setBuildMode(null);
+  }, [room?.game?.revision]);
+
   async function handleCreate(playerName: string) {
     await runBusy(async () => {
       const response = await createRoom(playerName);
       storeSession({ roomId: response.roomId, playerId: response.playerId });
       setRoom(response.room);
+      setBuildMode(null);
     });
   }
 
@@ -143,7 +149,7 @@ export function App() {
             <p>把房间码 <strong>{room.id}</strong> 发给朋友。第三位玩家加入后，房主即可生成岛屿。</p>
           </section>
         ) : (
-          <Board game={room.game} busy={busy} onCommand={handleGameCommand} />
+          <Board game={room.game} busy={busy} buildMode={buildMode} onCommand={handleGameCommand} />
         )}
       </div>
       <RoomPanel
@@ -154,6 +160,8 @@ export function App() {
         onStart={handleStart}
         onLeave={handleLeave}
         onGameCommand={handleGameCommand}
+        buildMode={buildMode}
+        onBuildModeChange={setBuildMode}
       />
       {error === null ? null : <p className="toast-error" role="alert">{error}</p>}
     </main>

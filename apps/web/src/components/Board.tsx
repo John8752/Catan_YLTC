@@ -1,5 +1,6 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import type { KeyboardEvent } from "react";
+import { ConstructionTargets } from "./ConstructionTargets.js";
 
 const TERRAIN_LABELS = {
   brick: "砖土",
@@ -29,15 +30,6 @@ export function Board({
   selectedRobberHexId = null,
   onRobberHexSelect,
 }: BoardProps) {
-  const selectableVertices = new Set([
-    ...game.interaction.vertexIds,
-    ...(game.interaction.kind === "turn-action" && buildMode === "settlement" ? game.interaction.settlementVertexIds : []),
-    ...(game.interaction.kind === "turn-action" && buildMode === "city" ? game.interaction.cityVertexIds : []),
-  ]);
-  const selectableEdges = new Set([
-    ...game.interaction.edgeIds,
-    ...(game.interaction.kind === "turn-action" && buildMode === "road" ? game.interaction.roadEdgeIds : []),
-  ]);
   const robberHex = game.map.hexes.find((hex) => hex.id === game.map.robberHexId);
 
   return (
@@ -151,32 +143,10 @@ export function Board({
                 <line
                   key={edge.id}
                   data-edge-id={edge.id}
-                  className={selectableEdges.has(edge.id) ? "is-selectable" : undefined}
                   x1={first.x * HEX_SIZE}
                   y1={first.y * HEX_SIZE}
                   x2={second.x * HEX_SIZE}
                   y2={second.y * HEX_SIZE}
-                  role={selectableEdges.has(edge.id) ? "button" : undefined}
-                  tabIndex={selectableEdges.has(edge.id) ? 0 : undefined}
-                  aria-label={selectableEdges.has(edge.id) ? "在这里放置道路" : undefined}
-                  onClick={() => {
-                    if (selectableEdges.has(edge.id) && !busy) {
-                      onCommand?.(game.interaction.kind === "setup-road"
-                        ? { type: "PlaceInitialRoad", edgeId: edge.id }
-                        : game.interaction.kind === "free-road"
-                          ? { type: "BuildFreeRoad", edgeId: edge.id }
-                          : { type: "BuildRoad", edgeId: edge.id });
-                    }
-                  }}
-                  onKeyDown={(event) => activateOnKeyboard(event, () => {
-                    if (selectableEdges.has(edge.id) && !busy) {
-                      onCommand?.(game.interaction.kind === "setup-road"
-                        ? { type: "PlaceInitialRoad", edgeId: edge.id }
-                        : game.interaction.kind === "free-road"
-                          ? { type: "BuildFreeRoad", edgeId: edge.id }
-                          : { type: "BuildRoad", edgeId: edge.id });
-                    }
-                  })}
                 />
               );
             })}
@@ -186,31 +156,9 @@ export function Board({
               <circle
                 key={vertex.id}
                 data-vertex-id={vertex.id}
-                className={selectableVertices.has(vertex.id) ? "is-selectable" : undefined}
                 cx={vertex.x * HEX_SIZE}
                 cy={vertex.y * HEX_SIZE}
                 r="4.5"
-                role={selectableVertices.has(vertex.id) ? "button" : undefined}
-                tabIndex={selectableVertices.has(vertex.id) ? 0 : undefined}
-                aria-label={selectableVertices.has(vertex.id) ? "在这里放置定居点" : undefined}
-                onClick={() => {
-                  if (selectableVertices.has(vertex.id) && !busy) {
-                    onCommand?.(game.interaction.kind === "setup-settlement"
-                      ? { type: "PlaceInitialSettlement", vertexId: vertex.id }
-                      : buildMode === "city"
-                        ? { type: "BuildCity", vertexId: vertex.id }
-                        : { type: "BuildSettlement", vertexId: vertex.id });
-                  }
-                }}
-                onKeyDown={(event) => activateOnKeyboard(event, () => {
-                  if (selectableVertices.has(vertex.id) && !busy) {
-                    onCommand?.(game.interaction.kind === "setup-settlement"
-                      ? { type: "PlaceInitialSettlement", vertexId: vertex.id }
-                      : buildMode === "city"
-                        ? { type: "BuildCity", vertexId: vertex.id }
-                        : { type: "BuildSettlement", vertexId: vertex.id });
-                  }
-                })}
               />
             ))}
           </g>
@@ -274,6 +222,13 @@ export function Board({
               );
             })}
           </g>
+          <ConstructionTargets
+            game={game}
+            busy={busy}
+            buildMode={buildMode}
+            coordinateScale={HEX_SIZE}
+            onCommand={onCommand}
+          />
           <g className="board-ports" aria-label="港口">
             {game.map.ports.map((port) => {
               const [firstId, secondId] = port.vertexIds;
@@ -295,7 +250,7 @@ export function Board({
           </g>
         </svg>
       </div>
-      <p className="board-instruction" aria-live="polite">{game.interaction.instruction}</p>
+      <p className="board-instruction" aria-live="polite">{boardInstruction(game, buildMode)}</p>
     </section>
   );
 }
@@ -334,6 +289,14 @@ function terrainMark(terrain: GameView["map"]["hexes"][number]["terrain"]): stri
 
 function terrainLabel(terrain: GameView["map"]["hexes"][number]["terrain"]): string {
   return TERRAIN_LABELS[terrain];
+}
+
+function boardInstruction(game: GameView, buildMode: BoardProps["buildMode"]): string {
+  if (game.interaction.kind !== "turn-action") return game.interaction.instruction;
+  if (buildMode === "road") return "请在地图上选择一条高亮边建造道路";
+  if (buildMode === "settlement") return "请在地图上选择一个高亮顶点建造村庄";
+  if (buildMode === "city") return "请在地图上选择一座高亮村庄升级为城市";
+  return game.interaction.instruction;
 }
 
 function phaseLabel(game: GameView): string {

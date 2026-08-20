@@ -42,10 +42,10 @@ export function ResourceEffectLayer({
     const arrivalTimers = reducedMotion
       ? [window.setTimeout(() => animateTargets(effect, true), 40)]
       : nextFlights.length === 0
-        ? [window.setTimeout(() => animateTargets(effect, false), 760)]
-        : nextFlights.map((flight) => window.setTimeout(() => animateFlightTarget(flight), 650 + flight.delay));
+        ? [window.setTimeout(() => animateTargets(effect, false), 1_150)]
+        : nextFlights.map((flight) => window.setTimeout(() => animateFlightTarget(flight), 1_150 + flight.delay));
     const longestDelay = nextFlights.reduce((maximum, flight) => Math.max(maximum, flight.delay), 0);
-    const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : 1_080 + longestDelay);
+    const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : 1_650 + longestDelay);
     return () => {
       for (const timer of arrivalTimers) window.clearTimeout(timer);
       window.clearTimeout(completionTimer);
@@ -117,20 +117,28 @@ export function measureFlights(effect: PublicGameEffectView, root: ParentNode = 
 }
 
 function animateSources(effect: PublicGameEffectView, reducedMotion: boolean): void {
-  const hexIds = new Set(effect.sources.map((source) => source.hexId));
+  const hexIds = new Set(effect.triggeredHexIds);
   const vertexIds = new Set(effect.sources.map((source) => source.vertexId));
   for (const hexId of hexIds) {
     const hex = findDataElement(document, "hex-id", hexId);
-    animateElement(hex?.querySelector("polygon") ?? null, [
-      { filter: "brightness(1)", opacity: 1 },
-      { filter: "brightness(1.42) drop-shadow(0 0 10px rgba(255,222,112,.95))", opacity: 1 },
-      { filter: "brightness(1)", opacity: 1 },
-    ], reducedMotion ? 260 : 720);
-    animateElement(hex?.querySelector(".token") ?? null, [
-      { transform: "scale(1)" },
-      { transform: "scale(1.2)" },
-      { transform: "scale(1)" },
-    ], reducedMotion ? 240 : 620);
+    animateElement(
+      hex?.querySelector(".hex-content") ?? null,
+      reducedMotion
+        ? [
+            { filter: "brightness(1)" },
+            { filter: "brightness(1.28) drop-shadow(0 0 7px rgba(255,222,112,.8))" },
+            { filter: "brightness(1)" },
+          ]
+        : [
+            { transform: "translateX(0) scale(1)", filter: "brightness(1)" },
+            { transform: "translateX(-3px) scale(1.025)", filter: "brightness(1.34) drop-shadow(0 0 9px rgba(255,222,112,.9))" },
+            { transform: "translateX(4px) scale(1.035)", filter: "brightness(1.42) drop-shadow(0 0 11px rgba(255,222,112,.95))" },
+            { transform: "translateX(-2px) scale(1.03)", filter: "brightness(1.36) drop-shadow(0 0 9px rgba(255,222,112,.88))" },
+            { transform: "translateX(2px) scale(1.018)", filter: "brightness(1.2)" },
+            { transform: "translateX(0) scale(1)", filter: "brightness(1)" },
+          ],
+      reducedMotion ? 280 : 900,
+    );
   }
   for (const vertexId of vertexIds) {
     const building = findDataElement(document, "vertex-id", vertexId);
@@ -169,7 +177,7 @@ function animateFlightTarget(flight: ResourceFlight): void {
     { transform: "scale(1)", filter: "brightness(1)" },
     { transform: "scale(1.08)", filter: "brightness(1.35) drop-shadow(0 0 9px rgba(255,215,97,.85))" },
     { transform: "scale(1)", filter: "brightness(1)" },
-  ], 460);
+  ], 560);
 }
 
 function animateElement(element: Element | null, keyframes: Keyframe[], duration: number): void {
@@ -207,7 +215,7 @@ function flightStyle(flight: ResourceFlight): CSSProperties {
     "--flight-end-x": `${flight.endX}px`,
     "--flight-end-y": `${flight.endY}px`,
     "--flight-delay": `${flight.delay}ms`,
-    "--arrival-delay": `${620 + flight.delay}ms`,
+    "--arrival-delay": `${1_100 + flight.delay}ms`,
   } as CSSProperties;
 }
 

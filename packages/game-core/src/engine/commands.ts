@@ -88,6 +88,7 @@ export type GameEvent =
       readonly total: number;
       readonly grants: readonly { readonly playerId: PlayerId; readonly resources: ResourceHand }[];
       readonly sources: readonly ResourceGrantSource[];
+      readonly triggeredHexIds: readonly HexId[];
     }
   | { readonly type: "resources_discarded"; readonly playerId: PlayerId; readonly total: number }
   | {

@@ -49,6 +49,7 @@ describe("normal turn commands", () => {
     if (!rollResult.accepted) throw new Error("Expected accepted roll");
     const productionEvent = rollResult.events.find((event) => event.type === "resources_produced");
     expect(productionEvent).toEqual(expect.objectContaining({
+      triggeredHexIds: expect.arrayContaining([producingHex.id]),
       sources: expect.arrayContaining([
         expect.objectContaining({ hexId: producingHex.id, resource: producingHex.terrain }),
       ]),
@@ -65,6 +66,46 @@ describe("normal turn commands", () => {
       turnNumber: 2,
     });
     expect(ended.lastRoll).toBeNull();
+  });
+
+  it("records every unblocked matching hex even when no building receives a resource", () => {
+    const base = createBaseGame({ id: "game_unclaimed_production", seed: 303, players });
+    const producingHex = base.map.hexes.find((hex) => hex.numberToken !== null);
+    if (producingHex?.numberToken === null || producingHex === undefined) throw new Error("Missing numbered hex");
+    const game: GameState = {
+      ...base,
+      phase: { kind: "turn", activePlayerId: "player_1", step: "roll", turnNumber: 1 },
+    };
+    const result = executeGameCommand(game, "player_1", { type: "RollDice" }, sequenceRandom(diceForTotal(producingHex.numberToken)));
+    if (!result.accepted) throw new Error(`${result.error.code}: ${result.error.message}`);
+    const production = result.events.find((event) => event.type === "resources_produced");
+
+    expect(production).toEqual(expect.objectContaining({
+      grants: [],
+      sources: [],
+      triggeredHexIds: expect.arrayContaining([producingHex.id]),
+    }));
+  });
+
+  it("keeps a matching hex triggered when the bank withholds its resource", () => {
+    const setup = completeSetup();
+    const producingHex = setup.map.hexes.find(
+      (hex) => hex.numberToken !== null && setup.buildings.some((building) =>
+        setup.map.vertices.find((vertex) => vertex.id === building.vertexId)?.adjacentHexIds.includes(hex.id)),
+    );
+    if (producingHex?.numberToken === null || producingHex === undefined || producingHex.terrain === "desert") {
+      throw new Error("Missing producing hex");
+    }
+    const resource = producingHex.terrain;
+    const game: GameState = { ...setup, bank: { ...setup.bank, [resource]: 0 } };
+    const result = executeGameCommand(game, "player_1", { type: "RollDice" }, sequenceRandom(diceForTotal(producingHex.numberToken)));
+    if (!result.accepted) throw new Error(`${result.error.code}: ${result.error.message}`);
+    const production = result.events.find((event) => event.type === "resources_produced");
+    if (production?.type !== "resources_produced") throw new Error("Missing production event");
+
+    expect(production.triggeredHexIds).toContain(producingHex.id);
+    expect(production.sources.some((source) => source.hexId === producingHex.id)).toBe(false);
+    expect(production.grants.every((grant) => grant.resources[resource] === 0)).toBe(true);
   });
 
   it("rejects a roll from a non-active player without mutation", () => {

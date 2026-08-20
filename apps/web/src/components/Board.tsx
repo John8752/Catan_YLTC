@@ -66,18 +66,20 @@ export function Board({ game, busy = false, onCommand, buildMode = null }: Board
                   role="group"
                   aria-label={`${label}${tile.numberToken === null ? "" : `，点数 ${tile.numberToken}`}`}
                 >
-                  <polygon points={hexPoints(HEX_SIZE)} />
-                  <text className="terrain-mark" y={tile.numberToken === null ? 7 : -11} textAnchor="middle">
-                    {terrainMark(tile.terrain)}
-                  </text>
-                  {tile.numberToken === null ? null : (
-                    <g className={tile.numberToken === 6 || tile.numberToken === 8 ? "token hot" : "token"}>
-                      <circle cy="16" r="15" />
-                      <text y="21" textAnchor="middle">
-                        {tile.numberToken}
-                      </text>
-                    </g>
-                  )}
+                  <g className="hex-content">
+                    <polygon points={hexPoints(HEX_SIZE)} />
+                    <text className="terrain-mark" y={tile.numberToken === null ? 7 : -11} textAnchor="middle">
+                      {terrainMark(tile.terrain)}
+                    </text>
+                    {tile.numberToken === null ? null : (
+                      <g className={tile.numberToken === 6 || tile.numberToken === 8 ? "token hot" : "token"}>
+                        <circle cy="16" r="15" />
+                        <text y="21" textAnchor="middle">
+                          {tile.numberToken}
+                        </text>
+                      </g>
+                    )}
+                  </g>
                 </g>
               );
             })}

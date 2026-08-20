@@ -29,11 +29,18 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
         const flights = settlementPage.locator("[data-resource-flight]");
         if (await flights.count() > 0) {
           await expect(flights.first()).toBeVisible();
+          const flightDuration = await flights.first().evaluate((element) => Number(element.getAnimations()[0]?.effect?.getTiming().duration ?? 0));
+          expect(flightDuration).toBeGreaterThanOrEqual(1_100);
           const targetKey = await flights.first().getAttribute("data-resource-flight");
           await settlementPage.waitForTimeout(260);
           await settlementPage.screenshot({ path: path.join(artifactDir, "resource-production-fx.png"), fullPage: true });
           if (targetKey === null) throw new Error("Resource flight is missing its target key");
-          const target = settlementPage.locator(`[data-resource-target="${targetKey}"]`);
+          const targetPlayerId = targetKey.split(":", 1)[0];
+          if (targetPlayerId === undefined) throw new Error("Resource flight is missing its target player");
+          const privateTarget = settlementPage.locator(`[data-resource-target="${targetKey}"]`);
+          const target = await privateTarget.count() > 0
+            ? privateTarget
+            : settlementPage.locator(`[data-player-target="${targetPlayerId}"]`);
           await expect(target).toBeVisible();
           await expect.poll(() => target.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
           await settlementPage.waitForTimeout(170);

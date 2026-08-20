@@ -3,12 +3,17 @@
 import { resourceAmounts } from "@catan/game-core";
 import type { PublicGameEffectView } from "@catan/protocol";
 import { act, render } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { measureFlights, ResourceEffectLayer } from "./ResourceEffectLayer.js";
 
 describe("resource flight measurement", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("merges equal resources and aims at the private resource card or public player row", () => {
@@ -33,6 +38,7 @@ describe("resource flight measurement", () => {
         { playerId: "player_1", resource: "brick", amount: 1, hexId: "hex_2", vertexId: "vertex_2" },
         { playerId: "player_2", resource: "ore", amount: 1, hexId: "hex_2", vertexId: "vertex_3" },
       ],
+      triggeredHexIds: ["hex_1", "hex_2"],
     };
 
     const flights = measureFlights(effect, root);
@@ -66,6 +72,7 @@ describe("resource flight measurement", () => {
           reason: "production",
           grants: [{ playerId: "player_1", resources: resourceAmounts({ wool: 1 }) }],
           sources: [{ playerId: "player_1", resource: "wool", amount: 1, hexId: "hex_1", vertexId: "vertex_1" }],
+          triggeredHexIds: ["hex_1"],
         }}
         onComplete={onComplete}
       />,
@@ -74,7 +81,43 @@ describe("resource flight measurement", () => {
     expect(container.querySelectorAll("[data-resource-flight]")).toHaveLength(0);
     act(() => vi.advanceTimersByTime(321));
     expect(onComplete).toHaveBeenCalledOnce();
-    vi.useRealTimers();
+  });
+
+  it("shakes a triggered hex even when the event grants no resources", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn(() => ({ matches: false })),
+    });
+    const hex = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    hex.setAttribute("data-hex-id", "hex_unclaimed");
+    const content = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    content.setAttribute("class", "hex-content");
+    const animate = vi.fn();
+    Object.defineProperty(content, "animate", { configurable: true, value: animate });
+    hex.append(content);
+    document.body.append(hex);
+
+    const { container } = render(
+      <ResourceEffectLayer
+        effect={{
+          id: "11:resources-produced",
+          revision: 11,
+          kind: "resource-grant",
+          reason: "production",
+          grants: [],
+          sources: [],
+          triggeredHexIds: ["hex_unclaimed"],
+        }}
+        onComplete={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelectorAll("[data-resource-flight]")).toHaveLength(0);
+    expect(animate).toHaveBeenCalledOnce();
+    expect(animate.mock.calls[0]?.[0]).toEqual(expect.arrayContaining([
+      expect.objectContaining({ transform: expect.stringContaining("translateX") }),
+    ]));
   });
 });
 

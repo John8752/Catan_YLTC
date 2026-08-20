@@ -76,6 +76,7 @@ export interface PublicGameEffectView {
   readonly reason: "production" | "starting-resources";
   readonly grants: readonly { readonly playerId: string; readonly resources: ResourceHand }[];
   readonly sources: readonly ResourceGrantSource[];
+  readonly triggeredHexIds: readonly string[];
 }
 
 export interface GameHistoryEntryView {
@@ -225,7 +226,7 @@ export function projectGameForPlayer(
 function projectPublicEffect(record: GameEventRecord): readonly PublicGameEffectView[] {
   const event = record.event;
   if (event.type === "resources_produced") {
-    if (event.grants.length === 0) return [];
+    if (event.triggeredHexIds.length === 0) return [];
     return [{
       id: `${record.revision}:resources-produced`,
       revision: record.revision,
@@ -233,6 +234,7 @@ function projectPublicEffect(record: GameEventRecord): readonly PublicGameEffect
       reason: "production",
       grants: event.grants,
       sources: event.sources,
+      triggeredHexIds: event.triggeredHexIds,
     }];
   }
   if (event.type === "starting_resources_granted" && event.total > 0) {
@@ -243,6 +245,7 @@ function projectPublicEffect(record: GameEventRecord): readonly PublicGameEffect
       reason: "starting-resources",
       grants: [{ playerId: event.playerId, resources: event.resources }],
       sources: event.sources,
+      triggeredHexIds: [...new Set(event.sources.map((source) => source.hexId))],
     }];
   }
   return [];

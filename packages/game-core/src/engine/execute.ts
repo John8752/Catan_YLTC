@@ -266,6 +266,9 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
   }
 
   const claims = calculateProductionClaims(state.map, state.buildings, total);
+  const triggeredHexIds = state.map.hexes
+    .filter((hex) => hex.numberToken === total && hex.id !== state.map.robberHexId && hex.terrain !== "desert")
+    .map((hex) => hex.id);
   const production = resolveProductionClaims(state.bank, claims);
   const grants = state.players.flatMap((player) => {
     const resources = production.grants.get(player.id);
@@ -295,6 +298,7 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
         total: grants.reduce((sum, grant) => sum + totalHand(grant.resources), 0),
         grants,
         sources,
+        triggeredHexIds,
       },
     ],
   );

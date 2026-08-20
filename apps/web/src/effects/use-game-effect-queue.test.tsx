@@ -13,6 +13,7 @@ const effect: PublicGameEffectView = {
   reason: "production",
   grants: [{ playerId: "player_1", resources: resourceAmounts({ grain: 1 }) }],
   sources: [{ playerId: "player_1", resource: "grain", amount: 1, hexId: "hex_1", vertexId: "vertex_1" }],
+  triggeredHexIds: ["hex_1"],
 };
 
 describe("useGameEffectQueue", () => {

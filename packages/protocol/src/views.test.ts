@@ -134,6 +134,7 @@ describe("player-safe game projections", () => {
           { playerId: "player_1", resource: "lumber", amount: 1, hexId: "hex_lumber", vertexId: "vertex_1" },
           { playerId: "player_3", resource: "ore", amount: 2, hexId: "hex_ore", vertexId: "vertex_3" },
         ],
+        triggeredHexIds: ["hex_brick", "hex_lumber", "hex_ore", "hex_unclaimed"],
       },
     }] satisfies GameEventRecord[];
 
@@ -145,6 +146,7 @@ describe("player-safe game projections", () => {
       id: "8:resources-produced",
       reason: "production",
       sources: expect.arrayContaining([expect.objectContaining({ hexId: "hex_ore", amount: 2 })]),
+      triggeredHexIds: expect.arrayContaining(["hex_unclaimed"]),
     }));
   });
 
@@ -176,6 +178,32 @@ describe("player-safe game projections", () => {
     expect(projectGameForPlayer(game, "player_3", records).history.map((entry) => entry.message)).toEqual([
       "周 同意了交易报价",
       "林 给 周 2 砖，获得 1 麦",
+    ]);
+  });
+
+  it("projects a matching-hex effect when production grants nobody resources", () => {
+    const game = createBaseGame({
+      id: "game_empty_production_effect",
+      seed: 14,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [{
+      revision: 9,
+      event: {
+        type: "resources_produced",
+        total: 0,
+        grants: [],
+        sources: [],
+        triggeredHexIds: ["hex_unclaimed"],
+      },
+    }] satisfies GameEventRecord[];
+
+    expect(projectGameForPlayer(game, "player_1", records).effects).toEqual([
+      expect.objectContaining({ triggeredHexIds: ["hex_unclaimed"], grants: [] }),
     ]);
   });
 });

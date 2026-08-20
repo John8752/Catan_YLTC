@@ -13,9 +13,10 @@ The deterministic engine records public source data for resource grants. `packag
 
 The Web implementation lives under `apps/web/src/effects` and uses semantic DOM anchors supplied by the board and HUD. Production feedback follows this restrained sequence:
 
-1. producing hexes, number tokens and buildings pulse;
-2. one merged token per player/resource travels to the player's target;
-3. the private resource card or public opponent row pulses on arrival.
+1. every unblocked hex matching the roll shakes and pulses, even when it has no adjacent building or the bank grants nobody that resource;
+2. buildings that actually produce pulse;
+3. one merged token per player/resource travels to the player's target;
+4. the private resource card or public opponent row pulses on arrival.
 
 Strong whole-board motion is reserved for disruptive events such as rolling seven or moving the robber.
 

@@ -79,7 +79,7 @@ export function RoomPanel({
               <button className="primary-button" type="button" disabled={!canStart || busy} onClick={onStart}>
                 {room.members.length < 3 ? "等待至少 3 人" : busy ? "正在开局…" : "生成岛屿并开局"}
               </button>
-              <p>当前里程碑支持 3–4 人基础棋盘。</p>
+              <p>支持 3–4 人基础规则完整对局。</p>
             </>
           ) : (
             <p>等待房主开局。把房间码发给朋友即可加入。</p>

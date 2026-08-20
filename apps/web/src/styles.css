@@ -130,7 +130,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 
 .game-brand { grid-column: 1 / -1; display: flex; align-items: center; gap: .5rem; color: #f8edcf; letter-spacing: .08em; }
 .game-brand span { color: #efbd79; font-size: 1.5rem; }
-.playfield { min-width: 0; display: grid; place-items: center; }
+.playfield { position: relative; min-width: 0; display: grid; place-items: center; }
 .waiting-island { max-width: 520px; color: #fff9e8; text-align: center; }
 .waiting-island h1 { font-size: clamp(2.3rem, 6vw, 4.6rem); margin-bottom: 1rem; }
 .waiting-island > p:last-child { color: rgba(255,255,255,.72); line-height: 1.7; }

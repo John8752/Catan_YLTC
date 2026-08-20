@@ -8,9 +8,18 @@
     "build": "pnpm -r build",
     "check": "pnpm -r check",
     "test": "pnpm -r test",
-    "validate": "pnpm check && pnpm test && pnpm build"
+    "test:core": "pnpm --filter @catan/game-core test",
+    "test:protocol": "pnpm --filter @catan/protocol test",
+    "test:server": "pnpm --filter @catan/server test",
+    "test:web": "pnpm --filter @catan/web test",
+    "test:replay": "pnpm --filter @catan/game-core exec vitest run src/engine/replay.test.ts -t \"replays a complete legal match\"",
+    "test:boundaries": "pnpm --filter @catan/game-core exec vitest run src/architecture.test.ts",
+    "test:e2e": "playwright test",
+    "validate": "pnpm check && pnpm test && pnpm build",
+    "validate:full": "pnpm validate && pnpm test:replay && pnpm test:boundaries && pnpm test:e2e"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.18.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"

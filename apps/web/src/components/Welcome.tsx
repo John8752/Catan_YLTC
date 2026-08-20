@@ -30,8 +30,8 @@ export function Welcome({ busy, error, onCreate, onJoin }: WelcomeProps) {
           创建一个私人房间，邀请朋友落座。规则引擎、实时同步和断线恢复会从第一天被当作同一件事设计。
         </p>
         <div className="milestone-note">
-          <span>M0</span>
-          <p>当前可以创建房间、三人开局，并看到由固定种子生成的同一张棋盘。</p>
+          <span>可玩版</span>
+          <p>3–4 人基础规则已贯通：摆放、生产、强盗、建造、交易、发展卡与胜负结算都由服务器统一裁定。</p>
         </div>
       </section>
 

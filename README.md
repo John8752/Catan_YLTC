@@ -1,8 +1,8 @@
 # Catan YLTC
 
-A server-authoritative browser board game for private 2–6 player groups. The current milestone is the deterministic M0 foundation; the first complete gameplay target is the 3–4 player base-rules profile.
+A server-authoritative browser board game for private groups. The first playable release supports complete 3–4 player base-rule matches; the architecture keeps 2–6 player profiles and future expansions as explicit follow-up work.
 
-M0 foundation status: runnable. Room creation, three-player start, live room broadcasts, deterministic SVG board rendering and player-safe projections are implemented. Initial piece placement is the next gameplay milestone.
+First playable status: room creation/join, independent per-tab seats, snake setup, dice production, robber/discard, building, player and maritime trade, development cards, awards, 10-point victory, reconnect and deterministic replay are implemented.
 
 ## Start here
 
@@ -20,6 +20,7 @@ pnpm check     type-check every workspace package
 pnpm test      run deterministic and application tests
 pnpm build     produce application and package builds
 pnpm validate  run the complete local quality gate
+pnpm validate:full  run validation plus replay and browser E2E
 ```
 
 The API listens on `http://localhost:8787` by default. Vite proxies `/api` and `/ws` to it during development.

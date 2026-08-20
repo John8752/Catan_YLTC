@@ -102,7 +102,7 @@ export class RoomRegistry {
     }
 
     if (room.members.length >= 4) {
-      throw new RoomError("ROOM_FULL", "M0 base rooms support at most four players");
+      throw new RoomError("ROOM_FULL", "Base-rule rooms support at most four players");
     }
 
     const color = PLAYER_COLORS[room.members.length];
@@ -139,7 +139,7 @@ export class RoomRegistry {
     }
 
     if (room.members.length < 3) {
-      throw new RoomError("NOT_ENOUGH_PLAYERS", "At least three players are required for M0");
+      throw new RoomError("NOT_ENOUGH_PLAYERS", "At least three players are required");
     }
 
     room.game = createBaseGame({

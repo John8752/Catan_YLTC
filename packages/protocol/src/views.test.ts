@@ -1,4 +1,4 @@
-import { createBaseGame } from "@catan/game-core";
+import { createBaseGame, resourceAmounts } from "@catan/game-core";
 import { describe, expect, it } from "vitest";
 import { projectGameForPlayer } from "./views.js";
 
@@ -80,5 +80,33 @@ describe("player-safe game projections", () => {
 
     expect(projectGameForPlayer(game, "player_1", records).history[0]?.privateDetail).toBeNull();
     expect(projectGameForPlayer(game, "player_2", records).history[0]?.privateDetail).toContain("victory-point");
+  });
+
+  it("projects only build actions the player can currently afford", () => {
+    const game = createBaseGame({
+      id: "game_affordances",
+      seed: 11,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const actionGame = {
+      ...game,
+      phase: { kind: "turn" as const, activePlayerId: "player_1", step: "action" as const, turnNumber: 1 },
+      buildings: [{ ownerId: "player_1", vertexId: game.map.vertices[0]?.id ?? "", kind: "settlement" as const }],
+      players: game.players.map((player) => player.id === "player_1"
+        ? { ...player, resources: resourceAmounts({ brick: 1 }) }
+        : player),
+    };
+
+    const interaction = projectGameForPlayer(actionGame, "player_1").interaction;
+    expect(interaction).toMatchObject({
+      kind: "turn-action",
+      roadEdgeIds: [],
+      settlementVertexIds: [],
+      cityVertexIds: [],
+    });
   });
 });

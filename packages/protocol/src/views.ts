@@ -1,4 +1,6 @@
 import {
+  BUILD_COSTS,
+  hasResources,
   resourceCardCount,
   legalInitialRoadEdges,
   legalInitialSettlementVertices,
@@ -292,14 +294,22 @@ function projectInteraction(state: GameState, viewerId: string): GameInteraction
       return { kind: "turn-roll", instruction: "轮到你了，请掷骰子", vertexIds: [], edgeIds: [] };
     }
     if (state.phase.step === "action") {
+      const player = state.players.find((candidate) => candidate.id === viewerId);
+      if (player === undefined) throw new Error(`Player ${viewerId} is missing`);
       return {
         kind: "turn-action",
         instruction: "你可以交易、建造或结束回合",
         vertexIds: [],
         edgeIds: [],
-        roadEdgeIds: legalRoadEdges(state, viewerId),
-        settlementVertexIds: legalSettlementVertices(state, viewerId),
-        cityVertexIds: legalCityVertices(state, viewerId),
+        roadEdgeIds: player.pieces.roads > 0 && hasResources(player.resources, BUILD_COSTS.road)
+          ? legalRoadEdges(state, viewerId)
+          : [],
+        settlementVertexIds: player.pieces.settlements > 0 && hasResources(player.resources, BUILD_COSTS.settlement)
+          ? legalSettlementVertices(state, viewerId)
+          : [],
+        cityVertexIds: player.pieces.cities > 0 && hasResources(player.resources, BUILD_COSTS.city)
+          ? legalCityVertices(state, viewerId)
+          : [],
       };
     }
     if (state.phase.step === "robber") {

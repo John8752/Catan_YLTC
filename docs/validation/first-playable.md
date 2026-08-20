@@ -6,10 +6,11 @@
 - Runtime: Node.js 22, pnpm 9
 - Browser automation: Playwright 1.62.1, Chromium 151
 - Canonical replay seed: `20260820`
-- Canonical replay SHA-256: `88fc49433b3481ac7cef9201367dc6b1a771b1f08aedec3736b944000ef43f66`
+- Canonical replay SHA-256: `94538895f05aac0f93b3c0ebb6443490c141eba0fcf7ca1f64cbaaf0032f104c`
 - Baseline implementation commit: `f03eef4` (`feat(release): complete first playable quality gate`)
 - Validated change commits: `b6d4a95` (frontend stack), `8d9ac2d` (multi-response trade), `f094fbd` (table UI)
 - Resource-effect commit: `c4429bc` (authoritative production sources, queued flight and arrival feedback)
+- Resource-effect tuning commit: `6415f32` (all triggered hexes shake; 1200ms resource travel)
 - Validation date: 2026-08-20
 
 ## Evidence
@@ -21,6 +22,7 @@
 - Responsive: the active game was checked at 390×844 with no horizontal overflow. The captured run also exercised the seven/robber control surface.
 - Table UI: the desktop capture keeps the board, bottom private player dock and internally scrolling public sidebar in one viewport; the mobile capture keeps the same zones in natural document flow.
 - Resource feedback: Chromium asserts a live starting-resource event creates a merged flight, reaches the correct private resource target and starts its arrival animation; unit coverage verifies source averaging, opponent targets, reconnect suppression, duplicate-revision suppression and reduced-motion behavior.
+- Trigger feedback: engine and projection tests cover matching hexes with no adjacent recipient and bank-withheld resources; Chromium verifies the resource-flight animation duration is at least 1100ms.
 - Manual desktop smoke: three independently isolated headed browser sessions completed create/join/start, all setup placements and the first production turn with no console errors.
 
 Browser artifacts are intentionally local-only under `output/playwright/`:

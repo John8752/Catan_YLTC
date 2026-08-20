@@ -18,8 +18,8 @@ export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
     <section className="board-shell lobby-setup" aria-labelledby="lobby-map-title">
       <div className="board-heading">
         <div>
-          <p className="eyebrow">开局地图预览 · 种子 {room.settings.mapSeed}</p>
-          <h2 id="lobby-map-title">群岛等待命名</h2>
+          <p className="eyebrow">今晚的岛屿 · 地图 #{room.settings.mapSeed}</p>
+          <h2 id="lobby-map-title">出发吧，开拓者们</h2>
         </div>
         {isHost ? (
           <Button

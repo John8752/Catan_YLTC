@@ -17,7 +17,8 @@ describe("lobby setup", () => {
 
     expect(hostView.container.querySelectorAll("[data-hex-id]")).toHaveLength(19);
     expect(hostView.container.querySelectorAll("[data-port-id]")).toHaveLength(9);
-    expect(screen.getByText(/种子 77/)).toBeTruthy();
+    expect(screen.getByText(/地图 #77/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "出发吧，开拓者们" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "地图产能分析" })).toBeTruthy();
     expect(hostView.container.querySelectorAll("[data-resource-analysis]")).toHaveLength(5);
     expect(screen.getByText(/全图最稀缺/)).toBeTruthy();

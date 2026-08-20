@@ -395,7 +395,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 }
 
 @media (max-width: 820px) {
-  .welcome-layout { grid-template-columns: 1fr; padding: 1.4rem; background: linear-gradient(170deg, var(--pine) 0 46%, #d8c8a6 46.2%); }
+  .welcome-layout { grid-template-columns: 1fr; padding: 1.4rem; background: linear-gradient(170deg, var(--pine) 0 56%, #d8c8a6 56.2%); }
   .welcome-copy h1 { font-size: clamp(2.8rem, 14vw, 5rem); }
   .milestone-note { margin-bottom: 1rem; }
   .game-brand { grid-column: 1; }

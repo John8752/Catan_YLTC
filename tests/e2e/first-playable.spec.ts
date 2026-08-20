@@ -70,6 +70,8 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await mkdir(artifactDir, { recursive: true });
     await host.screenshot({ path: path.join(artifactDir, "e2e-lobby-settings.png"), fullPage: true });
     await host.getByRole("button", { name: "使用当前地图开局" }).click();
+    await expect(host.getByRole("button", { name: "在这里放置定居点" }).first()).toBeVisible();
+    await host.screenshot({ path: path.join(artifactDir, "e2e-setup-targets.png"), fullPage: true });
     let capturedResourceEffect = false;
 
     for (let placement = 0; placement < 6; placement += 1) {

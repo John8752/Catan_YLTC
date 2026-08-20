@@ -255,6 +255,10 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .construction-target-upgrade-mark path { fill: none; stroke: #17506a; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .construction-target:hover .construction-target-road-glow,.construction-target:focus-visible .construction-target-road-glow { stroke: #fffdf0; stroke-width: 12; }
 .construction-target:hover .construction-target-vertex-ring,.construction-target:focus-visible .construction-target-vertex-ring { fill: rgba(255,253,240,.62); stroke-width: 4; }
+.construction-target-setup .construction-target-vertex-ring { fill: rgba(255,247,218,.18); stroke: rgba(255,240,160,.68); stroke-width: 1.5; filter: none; animation: none; transition: fill .15s ease, stroke-width .15s ease, transform .15s ease, filter .15s ease; }
+.construction-target-setup .construction-target-house-mark { opacity: .38; transform: scale(.58); transform-box: fill-box; transform-origin: center; transition: opacity .15s ease, transform .15s ease; }
+.construction-target-setup:hover .construction-target-vertex-ring,.construction-target-setup:focus-visible .construction-target-vertex-ring { fill: rgba(255,253,240,.52); stroke: #fff0a0; stroke-width: 2.5; filter: drop-shadow(0 0 3px rgba(255,221,91,.68)); transform: scale(1.45); }
+.construction-target-setup:hover .construction-target-house-mark,.construction-target-setup:focus-visible .construction-target-house-mark { opacity: 1; transform: scale(1); }
 .board-ports { pointer-events: none; }
 .board-ports circle { fill: #efe1ba; stroke: rgba(63,81,83,.7); stroke-width: 2; }
 .board-ports text { fill: #354649; font-size: 8px; font-weight: 800; pointer-events: none; }

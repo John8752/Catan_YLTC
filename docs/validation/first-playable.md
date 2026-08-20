@@ -24,6 +24,7 @@
 - Table UI: the desktop capture keeps the board, bottom private player dock and internally scrolling public sidebar in one viewport; the mobile capture keeps the same zones in natural document flow.
 - Resource feedback: Chromium asserts a live starting-resource event creates a merged flight, reaches the correct private resource target and starts its arrival animation; unit coverage verifies source averaging, opponent targets, reconnect suppression, duplicate-revision suppression and reduced-motion behavior.
 - Trigger feedback: engine and projection tests cover matching hexes with no adjacent recipient and bank-withheld resources; Chromium verifies the resource-flight animation duration is at least 1100ms.
+- Setup targeting: initial settlement placement uses small static intersection markers across the wide legal set; the stronger pulsing house/city treatment remains reserved for later build actions, with hover and keyboard focus restoring a prominent local cue.
 - Manual desktop smoke: three independently isolated headed browser sessions completed create/join/start, all setup placements and the first production turn with no console errors.
 
 Browser artifacts are intentionally local-only under `output/playwright/`:
@@ -33,6 +34,7 @@ Browser artifacts are intentionally local-only under `output/playwright/`:
 - `e2e-desktop.png`
 - `e2e-mobile.png`
 - `e2e-lobby-settings.png`
+- `e2e-setup-targets.png`
 - `resource-production-fx.png`
 - `resource-arrival-fx.png`
 

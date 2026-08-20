@@ -40,6 +40,8 @@ describe("Board construction targets", () => {
     rerender(<Board game={game} buildMode="settlement" onCommand={onCommand} />);
     const settlementTarget = screen.getByRole("button", { name: "在这里建造村庄" });
     expect(settlementTarget.getAttribute("data-build-target-id")).toBe(settlementId);
+    expect(settlementTarget.getAttribute("data-build-target-context")).toBe("build");
+    expect(settlementTarget.classList.contains("construction-target-setup")).toBe(false);
     fireEvent.keyDown(settlementTarget, { key: "Enter" });
     expect(onCommand).toHaveBeenLastCalledWith({ type: "BuildSettlement", vertexId: settlementId });
 
@@ -63,6 +65,9 @@ describe("Board construction targets", () => {
     fireEvent.click(target);
 
     expect(target.getAttribute("data-build-target-kind")).toBe("settlement");
+    expect(target.getAttribute("data-build-target-context")).toBe("setup");
+    expect(target.classList.contains("construction-target-setup")).toBe(true);
+    expect(target.querySelector(".construction-target-vertex-ring")?.getAttribute("r")).toBe("7");
     expect(onCommand).toHaveBeenCalledWith({
       type: "PlaceInitialSettlement",
       vertexId: target.getAttribute("data-build-target-id"),

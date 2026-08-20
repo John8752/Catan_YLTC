@@ -32,6 +32,7 @@ export function ConstructionTargets({
     : game.interaction.kind === "turn-action" && (buildMode === "settlement" || buildMode === "city")
       ? buildMode
       : null;
+  const isSetupSettlementTarget = game.interaction.kind === "setup-settlement";
   const edgeTargetKind = game.interaction.kind === "setup-road" || game.interaction.kind === "free-road"
     ? "road"
     : game.interaction.kind === "turn-action" && buildMode === "road"
@@ -96,8 +97,9 @@ export function ConstructionTargets({
         return (
           <g
             key={vertex.id}
-            className={`construction-target construction-target-${vertexTargetKind}`}
+            className={`construction-target construction-target-${vertexTargetKind}${isSetupSettlementTarget ? " construction-target-setup" : ""}`}
             data-build-target-kind={vertexTargetKind}
+            data-build-target-context={isSetupSettlementTarget ? "setup" : "build"}
             data-build-target-id={vertex.id}
             transform={`translate(${vertex.x * coordinateScale} ${vertex.y * coordinateScale})`}
             role="button"
@@ -108,7 +110,10 @@ export function ConstructionTargets({
             onKeyDown={(event) => activateOnKeyboard(event, activate)}
           >
             <circle className="construction-target-hit" r="19" />
-            <circle className="construction-target-vertex-ring" r={vertexTargetKind === "city" ? 17 : 12} />
+            <circle
+              className="construction-target-vertex-ring"
+              r={vertexTargetKind === "city" ? 17 : isSetupSettlementTarget ? 7 : 12}
+            />
             {vertexTargetKind === "city" ? (
               <g className="construction-target-upgrade-mark" transform="translate(13 -13)">
                 <circle r="7" />

@@ -167,14 +167,17 @@ export function Board({ game, busy = false, onCommand, buildMode = null }: Board
               const player = game.players.find((candidate) => candidate.id === road.ownerId);
               if (first === undefined || second === undefined || player === undefined) return null;
               return (
-                <line
+                <g
                   key={road.edgeId}
                   className={`piece-color-${player.color}`}
-                  x1={first.x * HEX_SIZE}
-                  y1={first.y * HEX_SIZE}
-                  x2={second.x * HEX_SIZE}
-                  y2={second.y * HEX_SIZE}
-                />
+                  data-piece-kind="road"
+                  role="img"
+                  aria-label={`${player.name}的道路`}
+                >
+                  <line className="piece-road-shadow" x1={first.x * HEX_SIZE} y1={first.y * HEX_SIZE + 2} x2={second.x * HEX_SIZE} y2={second.y * HEX_SIZE + 2} />
+                  <line className="piece-road-body" x1={first.x * HEX_SIZE} y1={first.y * HEX_SIZE} x2={second.x * HEX_SIZE} y2={second.y * HEX_SIZE} />
+                  <line className="piece-road-shine" x1={first.x * HEX_SIZE} y1={first.y * HEX_SIZE - 1.5} x2={second.x * HEX_SIZE} y2={second.y * HEX_SIZE - 1.5} />
+                </g>
               );
             })}
           </g>
@@ -184,13 +187,32 @@ export function Board({ game, busy = false, onCommand, buildMode = null }: Board
               const player = game.players.find((candidate) => candidate.id === building.ownerId);
               if (vertex === undefined || player === undefined) return null;
               return (
-                <circle
+                <g
                   key={building.vertexId}
                   className={`piece-color-${player.color}`}
-                  cx={vertex.x * HEX_SIZE}
-                  cy={vertex.y * HEX_SIZE}
-                  r={building.kind === "city" ? 10 : 7}
-                />
+                  data-piece-kind={building.kind}
+                  transform={`translate(${vertex.x * HEX_SIZE} ${vertex.y * HEX_SIZE})`}
+                  role="img"
+                  aria-label={`${player.name}的${building.kind === "city" ? "城市" : "村庄"}`}
+                >
+                  <title>{player.name}的{building.kind === "city" ? "城市" : "村庄"}</title>
+                  {building.kind === "settlement" ? (
+                    <>
+                      <path className="piece-building-shadow" d="M-11 9V-5L0-14L11-5V9Z" transform="translate(0 2)" />
+                      <path className="piece-building-body" d="M-11 9V-5L0-14L11-5V9Z" />
+                      <path className="piece-building-shine" d="M-8-4L0-11L8-4" />
+                      <rect className="piece-building-door" x="-2.5" y="2" width="5" height="7" rx="1" />
+                    </>
+                  ) : (
+                    <>
+                      <path className="piece-building-shadow" d="M-15 10V-5H-9V-13H1V-6H8L14-12L18-6V10Z" transform="translate(0 2)" />
+                      <path className="piece-building-body" d="M-15 10V-5H-9V-13H1V-6H8L14-12L18-6V10Z" />
+                      <path className="piece-building-shine" d="M-12-3H-7V-10H-1M9-4L14-9L17-5" />
+                      <rect className="piece-building-door" x="-4" y="1" width="6" height="9" rx="1" />
+                      <rect className="piece-building-window" x="8" y="1" width="4" height="4" rx=".7" />
+                    </>
+                  )}
+                </g>
               );
             })}
           </g>

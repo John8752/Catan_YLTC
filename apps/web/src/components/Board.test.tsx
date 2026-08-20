@@ -23,4 +23,38 @@ describe("Board", () => {
     expect(markup.match(/data-port-id=/g)).toHaveLength(9);
     expect(markup).toContain("群岛初现");
   });
+
+  it("renders roads, villages and cities as distinct player-colored silhouettes", () => {
+    const game = createBaseGame({
+      id: "game_pieces",
+      seed: 43,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const firstVertex = game.map.vertices[0]?.id;
+    const secondVertex = game.map.vertices[2]?.id;
+    const firstEdge = game.map.edges[0]?.id;
+    if (firstVertex === undefined || secondVertex === undefined || firstEdge === undefined) throw new Error("Missing map locations");
+    const withPieces = {
+      ...game,
+      buildings: [
+        { ownerId: "player_1", vertexId: firstVertex, kind: "settlement" as const },
+        { ownerId: "player_2", vertexId: secondVertex, kind: "city" as const },
+      ],
+      roads: [{ ownerId: "player_3", edgeId: firstEdge }],
+    };
+    const markup = renderToStaticMarkup(<Board game={projectGameForPlayer(withPieces, "player_1")} />);
+
+    expect(markup).toContain('data-piece-kind="road"');
+    expect(markup).toContain('data-piece-kind="settlement"');
+    expect(markup).toContain('data-piece-kind="city"');
+    expect(markup).toContain("piece-color-terracotta");
+    expect(markup).toContain("piece-color-ocean");
+    expect(markup).toContain("piece-color-pine");
+    expect(markup).toContain("林的村庄");
+    expect(markup).toContain("周的城市");
+  });
 });

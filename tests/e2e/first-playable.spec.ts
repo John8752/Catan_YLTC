@@ -29,12 +29,15 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
 
     await expect(host.getByRole("button", { name: "掷骰子" })).toBeVisible();
     await host.getByRole("button", { name: "掷骰子" }).click();
-    await expect(host.getByText(/骰子：\d \+ \d/)).toBeVisible();
+    await expect(host.getByLabel(/骰子：\d \+ \d/)).toBeVisible();
     await expect(host.getByRole("img", { name: "由十九块六边形地形组成的游戏棋盘" })).toBeVisible();
+    const artifactDir = path.join(process.cwd(), "output", "playwright");
+    await mkdir(artifactDir, { recursive: true });
+    await host.screenshot({ path: path.join(artifactDir, "e2e-desktop.png"), fullPage: true });
 
     await second.reload();
     await expect(second.locator(".room-code")).toHaveText(roomCode ?? "");
-    await expect(second.getByText("玩家 · 你")).toBeVisible();
+    await expect(second.locator('[data-current-player="true"]')).toContainText("岚");
 
     const extraTab = await contexts[0]?.newPage();
     if (extraTab === undefined) throw new Error("Missing host browser context");
@@ -44,8 +47,6 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
 
     await host.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => host.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    const artifactDir = path.join(process.cwd(), "output", "playwright");
-    await mkdir(artifactDir, { recursive: true });
     await host.screenshot({ path: path.join(artifactDir, "e2e-mobile.png"), fullPage: true });
   } finally {
     await Promise.allSettled(contexts.map((context) => context.close()));

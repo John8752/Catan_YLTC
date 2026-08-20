@@ -10,6 +10,7 @@ import {
   type PlayerSession,
 } from "./api.js";
 import { Board } from "./components/Board.js";
+import { PlayerDock } from "./components/PlayerDock.js";
 import { RoomPanel } from "./components/RoomPanel.js";
 import { Welcome } from "./components/Welcome.js";
 import { clearLegacySharedSession, createPlayerSessionStore } from "./player-session.js";
@@ -153,12 +154,12 @@ export function App() {
   }
 
   return (
-    <main className="game-layout">
-      <div className="game-brand" aria-label="Catan YLTC">
+    <main className="game-layout grid min-h-svh grid-cols-1 gap-3 p-3 lg:h-svh lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:overflow-hidden">
+      <div className="game-brand lg:col-start-1 lg:row-start-1" aria-label="Catan YLTC">
         <span aria-hidden="true">⬡</span>
         <strong>Catan YLTC</strong>
       </div>
-      <div className="playfield">
+      <div className="playfield min-h-[420px] lg:col-start-1 lg:row-start-2 lg:min-h-0">
         {room.game === null ? (
           <section className="waiting-island">
             <div className="island-orbit" aria-hidden="true"><span>⬡</span></div>
@@ -179,6 +180,15 @@ export function App() {
           </>
         )}
       </div>
+      {room.game === null ? null : (
+        <PlayerDock
+          game={room.game}
+          busy={busy}
+          onCommand={handleGameCommand}
+          buildMode={buildMode}
+          onBuildModeChange={setBuildMode}
+        />
+      )}
       <RoomPanel
         room={room}
         playerId={session.playerId}
@@ -186,9 +196,6 @@ export function App() {
         busy={busy}
         onStart={handleStart}
         onLeave={handleLeave}
-        onGameCommand={handleGameCommand}
-        buildMode={buildMode}
-        onBuildModeChange={setBuildMode}
       />
       {error === null ? null : <p className="toast-error" role="alert">{error}</p>}
     </main>

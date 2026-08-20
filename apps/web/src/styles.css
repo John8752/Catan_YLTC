@@ -1,3 +1,33 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--ui-muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
 :root {
   color-scheme: light;
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
@@ -14,6 +44,25 @@
   --wheat: #d7ad4f;
   --line: rgba(32, 52, 51, 0.18);
   --shadow: 0 18px 55px rgba(34, 30, 20, 0.2);
+  --radius: .75rem;
+  --background: oklch(0.89 0.035 82);
+  --foreground: oklch(0.27 0.03 185);
+  --card: oklch(0.93 0.04 86);
+  --card-foreground: oklch(0.27 0.03 185);
+  --popover: oklch(0.96 0.025 86);
+  --popover-foreground: oklch(0.25 0.03 185);
+  --primary: oklch(0.31 0.055 185);
+  --primary-foreground: oklch(0.98 0.015 86);
+  --secondary: oklch(0.86 0.055 80);
+  --secondary-foreground: oklch(0.29 0.03 185);
+  --ui-muted: oklch(0.88 0.025 80);
+  --muted-foreground: oklch(0.51 0.025 175);
+  --accent: oklch(0.62 0.14 42);
+  --accent-foreground: oklch(0.98 0.015 86);
+  --destructive: oklch(0.55 0.19 28);
+  --border: oklch(0.72 0.035 75 / 45%);
+  --input: oklch(0.72 0.035 75 / 55%);
+  --ring: oklch(0.55 0.08 190);
 }
 
 * { box-sizing: border-box; }
@@ -118,17 +167,12 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 
 .game-layout {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  grid-template-rows: auto 1fr;
-  gap: 1rem;
-  padding: 1rem;
   background:
     radial-gradient(circle at 40% 45%, rgba(78,135,142,.9), rgba(30,82,87,.96) 45%, #153d3f 75%),
     #184448;
 }
 
-.game-brand { grid-column: 1 / -1; display: flex; align-items: center; gap: .5rem; color: #f8edcf; letter-spacing: .08em; }
+.game-brand { display: flex; align-items: center; gap: .5rem; color: #f8edcf; letter-spacing: .08em; }
 .game-brand span { color: #efbd79; font-size: 1.5rem; }
 .playfield { position: relative; min-width: 0; display: grid; place-items: center; }
 .waiting-island { max-width: 520px; color: #fff9e8; text-align: center; }
@@ -188,9 +232,21 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .board-vertices .is-selectable { fill: #fff2a8; stroke: #8d5b24; stroke-width: 3; r: 8px; cursor: pointer; filter: drop-shadow(0 0 5px rgba(255,221,91,.9)); }
 .board-ports circle { fill: #efe1ba; stroke: rgba(63,81,83,.7); stroke-width: 2; }
 .board-ports text { fill: #354649; font-size: 8px; font-weight: 800; pointer-events: none; }
-.placed-roads line { stroke-width: 9; stroke-linecap: round; stroke: #777; pointer-events: none; filter: drop-shadow(0 2px 1px rgba(0,0,0,.35)); }
-.placed-buildings circle { stroke: #f7e8c5; stroke-width: 2; pointer-events: none; filter: drop-shadow(0 3px 2px rgba(0,0,0,.35)); }
-.placed-roads .piece-color-terracotta,.placed-buildings .piece-color-terracotta { stroke: #b65f43; fill: #b65f43; }.placed-roads .piece-color-ocean,.placed-buildings .piece-color-ocean { stroke: #387d95; fill: #387d95; }.placed-roads .piece-color-pine,.placed-buildings .piece-color-pine { stroke: #3f7452; fill: #3f7452; }.placed-roads .piece-color-wheat,.placed-buildings .piece-color-wheat { stroke: #d4a93f; fill: #d4a93f; }.placed-roads .piece-color-plum,.placed-buildings .piece-color-plum { stroke: #74526f; fill: #74526f; }.placed-roads .piece-color-charcoal,.placed-buildings .piece-color-charcoal { stroke: #424a49; fill: #424a49; }
+.placed-roads,.placed-buildings { pointer-events: none; }
+.piece-color-terracotta { --piece: #c85d42; --piece-dark: #7f3025; --piece-light: #ffd1bd; }
+.piece-color-ocean { --piece: #3383a5; --piece-dark: #17506a; --piece-light: #bcecff; }
+.piece-color-pine { --piece: #43845a; --piece-dark: #245237; --piece-light: #c9f0d4; }
+.piece-color-wheat { --piece: #d4a42e; --piece-dark: #876316; --piece-light: #fff0aa; }
+.piece-color-plum { --piece: #865c82; --piece-dark: #52364f; --piece-light: #efd0eb; }
+.piece-color-charcoal { --piece: #4e5857; --piece-dark: #293130; --piece-light: #d9e2df; }
+.piece-road-shadow { stroke: rgba(12,29,29,.55); stroke-width: 12; stroke-linecap: round; }
+.piece-road-body { stroke: var(--piece); stroke-width: 9; stroke-linecap: round; filter: drop-shadow(0 2px 1px rgba(0,0,0,.3)); }
+.piece-road-shine { stroke: var(--piece-light); stroke-width: 2.2; stroke-linecap: round; opacity: .72; }
+.piece-building-shadow { fill: rgba(10,26,25,.48); stroke: rgba(10,26,25,.2); stroke-width: 2; }
+.piece-building-body { fill: var(--piece); stroke: var(--piece-dark); stroke-width: 2; filter: drop-shadow(0 3px 2px rgba(0,0,0,.35)); }
+.piece-building-shine { fill: none; stroke: var(--piece-light); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: .78; }
+.piece-building-door { fill: var(--piece-dark); opacity: .9; }
+.piece-building-window { fill: var(--piece-light); opacity: .9; }
 .board-instruction { margin: .35rem 0 0; color: #f4e6c5; font-weight: 700; text-align: center; }
 .resolution-form { display: grid; gap: .65rem; }.resolution-form label { display: grid; gap: .25rem; font-size: .78rem; }.resolution-form input,.resolution-form select { min-width: 0; padding: .48rem; border: 1px solid rgba(75,58,38,.24); border-radius: 8px; background: #fffaf0; color: #312b24; }.discard-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: .3rem; }.discard-grid input { width: 100%; }.dice-result { font-weight: 800; color: #6d422b; }
 .action-stack { display: grid; gap: .55rem; }.build-buttons { display: grid; grid-template-columns: repeat(3,1fr); gap: .35rem; }.build-button { border: 1px solid rgba(91,67,38,.25); border-radius: 8px; padding: .52rem .25rem; background: #f4e7ca; color: #4f3b28; font-weight: 750; cursor: pointer; }.build-button.is-active { color: #fff; background: #9a5239; box-shadow: 0 0 0 2px rgba(154,82,57,.2); }
@@ -201,11 +257,16 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .toast-error { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 10; margin: 0; box-shadow: var(--shadow); }
 .loading-table { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 1rem; color: var(--pine); }
 
+@media (min-width: 1024px) {
+  .board-shell { width: min(100%, calc((100svh - 300px) * 1.1923)); height: 100%; display: flex; flex-direction: column; }
+  .board-stage { min-height: 0; flex: 1; display: grid; place-items: center; aspect-ratio: auto; }
+  .board-svg { width: auto; max-width: 100%; height: 100%; }
+}
+
 @media (max-width: 820px) {
   .welcome-layout { grid-template-columns: 1fr; padding: 1.4rem; background: linear-gradient(170deg, var(--pine) 0 46%, #d8c8a6 46.2%); }
   .welcome-copy h1 { font-size: clamp(2.8rem, 14vw, 5rem); }
   .milestone-note { margin-bottom: 1rem; }
-  .game-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(420px, 1fr) auto; }
   .game-brand { grid-column: 1; }
   .room-panel { min-height: auto; }
   .board-shell { align-self: start; }
@@ -217,7 +278,6 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   .welcome-copy h1 { font-size: 3rem; }
   .welcome-lead { font-size: .95rem; }
   .entry-panel { padding: 1.25rem; }
-  .game-layout { padding: .65rem; grid-template-rows: auto minmax(330px, auto) auto; }
   .board-heading h2 { font-size: 1.45rem; }
   .phase-chip { font-size: .66rem; }
   .waiting-island { padding: 2rem 1rem; }

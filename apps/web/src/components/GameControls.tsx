@@ -1,5 +1,7 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button.js";
+import { cn } from "@/lib/utils.js";
 import { TradeControls } from "./TradeControls.js";
 import { DevelopmentControls } from "./DevelopmentControls.js";
 
@@ -37,41 +39,46 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
 
   if (game.interaction.kind === "turn-roll") {
     return (
-      <div className="action-stack">
+      <div className="action-stack xl:grid-cols-2">
         <DevelopmentControls game={game} busy={busy} onCommand={onCommand} />
-        <button className="primary-button" type="button" disabled={busy} onClick={() => onCommand({ type: "RollDice" })}>
+        <Button type="button" disabled={busy} onClick={() => onCommand({ type: "RollDice" })}>
           {busy ? "掷骰中…" : "掷骰子"}
-        </button>
+        </Button>
       </div>
     );
   }
 
   if (game.interaction.kind === "turn-action") {
     return (
-      <div className="action-stack">
+      <div className="action-stack xl:grid-cols-3 xl:items-start">
         <DevelopmentControls game={game} busy={busy} onCommand={onCommand} />
         <TradeControls game={game} busy={busy} onCommand={onCommand} />
-        <div className="build-buttons" aria-label="建造选项">
+        <Button type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
+          {busy ? "提交中…" : "结束回合"}
+        </Button>
+        <div className="build-buttons xl:col-span-3" aria-label="建造选项">
           {([
             ["road", "道路", game.interaction.roadEdgeIds.length],
             ["settlement", "定居点", game.interaction.settlementVertexIds.length],
             ["city", "城市", game.interaction.cityVertexIds.length],
           ] as const).map(([mode, label, targets]) => (
-            <button
+            <Button
               key={mode}
-              className={buildMode === mode ? "build-button is-active" : "build-button"}
+              variant="outline"
+              size="sm"
+              className={cn(
+                "border-[#a65c43]/25 bg-[#fffaf0]/70",
+                buildMode === mode && "border-[#b45c42] bg-[#b45c42] text-white hover:bg-[#9f4d38] hover:text-white",
+              )}
               type="button"
               disabled={busy || targets === 0}
               onClick={() => onBuildModeChange(buildMode === mode ? null : mode)}
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
-        <small>道路：砖+木　定居点：砖+木+羊+麦　城市：2麦+3矿</small>
-        <button className="primary-button" type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
-          {busy ? "提交中…" : "结束回合"}
-        </button>
+        <small className="xl:col-span-3">道路：砖+木　定居点：砖+木+羊+麦　城市：2麦+3矿</small>
       </div>
     );
   }
@@ -104,9 +111,9 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
             </label>
           ))}
         </div>
-        <button className="primary-button" type="submit" disabled={busy || selectedCount !== game.interaction.requiredCount}>
+        <Button type="submit" disabled={busy || selectedCount !== game.interaction.requiredCount}>
           确认弃牌
-        </button>
+        </Button>
       </form>
     );
   }
@@ -114,7 +121,7 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
   if (game.interaction.kind === "robber") {
     return (
       <form
-        className="resolution-form"
+        className="resolution-form xl:grid-cols-2 xl:items-end"
         onSubmit={(event) => {
           event.preventDefault();
           if (robberHexId !== "") {
@@ -142,7 +149,7 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
             </select>
           </label>
         ) : null}
-        <button className="primary-button" type="submit" disabled={busy || robberHexId === ""}>移动强盗</button>
+        <Button type="submit" disabled={busy || robberHexId === ""}>移动强盗</Button>
       </form>
     );
   }

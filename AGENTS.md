@@ -28,6 +28,29 @@
 - UI copy defaults to Simplified Chinese. Stable protocol values remain English code strings.
 - Use SVG for the board and DOM for text-heavy controls, dialogs, logs and accessibility-sensitive UI.
 
+## Domain modularity
+
+`packages/game-core` is one package for now, but it must contain explicit domain modules rather than one connected rules blob:
+
+- `primitives`: stable IDs, quantities, coordinates and generic result/error values; imports no game domain.
+- `map`: faces, vertices, edges, adjacency, board templates and occupancy slots; knows nothing about inventories, prices or trade flow.
+- `resources`: resource definitions, amounts, bank supply, player inventories and production transfers; knows nothing about SVG coordinates or room transport.
+- `buildables`: buildable definitions, costs, piece limits and placement requirements; references resources and map locations only through stable IDs/value types and public capabilities.
+- `trade`: offers, counteroffers, maritime ratios and atomic asset transfers; consumes inventory/port capabilities and does not inspect map internals or UI state.
+- `rulesets`: the only layer that composes a map template, resource catalog, buildable catalog and trade policy into a named `RuleProfile`.
+- `engine`: validates commands and applies events using the composed ruleset; it orchestrates modules without absorbing their private logic.
+
+Hard constraints:
+
+- Sibling domain modules do not import another module's internal files or mutate another module's state directly.
+- Cross-module calls use exported immutable value types, commands, events or narrow capability interfaces.
+- A stable domain concept has one canonical definition. Never duplicate resource, terrain, buildable or tradable IDs in server/web code.
+- Adding a resource, map template, buildable or tradable asset should primarily add a definition and focused rules, not require editing unrelated modules.
+- Rule-profile differences belong in `rulesets`, not scattered `playerCount` or profile conditionals.
+- Domain modules must be headlessly testable. Rendering, networking, persistence and browser input remain outer adapters.
+- Keep the dependency direction acyclic: `primitives -> sibling domains -> rulesets -> engine -> protocol -> apps`.
+- See ADR-0004 before introducing initial placement, production, building or trading behavior.
+
 ## Rule change workflow
 
 1. Add or update the relevant rule note under `docs/rules`.

@@ -29,3 +29,4 @@
 | R3 | Reconnect creates divergent state | Use revisions, snapshots and recorded commands/events |
 | R4 | Player-count variants become nested conditionals | Use explicit `RuleProfile` modules |
 | R5 | Vibe coding produces giant files | Enforce the code map and split near 500 lines |
+| R6 | Map, resources, building and trade collapse into one rules blob | Enforce ADR-0004 domain boundaries and compose them only in named rulesets |

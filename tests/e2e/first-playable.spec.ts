@@ -14,12 +14,25 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     const roomCode = (await host.locator(".room-code").textContent())?.trim();
     expect(roomCode).toMatch(/^[A-Z0-9]{6}$/);
 
+    await expect(host.getByRole("img", { name: "由十九块六边形地形组成的开局地图预览" })).toBeVisible();
+    const seedLabel = host.locator(".lobby-setup .eyebrow");
+    const initialSeedLabel = await seedLabel.textContent();
+    await host.getByRole("button", { name: "再次随机" }).click();
+    await expect.poll(() => seedLabel.textContent()).not.toBe(initialSeedLabel);
+    await host.getByRole("button", { name: "3 人", exact: true }).click();
+    await expect(host.getByRole("button", { name: "3 人", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await host.getByRole("combobox", { name: "获胜分数" }).selectOption("12");
+    await expect(host.getByRole("combobox", { name: "获胜分数" })).toHaveValue("12");
+
     await joinRoom(second, "岚", roomCode ?? "");
     await joinRoom(third, "舟", roomCode ?? "");
-    await expect(host.getByText("3/4")).toBeVisible();
-    await host.getByRole("button", { name: "生成岛屿并开局" }).click();
+    await expect(host.getByText("3/3")).toBeVisible();
+    await expect(second.getByRole("combobox", { name: "获胜分数" })).toHaveValue("12");
+    await expect(second.getByRole("combobox", { name: "获胜分数" })).toBeDisabled();
     const artifactDir = path.join(process.cwd(), "output", "playwright");
     await mkdir(artifactDir, { recursive: true });
+    await host.screenshot({ path: path.join(artifactDir, "e2e-lobby-settings.png"), fullPage: true });
+    await host.getByRole("button", { name: "使用当前地图开局" }).click();
     let capturedResourceEffect = false;
 
     for (let placement = 0; placement < 6; placement += 1) {

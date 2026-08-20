@@ -2,6 +2,11 @@ import { initialPieceSupply } from "../buildables/index.js";
 import { createDevelopmentDeck } from "../development/index.js";
 import { createStandardMap, type TerrainType } from "../map/index.js";
 import { emptyResourceHand, initialResourceBank, RESOURCE_TYPES } from "../resources/index.js";
+import {
+  DEFAULT_VICTORY_POINTS_TO_WIN,
+  MAX_VICTORY_POINTS_TO_WIN,
+  MIN_VICTORY_POINTS_TO_WIN,
+} from "../rulesets/index.js";
 import type { GameState, PlayerSeed } from "./state.js";
 
 const EXPECTED_TERRAIN_COUNTS: Readonly<Record<TerrainType, number>> = {
@@ -17,11 +22,12 @@ export interface CreateGameInput {
   readonly id: string;
   readonly seed: number;
   readonly players: readonly PlayerSeed[];
+  readonly victoryPointsToWin?: number;
 }
 
 export class GameRuleError extends Error {
   constructor(
-    readonly code: "UNSUPPORTED_PLAYER_COUNT" | "DUPLICATE_PLAYER" | "INVALID_PLAYER_NAME",
+    readonly code: "UNSUPPORTED_PLAYER_COUNT" | "DUPLICATE_PLAYER" | "INVALID_PLAYER_NAME" | "INVALID_VICTORY_TARGET",
     message: string,
   ) {
     super(message);
@@ -34,6 +40,18 @@ export function createBaseGame(input: CreateGameInput): GameState {
     throw new GameRuleError(
       "UNSUPPORTED_PLAYER_COUNT",
       "The base-3-4 rule profile requires three or four players",
+    );
+  }
+
+  const victoryPointsToWin = input.victoryPointsToWin ?? DEFAULT_VICTORY_POINTS_TO_WIN;
+  if (
+    !Number.isInteger(victoryPointsToWin) ||
+    victoryPointsToWin < MIN_VICTORY_POINTS_TO_WIN ||
+    victoryPointsToWin > MAX_VICTORY_POINTS_TO_WIN
+  ) {
+    throw new GameRuleError(
+      "INVALID_VICTORY_TARGET",
+      `Victory target must be ${MIN_VICTORY_POINTS_TO_WIN}–${MAX_VICTORY_POINTS_TO_WIN} points`,
     );
   }
 
@@ -59,6 +77,7 @@ export function createBaseGame(input: CreateGameInput): GameState {
   const state: GameState = {
     id: input.id,
     ruleProfile: "base-3-4",
+    victoryPointsToWin,
     seed: input.seed,
     revision: 1,
     map: createStandardMap(input.seed),
@@ -95,6 +114,14 @@ export function createBaseGame(input: CreateGameInput): GameState {
 }
 
 export function assertGameInvariant(state: GameState): void {
+  if (
+    !Number.isInteger(state.victoryPointsToWin) ||
+    state.victoryPointsToWin < MIN_VICTORY_POINTS_TO_WIN ||
+    state.victoryPointsToWin > MAX_VICTORY_POINTS_TO_WIN
+  ) {
+    throw new Error(`Invalid victory target: ${state.victoryPointsToWin}`);
+  }
+
   if (state.map.hexes.length !== 19) {
     throw new Error(`Expected 19 board hexes, received ${state.map.hexes.length}`);
   }

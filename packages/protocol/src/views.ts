@@ -51,6 +51,7 @@ export interface PrivatePlayerView extends PublicPlayerView {
 export interface GameView {
   readonly id: string;
   readonly ruleProfile: RuleProfile;
+  readonly victoryPointsToWin: number;
   readonly seed: number;
   readonly revision: number;
   readonly map: GameMap;
@@ -158,11 +159,20 @@ export interface LobbyMemberView {
   readonly isHost: boolean;
 }
 
+export interface RoomSettingsView {
+  readonly ruleProfile: "base-3-4";
+  readonly playerLimit: 3 | 4;
+  readonly victoryPointsToWin: number;
+  readonly mapSeed: number;
+}
+
 export interface RoomView {
   readonly id: string;
   readonly revision: number;
   readonly hostPlayerId: string;
   readonly members: readonly LobbyMemberView[];
+  readonly settings: RoomSettingsView;
+  readonly previewMap: GameMap | null;
   readonly game: GameView | null;
 }
 
@@ -197,6 +207,7 @@ export function projectGameForPlayer(
   return {
     id: state.id,
     ruleProfile: state.ruleProfile,
+    victoryPointsToWin: state.victoryPointsToWin,
     seed: state.seed,
     revision: state.revision,
     map: state.map,

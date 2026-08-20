@@ -1,5 +1,6 @@
 import type { RoomView } from "@catan/protocol";
-import { Activity, Crown, LogOut, Route, ShieldCheck, Users } from "lucide-react";
+import type { ReactNode } from "react";
+import { Activity, Crown, LogOut, Route, Settings2, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card.js";
@@ -13,6 +14,10 @@ export interface RoomPanelProps {
   readonly connectionState: "connecting" | "live" | "offline";
   readonly busy: boolean;
   readonly onStart: () => void;
+  readonly onSettingsChange: (settings: {
+    playerLimit: 3 | 4;
+    victoryPointsToWin: number;
+  }) => void;
   readonly onLeave: () => void;
 }
 
@@ -31,6 +36,7 @@ export function RoomPanel({
   connectionState,
   busy,
   onStart,
+  onSettingsChange,
   onLeave,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
@@ -55,7 +61,7 @@ export function RoomPanel({
           </div>
         </CardHeader>
 
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-3">
           {room.game === null ? null : (
             <section className="flex min-h-0 flex-col lg:flex-1" aria-label="公开记录">
               <div className="mb-2 flex items-center justify-between text-xs font-black tracking-[.12em] text-[#5d665f] uppercase">
@@ -82,17 +88,73 @@ export function RoomPanel({
             </section>
           )}
 
+          {room.game === null ? (
+            <section aria-label="房间设置">
+              <div className="mb-2 flex items-center justify-between text-xs font-black tracking-[.12em] text-[#5d665f] uppercase">
+                <span className="flex items-center gap-2"><Settings2 className="size-4 text-[#b45c42]" />房间设置</span>
+                <span>{isHost ? "房主可调整" : "由房主设置"}</span>
+              </div>
+              <div className="space-y-1 rounded-xl border border-[#695237]/15 bg-white/35 p-3">
+                <SettingRow label="规则版本">
+                  <Badge variant="outline" className="border-[#386f62]/20 bg-white/35 text-[#37685d]">基础版 3–4 人</Badge>
+                </SettingRow>
+                <SettingRow label="人数上限">
+                  <div className="flex rounded-lg bg-[#ded0b2]/60 p-1" aria-label="人数上限">
+                    {([3, 4] as const).map((playerLimit) => (
+                      <Button
+                        key={playerLimit}
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className={cn(
+                          "h-7 min-w-10 rounded-md px-3 text-xs",
+                          room.settings.playerLimit === playerLimit
+                            ? "bg-[#37685d] text-white hover:bg-[#315d53] hover:text-white"
+                            : "text-[#53665f] hover:bg-white/55",
+                        )}
+                        aria-pressed={room.settings.playerLimit === playerLimit}
+                        disabled={!isHost || busy || room.members.length > playerLimit}
+                        onClick={() => onSettingsChange({
+                          playerLimit,
+                          victoryPointsToWin: room.settings.victoryPointsToWin,
+                        })}
+                      >
+                        {playerLimit} 人
+                      </Button>
+                    ))}
+                  </div>
+                </SettingRow>
+                <SettingRow label="获胜分数" icon={<Trophy className="size-3.5 text-[#ba8131]" />}>
+                  <select
+                    className="h-8 rounded-lg border border-[#695237]/20 bg-[#fffaf0]/80 px-2 text-sm font-bold text-[#29433d] outline-none focus-visible:ring-2 focus-visible:ring-[#37685d]/45 disabled:cursor-not-allowed disabled:opacity-65"
+                    aria-label="获胜分数"
+                    value={room.settings.victoryPointsToWin}
+                    disabled={!isHost || busy}
+                    onChange={(event) => onSettingsChange({
+                      playerLimit: room.settings.playerLimit,
+                      victoryPointsToWin: Number(event.target.value),
+                    })}
+                  >
+                    {Array.from({ length: 11 }, (_, index) => index + 5).map((score) => (
+                      <option key={score} value={score}>{score} 分</option>
+                    ))}
+                  </select>
+                </SettingRow>
+              </div>
+            </section>
+          ) : null}
+
           <section aria-label="落座玩家">
             <div className="mb-2 flex items-center justify-between text-xs font-black tracking-[.12em] text-[#5d665f] uppercase">
               <span className="flex items-center gap-2"><Users className="size-4 text-[#b45c42]" />落座玩家</span>
-              <span>{room.members.length}/4</span>
+              <span>{room.members.length}/{room.settings.playerLimit}</span>
             </div>
             <div className="space-y-1">
               {room.members.map((member) => {
                 const gamePlayer = room.game?.players.find((player) => player.id === member.id);
                 return (
                   <div className={cn(
-                    "flex items-center gap-3 rounded-xl px-2.5 py-2.5",
+                    "flex items-center gap-3 rounded-xl px-2.5 py-2",
                     member.id === playerId ? "bg-white/55 ring-1 ring-[#5b7f73]/20" : "bg-transparent",
                   )} key={member.id} data-player-id={member.id} data-player-target={member.id} data-current-player={member.id === playerId ? "true" : undefined}>
                     <span className={cn("size-3.5 shrink-0 rounded-[5px] shadow-sm ring-2 ring-white/70", PLAYER_COLORS[member.color])} aria-hidden="true" />
@@ -124,9 +186,11 @@ export function RoomPanel({
               {isHost ? (
                 <>
                   <Button className="w-full" disabled={!canStart || busy} onClick={onStart}>
-                    {room.members.length < 3 ? "等待至少 3 人" : busy ? "正在开局…" : "生成岛屿并开局"}
+                    {room.members.length < 3 ? "等待至少 3 人" : busy ? "正在开局…" : "使用当前地图开局"}
                   </Button>
-                  <p className="mt-2 mb-0 text-xs">支持 3–4 人基础规则完整对局。</p>
+                  <p className="mt-2 mb-0 text-xs">
+                    当前地图 · {room.settings.playerLimit} 人上限 · {room.settings.victoryPointsToWin} 分获胜
+                  </p>
                 </>
               ) : <p className="mb-0">等待房主开局。把房间码发给朋友即可加入。</p>}
             </div>
@@ -140,5 +204,22 @@ export function RoomPanel({
         </CardFooter>
       </Card>
     </aside>
+  );
+}
+
+function SettingRow({
+  label,
+  icon,
+  children,
+}: {
+  readonly label: string;
+  readonly icon?: ReactNode;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-8 items-center justify-between gap-3">
+      <span className="flex items-center gap-1.5 text-sm font-bold text-[#53625d]">{icon}{label}</span>
+      {children}
+    </div>
   );
 }

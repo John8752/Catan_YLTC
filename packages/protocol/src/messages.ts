@@ -19,6 +19,18 @@ export interface StartRoomRequest {
   readonly seatToken: string;
 }
 
+export interface UpdateRoomSettingsRequest {
+  readonly seatToken: string;
+  readonly expectedRevision: number;
+  readonly playerLimit: number;
+  readonly victoryPointsToWin: number;
+}
+
+export interface RerollRoomMapRequest {
+  readonly seatToken: string;
+  readonly expectedRevision: number;
+}
+
 export type RoomServerMessage =
   | {
       readonly type: "room_state";

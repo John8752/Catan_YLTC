@@ -32,7 +32,7 @@ export function finalizeAcceptedTransition(result: GameCommandResult): GameComma
 
   if (state.phase.kind === "turn") {
     const activePlayerId = state.phase.activePlayerId;
-    if (actualVictoryPoints(state, activePlayerId) >= 10) {
+    if (actualVictoryPoints(state, activePlayerId) >= state.victoryPointsToWin) {
       state = { ...state, phase: { kind: "finished", winnerId: activePlayerId } };
       events.push({ type: "game_won", playerId: activePlayerId });
     }

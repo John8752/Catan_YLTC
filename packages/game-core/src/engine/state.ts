@@ -59,6 +59,7 @@ export type GamePhase =
 export interface GameState {
   readonly id: GameId;
   readonly ruleProfile: RuleProfile;
+  readonly victoryPointsToWin: number;
   readonly seed: number;
   readonly revision: number;
   readonly map: GameMap;

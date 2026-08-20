@@ -10,13 +10,13 @@ The first playable version supports one named rule profile: `base-3-4`. A match 
 
 A complete match includes:
 
-1. create or join a private room;
-2. host starts with three or four seats;
+1. create or join a private room and preview its server-generated map;
+2. before starting, the host may choose a three- or four-seat limit, choose the victory target and reroll the preview map;
 3. every player places two settlements and two adjacent roads in snake order;
 4. the second settlement grants its adjacent starting resources;
 5. players take turns rolling, resolving production or a seven, trading, building and playing development cards;
 6. the engine maintains longest-road and largest-army awards;
-7. the first eligible player to reach 10 victory points wins;
+7. the first eligible player to reach the room's configured victory target wins;
 8. every connected browser receives the same revision while private hands and cards remain redacted.
 
 ## Explicit non-goals
@@ -36,11 +36,19 @@ A complete match includes:
 - The robber starts on the desert.
 - Nine coastal ports are present: one 2:1 port for each resource and four generic 3:1 ports.
 - Terrain, number and port assignments are deterministic for a recorded seed and generation version.
+- While the room is waiting, every member sees the map generated from the room's authoritative seed. A host reroll replaces that seed; starting the game uses the currently previewed seed unchanged.
 - The bank starts with 19 cards of each resource.
 - Each player starts with 15 roads, 5 settlements and 4 cities in their piece supply.
 - The development deck contains 14 knights, 5 hidden victory points, 2 road-building cards, 2 monopoly cards and 2 resource-choice cards.
 
 Map topology is independent from map content. Vertices, edges, adjacency and coastlines belong to `map`; terrain production, port policy and deck/supply definitions are composed by `rulesets/base-3-4`.
+
+## Lobby settings
+
+- The default room limit is four players. The host may set it to three or four before the game starts, but never below the number of occupied seats.
+- The default victory target is 10 points. The host may select any whole-number target from 5 through 15 before the game starts.
+- Only the host may change settings or reroll the map. Every mutation uses the current room revision, is broadcast to all members and is rejected after the game starts.
+- The rule profile remains `base-3-4`; two-player and 5–6-player options are not presented as working settings until their own rule profiles exist.
 
 ## Initial placement
 
@@ -123,7 +131,7 @@ Random deck order and stolen resources are injected outcomes and appear in the p
 - Each award is worth 2 victory points.
 - A current award holder keeps the award on a tie. A challenger takes it only by becoming strictly greater. If an interrupted route leaves tied eligible challengers and no qualifying holder, the award is unowned.
 - Public points include settlements, cities and held awards. Hidden victory-point cards are excluded from opponents' totals.
-- During the active player's own turn, after every accepted command, the engine checks their actual total. At 10 or more points, it immediately emits the win and rejects further gameplay commands.
+- During the active player's own turn, after every accepted command, the engine checks their actual total. At the room's configured target or more points, it immediately emits the win and rejects further gameplay commands.
 
 ## Disconnection and history
 

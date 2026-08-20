@@ -4,6 +4,7 @@ import type {
   GameCommandResponse,
   PlayerSessionResponse,
   RoomServerMessage,
+  RoomSettingsView,
   RoomView,
 } from "@catan/protocol";
 
@@ -39,6 +40,29 @@ export async function startRoom(session: PlayerSession): Promise<RoomView> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ seatToken: session.seatToken }),
+  });
+}
+
+export async function updateRoomSettings(
+  session: PlayerSession,
+  expectedRevision: number,
+  settings: Pick<RoomSettingsView, "playerLimit" | "victoryPointsToWin">,
+): Promise<RoomView> {
+  return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}/settings`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ seatToken: session.seatToken, expectedRevision, ...settings }),
+  });
+}
+
+export async function rerollRoomMap(
+  session: PlayerSession,
+  expectedRevision: number,
+): Promise<RoomView> {
+  return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}/reroll-map`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ seatToken: session.seatToken, expectedRevision }),
   });
 }
 

@@ -1,17 +1,13 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import type { KeyboardEvent } from "react";
+import {
+  axialToPixel,
+  BOARD_HEX_SIZE,
+  BoardPorts,
+  BoardTerrain,
+  terrainLabel,
+} from "./BoardMap.js";
 import { ConstructionTargets } from "./ConstructionTargets.js";
-
-const TERRAIN_LABELS = {
-  brick: "砖土",
-  lumber: "森林",
-  wool: "牧场",
-  grain: "麦田",
-  ore: "矿山",
-  desert: "荒漠",
-} as const;
-
-const HEX_SIZE = 56;
 
 export interface BoardProps {
   readonly game: GameView;
@@ -54,38 +50,7 @@ export function Board({
               <feDropShadow dx="0" dy="5" stdDeviation="4" floodOpacity="0.22" />
             </filter>
           </defs>
-          <g filter="url(#tile-shadow)">
-            {game.map.hexes.map((tile) => {
-              const center = axialToPixel(tile.q, tile.r);
-              const label = TERRAIN_LABELS[tile.terrain];
-
-              return (
-                <g
-                  key={tile.id}
-                  className={`hex-tile terrain-${tile.terrain}`}
-                  data-hex-id={tile.id}
-                  transform={`translate(${center.x} ${center.y})`}
-                  role="group"
-                  aria-label={`${label}${tile.numberToken === null ? "" : `，点数 ${tile.numberToken}`}`}
-                >
-                  <g className="hex-content">
-                    <polygon points={hexPoints(HEX_SIZE)} />
-                    <text className="terrain-mark" y={tile.numberToken === null ? 7 : -11} textAnchor="middle">
-                      {terrainMark(tile.terrain)}
-                    </text>
-                    {tile.numberToken === null ? null : (
-                      <g className={tile.numberToken === 6 || tile.numberToken === 8 ? "token hot" : "token"}>
-                        <circle cy="16" r="15" />
-                        <text y="21" textAnchor="middle">
-                          {tile.numberToken}
-                        </text>
-                      </g>
-                    )}
-                  </g>
-                </g>
-              );
-            })}
-          </g>
+          <BoardTerrain map={game.map} />
           <g className="robber-layer" aria-label="强盗位置与可选目的地">
             {robberHex === undefined ? null : (
               <g
@@ -143,10 +108,10 @@ export function Board({
                 <line
                   key={edge.id}
                   data-edge-id={edge.id}
-                  x1={first.x * HEX_SIZE}
-                  y1={first.y * HEX_SIZE}
-                  x2={second.x * HEX_SIZE}
-                  y2={second.y * HEX_SIZE}
+                  x1={first.x * BOARD_HEX_SIZE}
+                  y1={first.y * BOARD_HEX_SIZE}
+                  x2={second.x * BOARD_HEX_SIZE}
+                  y2={second.y * BOARD_HEX_SIZE}
                 />
               );
             })}
@@ -156,8 +121,8 @@ export function Board({
               <circle
                 key={vertex.id}
                 data-vertex-id={vertex.id}
-                cx={vertex.x * HEX_SIZE}
-                cy={vertex.y * HEX_SIZE}
+                cx={vertex.x * BOARD_HEX_SIZE}
+                cy={vertex.y * BOARD_HEX_SIZE}
                 r="4.5"
               />
             ))}
@@ -167,7 +132,7 @@ export function Board({
             busy={busy}
             buildMode={buildMode}
             layer="roads"
-            coordinateScale={HEX_SIZE}
+            coordinateScale={BOARD_HEX_SIZE}
             onCommand={onCommand}
           />
           <g className="placed-roads" aria-label="已建道路">
@@ -187,9 +152,9 @@ export function Board({
                   role="img"
                   aria-label={`${player.name}的道路`}
                 >
-                  <line className="piece-road-shadow" x1={first.x * HEX_SIZE} y1={first.y * HEX_SIZE + 2} x2={second.x * HEX_SIZE} y2={second.y * HEX_SIZE + 2} />
-                  <line className="piece-road-body" x1={first.x * HEX_SIZE} y1={first.y * HEX_SIZE} x2={second.x * HEX_SIZE} y2={second.y * HEX_SIZE} />
-                  <line className="piece-road-shine" x1={first.x * HEX_SIZE} y1={first.y * HEX_SIZE - 1.5} x2={second.x * HEX_SIZE} y2={second.y * HEX_SIZE - 1.5} />
+                  <line className="piece-road-shadow" x1={first.x * BOARD_HEX_SIZE} y1={first.y * BOARD_HEX_SIZE + 2} x2={second.x * BOARD_HEX_SIZE} y2={second.y * BOARD_HEX_SIZE + 2} />
+                  <line className="piece-road-body" x1={first.x * BOARD_HEX_SIZE} y1={first.y * BOARD_HEX_SIZE} x2={second.x * BOARD_HEX_SIZE} y2={second.y * BOARD_HEX_SIZE} />
+                  <line className="piece-road-shine" x1={first.x * BOARD_HEX_SIZE} y1={first.y * BOARD_HEX_SIZE - 1.5} x2={second.x * BOARD_HEX_SIZE} y2={second.y * BOARD_HEX_SIZE - 1.5} />
                 </g>
               );
             })}
@@ -205,7 +170,7 @@ export function Board({
                   className={`piece-color-${player.color}`}
                   data-piece-kind={building.kind}
                   data-vertex-id={building.vertexId}
-                  transform={`translate(${vertex.x * HEX_SIZE} ${vertex.y * HEX_SIZE})`}
+                  transform={`translate(${vertex.x * BOARD_HEX_SIZE} ${vertex.y * BOARD_HEX_SIZE})`}
                   role="img"
                   aria-label={`${player.name}的${building.kind === "city" ? "城市" : "村庄"}`}
                 >
@@ -235,28 +200,10 @@ export function Board({
             busy={busy}
             buildMode={buildMode}
             layer="buildings"
-            coordinateScale={HEX_SIZE}
+            coordinateScale={BOARD_HEX_SIZE}
             onCommand={onCommand}
           />
-          <g className="board-ports" aria-label="港口">
-            {game.map.ports.map((port) => {
-              const [firstId, secondId] = port.vertexIds;
-              const first = game.map.vertices.find((vertex) => vertex.id === firstId);
-              const second = game.map.vertices.find((vertex) => vertex.id === secondId);
-
-              if (first === undefined || second === undefined) return null;
-              const x = ((first.x + second.x) / 2) * HEX_SIZE * 1.14;
-              const y = ((first.y + second.y) / 2) * HEX_SIZE * 1.14;
-              const label = port.kind === "generic" ? "3:1" : `2:1 ${terrainMark(port.resource)}`;
-
-              return (
-                <g key={port.id} data-port-id={port.id} transform={`translate(${x} ${y})`}>
-                  <circle r="15" />
-                  <text y="4" textAnchor="middle">{label}</text>
-                </g>
-              );
-            })}
-          </g>
+          <BoardPorts map={game.map} />
         </svg>
       </div>
       <p className="board-instruction" aria-live="polite">{boardInstruction(game, buildMode)}</p>
@@ -269,35 +216,6 @@ function activateOnKeyboard(event: KeyboardEvent<SVGElement>, action: () => void
     event.preventDefault();
     action();
   }
-}
-
-function axialToPixel(q: number, r: number) {
-  return {
-    x: HEX_SIZE * Math.sqrt(3) * (q + r / 2),
-    y: HEX_SIZE * 1.5 * r,
-  };
-}
-
-function hexPoints(size: number): string {
-  return Array.from({ length: 6 }, (_, index) => {
-    const angle = ((60 * index - 30) * Math.PI) / 180;
-    return `${size * Math.cos(angle)},${size * Math.sin(angle)}`;
-  }).join(" ");
-}
-
-function terrainMark(terrain: GameView["map"]["hexes"][number]["terrain"]): string {
-  return {
-    brick: "▧",
-    lumber: "♠",
-    wool: "⌁",
-    grain: "≋",
-    ore: "◆",
-    desert: "☀",
-  }[terrain];
-}
-
-function terrainLabel(terrain: GameView["map"]["hexes"][number]["terrain"]): string {
-  return TERRAIN_LABELS[terrain];
 }
 
 function boardInstruction(game: GameView, buildMode: BoardProps["buildMode"]): string {

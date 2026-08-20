@@ -11,6 +11,18 @@ const startRoomSchema = z.object({
   seatToken: z.string().min(1),
 });
 
+const roomSettingsSchema = z.object({
+  seatToken: z.string().min(1),
+  expectedRevision: z.number().int().positive(),
+  playerLimit: z.union([z.literal(3), z.literal(4)]),
+  victoryPointsToWin: z.number().int().min(5).max(15),
+});
+
+const rerollRoomMapSchema = z.object({
+  seatToken: z.string().min(1),
+  expectedRevision: z.number().int().positive(),
+});
+
 const gameCommandSchema = z.object({
   seatToken: z.string().min(1),
   commandId: z.string().min(1).max(100),
@@ -101,6 +113,31 @@ export async function buildApp(registry = new RoomRegistry()) {
     try {
       const body = startRoomSchema.parse(request.body);
       return reply.code(200).send(registry.startRoom(request.params.roomId, body.seatToken));
+    } catch (error) {
+      return sendError(reply, error);
+    }
+  });
+
+  app.patch<{ Params: { roomId: string } }>("/api/rooms/:roomId/settings", async (request, reply) => {
+    try {
+      const body = roomSettingsSchema.parse(request.body);
+      return reply.code(200).send(
+        registry.updateSettings(request.params.roomId, body.seatToken, body.expectedRevision, {
+          playerLimit: body.playerLimit,
+          victoryPointsToWin: body.victoryPointsToWin,
+        }),
+      );
+    } catch (error) {
+      return sendError(reply, error);
+    }
+  });
+
+  app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/reroll-map", async (request, reply) => {
+    try {
+      const body = rerollRoomMapSchema.parse(request.body);
+      return reply.code(200).send(
+        registry.rerollMap(request.params.roomId, body.seatToken, body.expectedRevision),
+      );
     } catch (error) {
       return sendError(reply, error);
     }

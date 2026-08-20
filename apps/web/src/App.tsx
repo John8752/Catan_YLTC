@@ -5,11 +5,14 @@ import {
   createRoom,
   getRoom,
   joinRoom,
+  rerollRoomMap,
   startRoom,
   submitGameCommand,
+  updateRoomSettings,
   type PlayerSession,
 } from "./api.js";
 import { Board } from "./components/Board.js";
+import { LobbySetup } from "./components/LobbySetup.js";
 import { PlayerDock } from "./components/PlayerDock.js";
 import { RoomPanel } from "./components/RoomPanel.js";
 import { Welcome } from "./components/Welcome.js";
@@ -109,6 +112,33 @@ export function App() {
     await runBusy(async () => setRoom(await startRoom(session)));
   }
 
+  async function handleRoomSettingsChange(settings: {
+    playerLimit: 3 | 4;
+    victoryPointsToWin: number;
+  }) {
+    if (session === null || room === null || room.game !== null) return;
+    await runBusy(async () => {
+      try {
+        setRoom(await updateRoomSettings(session, room.revision, settings));
+      } catch (caught) {
+        setRoom(await getRoom(session));
+        throw caught;
+      }
+    });
+  }
+
+  async function handleRerollMap() {
+    if (session === null || room === null || room.game !== null) return;
+    await runBusy(async () => {
+      try {
+        setRoom(await rerollRoomMap(session, room.revision));
+      } catch (caught) {
+        setRoom(await getRoom(session));
+        throw caught;
+      }
+    });
+  }
+
   async function handleGameCommand(command: GameCommand) {
     if (session === null || room?.game === null || room?.game === undefined) return;
     await runBusy(async () => {
@@ -189,12 +219,12 @@ export function App() {
       </div>
       <div className="playfield min-h-[420px] lg:col-start-1 lg:row-start-2 lg:min-h-0">
         {room.game === null ? (
-          <section className="waiting-island">
-            <div className="island-orbit" aria-hidden="true"><span>⬡</span></div>
-            <p className="eyebrow">桌面已经打开</p>
-            <h1>等待同行者落座</h1>
-            <p>把房间码 <strong>{room.id}</strong> 发给朋友。第三位玩家加入后，房主即可生成岛屿。</p>
-          </section>
+          <LobbySetup
+            room={room}
+            isHost={room.hostPlayerId === session.playerId}
+            busy={busy}
+            onReroll={handleRerollMap}
+          />
         ) : (
           <>
             <Board
@@ -231,6 +261,7 @@ export function App() {
         connectionState={connectionState}
         busy={busy}
         onStart={handleStart}
+        onSettingsChange={handleRoomSettingsChange}
         onLeave={handleLeave}
       />
       <ResourceEffectLayer effect={activeEffect} onComplete={completeActiveEffect} />

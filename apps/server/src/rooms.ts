@@ -1,7 +1,11 @@
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import {
   createBaseGame,
+  createStandardMap,
+  DEFAULT_VICTORY_POINTS_TO_WIN,
   executeGameCommand,
+  MAX_VICTORY_POINTS_TO_WIN,
+  MIN_VICTORY_POINTS_TO_WIN,
   PLAYER_COLORS,
   type GameCommand,
   type GameCommandErrorCode,
@@ -26,9 +30,13 @@ interface RoomMember {
 interface RoomRecord {
   readonly id: string;
   readonly hostPlayerId: string;
-  readonly seed: number;
+  seed: number;
   revision: number;
   readonly members: RoomMember[];
+  settings: {
+    readonly playerLimit: 3 | 4;
+    readonly victoryPointsToWin: number;
+  };
   game: GameState | null;
   readonly commandResults: Map<string, GameCommandResponse>;
   readonly history: GameEventRecord[];
@@ -48,7 +56,11 @@ export type RoomErrorCode =
   | "ROOM_FULL"
   | "INVALID_PLAYER_NAME"
   | "ONLY_HOST_CAN_START"
+  | "ONLY_HOST_CAN_CONFIGURE"
   | "NOT_ENOUGH_PLAYERS"
+  | "INVALID_ROOM_SETTINGS"
+  | "ROOM_CAPACITY_TOO_SMALL"
+  | "STALE_ROOM_REVISION"
   | "GAME_NOT_STARTED"
   | "STALE_REVISION"
   | GameCommandErrorCode;
@@ -66,6 +78,11 @@ export class RoomError extends Error {
 export class RoomRegistry {
   private readonly rooms = new Map<string, RoomRecord>();
   private readonly subscriptions = new Map<string, Set<Subscription>>();
+  private readonly nextSeed: () => number;
+
+  constructor(options: { readonly nextSeed?: () => number } = {}) {
+    this.nextSeed = options.nextSeed ?? (() => randomInt(1, 2_147_483_647));
+  }
 
   createRoom(playerName: string): PlayerSessionResponse {
     const name = normalizePlayerName(playerName);
@@ -75,9 +92,10 @@ export class RoomRegistry {
     const room: RoomRecord = {
       id: roomId,
       hostPlayerId: playerId,
-      seed: randomInt(1, 2_147_483_647),
+      seed: this.createSeed(),
       revision: 1,
       members: [{ id: playerId, seatToken, name, color: PLAYER_COLORS[0] }],
+      settings: { playerLimit: 4, victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN },
       game: null,
       commandResults: new Map(),
       history: [],
@@ -101,8 +119,8 @@ export class RoomRegistry {
       throw new RoomError("ROOM_ALREADY_STARTED", "This room has already started");
     }
 
-    if (room.members.length >= 4) {
-      throw new RoomError("ROOM_FULL", "Base-rule rooms support at most four players");
+    if (room.members.length >= room.settings.playerLimit) {
+      throw new RoomError("ROOM_FULL", `This room is limited to ${room.settings.playerLimit} players`);
     }
 
     const color = PLAYER_COLORS[room.members.length];
@@ -123,6 +141,47 @@ export class RoomRegistry {
       seatToken,
       room: this.projectRoom(room, playerId),
     };
+  }
+
+  updateSettings(
+    roomId: string,
+    seatToken: string,
+    expectedRevision: number,
+    settings: { readonly playerLimit: number; readonly victoryPointsToWin: number },
+  ): RoomView {
+    const room = this.requireConfigurableRoom(roomId, seatToken, expectedRevision);
+    if (settings.playerLimit !== 3 && settings.playerLimit !== 4) {
+      throw new RoomError("INVALID_ROOM_SETTINGS", "Base 3–4 supports a player limit of three or four");
+    }
+    if (
+      !Number.isInteger(settings.victoryPointsToWin) ||
+      settings.victoryPointsToWin < MIN_VICTORY_POINTS_TO_WIN ||
+      settings.victoryPointsToWin > MAX_VICTORY_POINTS_TO_WIN
+    ) {
+      throw new RoomError(
+        "INVALID_ROOM_SETTINGS",
+        `Victory target must be ${MIN_VICTORY_POINTS_TO_WIN}–${MAX_VICTORY_POINTS_TO_WIN} points`,
+      );
+    }
+    if (settings.playerLimit < room.members.length) {
+      throw new RoomError("ROOM_CAPACITY_TOO_SMALL", "Player limit cannot be lower than the occupied seats");
+    }
+
+    room.settings = {
+      playerLimit: settings.playerLimit,
+      victoryPointsToWin: settings.victoryPointsToWin,
+    };
+    room.revision += 1;
+    this.notify(room);
+    return this.projectRoom(room, room.hostPlayerId);
+  }
+
+  rerollMap(roomId: string, seatToken: string, expectedRevision: number): RoomView {
+    const room = this.requireConfigurableRoom(roomId, seatToken, expectedRevision);
+    room.seed = this.createSeed(room.seed);
+    room.revision += 1;
+    this.notify(room);
+    return this.projectRoom(room, room.hostPlayerId);
   }
 
   startRoom(roomId: string, seatToken: string): RoomView {
@@ -146,6 +205,7 @@ export class RoomRegistry {
       id: `game_${room.id.toLowerCase()}`,
       seed: room.seed,
       players: room.members,
+      victoryPointsToWin: room.settings.victoryPointsToWin,
     });
     room.revision += 1;
     this.notify(room);
@@ -224,6 +284,14 @@ export class RoomRegistry {
     throw new Error("Unable to allocate a unique room id");
   }
 
+  private createSeed(excludedSeed?: number): number {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const seed = this.nextSeed();
+      if (Number.isInteger(seed) && seed > 0 && seed < 2_147_483_647 && seed !== excludedSeed) return seed;
+    }
+    throw new Error("Unable to allocate a map seed");
+  }
+
   private requireRoom(roomId: string): RoomRecord {
     const room = this.rooms.get(roomId.trim().toUpperCase());
 
@@ -252,6 +320,21 @@ export class RoomRegistry {
     return member;
   }
 
+  private requireConfigurableRoom(roomId: string, seatToken: string, expectedRevision: number): RoomRecord {
+    const room = this.requireRoom(roomId);
+    const member = this.requireCredential(room, seatToken);
+    if (member.id !== room.hostPlayerId) {
+      throw new RoomError("ONLY_HOST_CAN_CONFIGURE", "Only the room host can change settings");
+    }
+    if (room.game !== null) {
+      throw new RoomError("ROOM_ALREADY_STARTED", "Room settings are locked after the game starts");
+    }
+    if (room.revision !== expectedRevision) {
+      throw new RoomError("STALE_ROOM_REVISION", "Room settings changed; refresh and try again");
+    }
+    return room;
+  }
+
   private projectRoom(room: RoomRecord, viewerId: string): RoomView {
     this.requireMember(room, viewerId);
 
@@ -265,6 +348,13 @@ export class RoomRegistry {
         color: member.color,
         isHost: member.id === room.hostPlayerId,
       })),
+      settings: {
+        ruleProfile: "base-3-4",
+        playerLimit: room.settings.playerLimit,
+        victoryPointsToWin: room.settings.victoryPointsToWin,
+        mapSeed: room.seed,
+      },
+      previewMap: room.game === null ? createStandardMap(room.seed) : null,
       game: room.game === null ? null : projectGameForPlayer(room.game, viewerId, room.history),
     };
   }

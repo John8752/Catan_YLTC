@@ -17,6 +17,28 @@ const players: readonly PlayerSeed[] = [
 ];
 
 describe("victory calculation", () => {
+  it("uses the configured victory target", () => {
+    let game = actionState(5);
+    const vertices = game.map.vertices.slice(0, 3).map((vertex) => vertex.id);
+    const cityTarget = vertices[2];
+    if (cityTarget === undefined) throw new Error("Missing city target");
+    game = {
+      ...game,
+      buildings: vertices.map((vertexId, index) => ({
+        ownerId: "player_1",
+        vertexId,
+        kind: index === 0 ? "city" as const : "settlement" as const,
+      })),
+      players: game.players.map((player) => player.id === "player_1"
+        ? { ...player, resources: resourceAmounts({ grain: 2, ore: 3 }) }
+        : player),
+    };
+
+    game = accept(executeGameCommand(game, "player_1", { type: "BuildCity", vertexId: cityTarget }));
+    expect(game.phase).toEqual({ kind: "finished", winnerId: "player_1" });
+    expect(game.victoryPointsToWin).toBe(5);
+  });
+
   it("ends immediately when a city upgrade plus hidden point reaches ten", () => {
     let game = actionState();
     const vertices = game.map.vertices.slice(0, 5).map((vertex) => vertex.id);
@@ -48,8 +70,8 @@ describe("victory calculation", () => {
   });
 });
 
-function actionState(): GameState {
-  let game = createBaseGame({ id: "game_win", seed: 707, players });
+function actionState(victoryPointsToWin = 10): GameState {
+  let game = createBaseGame({ id: "game_win", seed: 707, players, victoryPointsToWin });
   while (game.phase.kind === "setup") {
     const actorId = game.phase.placementOrder[game.phase.placementIndex];
     if (actorId === undefined) throw new Error("Missing actor");

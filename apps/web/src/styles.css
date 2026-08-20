@@ -224,9 +224,10 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .terrain-lumber polygon { fill: #3f7148; }.terrain-wool polygon { fill: #85a467; }.terrain-grain polygon { fill: #d2a948; }.terrain-brick polygon { fill: #a95842; }.terrain-ore polygon { fill: #65757b; }.terrain-desert polygon { fill: #d9bc78; }
 .terrain-mark { fill: rgba(255,255,255,.46); font-family: Georgia, serif; font-size: 28px; pointer-events: none; }
 .terrain-icon-wool { pointer-events: none; filter: drop-shadow(0 2px 1px rgba(33,66,43,.24)); }
-.terrain-icon-wool .wool-body,.terrain-icon-wool .wool-head,.terrain-icon-wool .wool-ear { fill: rgba(255,255,255,.72); stroke: rgba(52,91,59,.62); stroke-width: 1.1; }
-.terrain-icon-wool .wool-legs { fill: none; stroke: rgba(255,255,255,.78); stroke-width: 2.2; stroke-linecap: round; }
-.terrain-icon-wool .wool-eye { fill: #38513b; }
+.terrain-icon-wool .wool-fleece { fill: rgba(255,255,255,.78); stroke: rgba(52,91,59,.55); stroke-width: 1.1; }
+.terrain-icon-wool .wool-face,.terrain-icon-wool .wool-ears { fill: rgba(55,82,60,.78); stroke: rgba(255,255,255,.58); stroke-width: .8; stroke-linejoin: round; }
+.terrain-icon-wool .wool-eyes { fill: #fff8df; }
+.terrain-icon-wool .wool-muzzle { fill: none; stroke: #fff8df; stroke-width: .9; stroke-linecap: round; stroke-linejoin: round; }
 .token > circle { fill: #f6e7c3; stroke: rgba(75,49,26,.3); stroke-width: 1.5; }
 .token-number { fill: #3c3529; font-family: Georgia, serif; font-size: 15px; font-weight: 800; }
 .token-pips circle { fill: #6f5130; stroke: none; }
@@ -270,9 +271,10 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .port-ratio { font-size: 10px; font-weight: 900; }
 .port-resource-mark { font-family: Georgia, serif; font-size: 12px; font-weight: 800; }
 .port-resource-icon { pointer-events: none; }
-.port-resource-icon .wool-body,.port-resource-icon .wool-head,.port-resource-icon .wool-ear { fill: #fffdf4; stroke: #47604e; stroke-width: 1.8; }
-.port-resource-icon .wool-legs { fill: none; stroke: #47604e; stroke-width: 2.4; stroke-linecap: round; }
-.port-resource-icon .wool-eye { fill: #263d39; }
+.port-resource-icon .wool-fleece { fill: #fffdf4; stroke: #47604e; stroke-width: 1.6; }
+.port-resource-icon .wool-face,.port-resource-icon .wool-ears { fill: #47604e; stroke: #fffdf4; stroke-width: 1; stroke-linejoin: round; }
+.port-resource-icon .wool-eyes { fill: #fffdf4; }
+.port-resource-icon .wool-muzzle { fill: none; stroke: #fffdf4; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
 .placed-roads,.placed-buildings { pointer-events: none; }
 .piece-color-terracotta { --piece: #c85d42; --piece-dark: #7f3025; --piece-light: #ffd1bd; }
 .piece-color-ocean { --piece: #3383a5; --piece-dark: #17506a; --piece-light: #bcecff; }

@@ -114,7 +114,8 @@ export function App() {
   }
 
   async function handleRoomSettingsChange(settings: {
-    playerLimit: 3 | 4;
+    ruleProfile: "base-3-4" | "extended-5-6";
+    playerLimit: 3 | 4 | 5 | 6;
     victoryPointsToWin: number;
   }) {
     if (session === null || room === null || room.game !== null) return;

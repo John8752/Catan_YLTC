@@ -6,7 +6,7 @@ import {
   type VertexId,
 } from "../primitives/index.js";
 import { RESOURCE_TYPES, type ResourceType } from "../resources/index.js";
-import { STANDARD_COORDINATES } from "./standard-board.js";
+import { EXTENDED_COORDINATES, STANDARD_COORDINATES } from "./standard-board.js";
 import type {
   AxialCoordinate,
   BoardHex,
@@ -26,7 +26,7 @@ const DIRECTIONS: readonly AxialCoordinate[] = [
   { q: 1, r: -1 },
 ];
 
-const TERRAIN_DECK: readonly TerrainType[] = [
+const STANDARD_TERRAIN_DECK: readonly TerrainType[] = [
   "lumber", "lumber", "lumber", "lumber",
   "wool", "wool", "wool", "wool",
   "grain", "grain", "grain", "grain",
@@ -35,13 +35,39 @@ const TERRAIN_DECK: readonly TerrainType[] = [
   "desert",
 ];
 
-const NUMBER_TOKENS: readonly number[] = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12];
+const STANDARD_NUMBER_TOKENS: readonly number[] = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12];
+const EXTENDED_TERRAIN_DECK: readonly TerrainType[] = [
+  ...Array<TerrainType>(6).fill("lumber"),
+  ...Array<TerrainType>(6).fill("wool"),
+  ...Array<TerrainType>(6).fill("grain"),
+  ...Array<TerrainType>(5).fill("brick"),
+  ...Array<TerrainType>(5).fill("ore"),
+  "desert",
+  "desert",
+];
+const EXTENDED_NUMBER_TOKENS: readonly number[] = [
+  2, 2,
+  3, 3, 3,
+  4, 4, 4,
+  5, 5, 5,
+  6, 6, 6,
+  8, 8, 8,
+  9, 9, 9,
+  10, 10, 10,
+  11, 11, 11,
+  12, 12,
+];
 const GENERIC_PORT = "generic" as const;
-const PORT_DECK: readonly (ResourceType | typeof GENERIC_PORT)[] = [
+const STANDARD_PORT_DECK: readonly (ResourceType | typeof GENERIC_PORT)[] = [
   ...RESOURCE_TYPES,
   GENERIC_PORT,
   GENERIC_PORT,
   GENERIC_PORT,
+  GENERIC_PORT,
+];
+const EXTENDED_PORT_DECK: readonly (ResourceType | typeof GENERIC_PORT)[] = [
+  ...STANDARD_PORT_DECK,
+  "wool",
   GENERIC_PORT,
 ];
 
@@ -54,20 +80,35 @@ interface TopologyHex {
   readonly edgeIds: readonly EdgeId[];
 }
 
-interface StandardTopology {
+interface BoardTopology {
   readonly hexes: readonly TopologyHex[];
   readonly vertices: readonly MapVertex[];
   readonly edges: readonly MapEdge[];
 }
 
-const STANDARD_TOPOLOGY = createTopology();
+const STANDARD_TOPOLOGY = createTopology(STANDARD_COORDINATES);
+const EXTENDED_TOPOLOGY = createTopology(EXTENDED_COORDINATES);
 
 export function createStandardMap(seed: number): GameMap {
-  const terrains = shuffled(TERRAIN_DECK, createSeededRandom(seed ^ 0x4d415000));
+  return createMap(seed, STANDARD_TOPOLOGY, STANDARD_TERRAIN_DECK, STANDARD_NUMBER_TOKENS, STANDARD_PORT_DECK);
+}
+
+export function createExtendedMap(seed: number): GameMap {
+  return createMap(seed, EXTENDED_TOPOLOGY, EXTENDED_TERRAIN_DECK, EXTENDED_NUMBER_TOKENS, EXTENDED_PORT_DECK);
+}
+
+function createMap(
+  seed: number,
+  topology: BoardTopology,
+  terrainDeck: readonly TerrainType[],
+  numberTokens: readonly number[],
+  portDeck: readonly (ResourceType | typeof GENERIC_PORT)[],
+): GameMap {
+  const terrains = shuffled(terrainDeck, createSeededRandom(seed ^ 0x4d415000));
   const terrainByHex = new Map<HexId, TerrainType>();
   let desertHexId: HexId | undefined;
 
-  STANDARD_TOPOLOGY.hexes.forEach((hex, index) => {
+  topology.hexes.forEach((hex, index) => {
     const terrain = terrains[index];
 
     if (terrain === undefined) throw new Error("Terrain deck is incomplete");
@@ -75,10 +116,10 @@ export function createStandardMap(seed: number): GameMap {
     if (terrain === "desert") desertHexId = hex.id;
   });
 
-  if (desertHexId === undefined) throw new Error("Standard map requires a desert");
+  if (desertHexId === undefined) throw new Error("Map requires a desert");
 
-  const numberByHex = assignFairNumbers(terrainByHex, seed);
-  const hexes: BoardHex[] = STANDARD_TOPOLOGY.hexes.map((hex) => ({
+  const numberByHex = assignFairNumbers(topology, terrainByHex, numberTokens, seed);
+  const hexes: BoardHex[] = topology.hexes.map((hex) => ({
     ...hex,
     terrain: requireValue(terrainByHex.get(hex.id), `Missing terrain for ${hex.id}`),
     numberToken: numberByHex.get(hex.id) ?? null,
@@ -87,19 +128,19 @@ export function createStandardMap(seed: number): GameMap {
   return {
     generationVersion: 1,
     hexes,
-    vertices: STANDARD_TOPOLOGY.vertices,
-    edges: STANDARD_TOPOLOGY.edges,
-    ports: createPorts(STANDARD_TOPOLOGY, seed),
+    vertices: topology.vertices,
+    edges: topology.edges,
+    ports: createPorts(topology, portDeck, seed),
     robberHexId: desertHexId,
   };
 }
 
-function createTopology(): StandardTopology {
-  const coordinateSet = new Set(STANDARD_COORDINATES.map((coordinate) => coordinateKey(coordinate)));
+function createTopology(coordinates: readonly AxialCoordinate[]): BoardTopology {
+  const coordinateSet = new Set(coordinates.map((coordinate) => coordinateKey(coordinate)));
   const vertexPositionByKey = new Map<string, { x: number; y: number }>();
   const cornerKeysByHex = new Map<HexId, readonly string[]>();
 
-  for (const coordinate of STANDARD_COORDINATES) {
+  for (const coordinate of coordinates) {
     const keys = Array.from({ length: 6 }, (_, corner) => {
       const key = cornerKey(coordinate, corner);
       const center = axialPosition(coordinate);
@@ -119,7 +160,7 @@ function createTopology(): StandardTopology {
   const edgeDrafts = new Map<string, { vertexIds: [VertexId, VertexId]; adjacentHexIds: Set<HexId> }>();
   const edgeKeysByHex = new Map<HexId, readonly string[]>();
 
-  for (const coordinate of STANDARD_COORDINATES) {
+  for (const coordinate of coordinates) {
     const id = hexId(coordinate);
     const cornerKeys = requireValue(cornerKeysByHex.get(id), `Missing corners for ${id}`);
     const edgeKeys = Array.from({ length: 6 }, (_, edgeIndex) => {
@@ -177,7 +218,7 @@ function createTopology(): StandardTopology {
     };
   });
 
-  const hexes: TopologyHex[] = STANDARD_COORDINATES.map((coordinate) => {
+  const hexes: TopologyHex[] = coordinates.map((coordinate) => {
     const id = hexId(coordinate);
     const cornerKeys = requireValue(cornerKeysByHex.get(id), `Missing corners for ${id}`);
     const edgeKeys = requireValue(edgeKeysByHex.get(id), `Missing edges for ${id}`);
@@ -197,14 +238,16 @@ function createTopology(): StandardTopology {
 }
 
 function assignFairNumbers(
+  topology: BoardTopology,
   terrainByHex: ReadonlyMap<HexId, TerrainType>,
+  numberTokens: readonly number[],
   seed: number,
 ): ReadonlyMap<HexId, number> {
-  const producingHexes = STANDARD_TOPOLOGY.hexes.filter((hex) => terrainByHex.get(hex.id) !== "desert");
+  const producingHexes = topology.hexes.filter((hex) => terrainByHex.get(hex.id) !== "desert");
   const random = createSeededRandom(seed ^ 0x4e554d00);
 
   for (let attempt = 0; attempt < 1_000; attempt += 1) {
-    const tokens = shuffled(NUMBER_TOKENS, random);
+    const tokens = shuffled(numberTokens, random);
     const assignment = new Map<HexId, number>();
     producingHexes.forEach((hex, index) => {
       assignment.set(hex.id, requireValue(tokens[index], "Number token deck is incomplete"));
@@ -225,7 +268,11 @@ function assignFairNumbers(
   throw new Error("Unable to generate a fair number-token layout");
 }
 
-function createPorts(topology: StandardTopology, seed: number): readonly MapPort[] {
+function createPorts(
+  topology: BoardTopology,
+  portDeck: readonly (ResourceType | typeof GENERIC_PORT)[],
+  seed: number,
+): readonly MapPort[] {
   const vertexById = new Map(topology.vertices.map((vertex) => [vertex.id, vertex]));
   const coastline = topology.edges
     .filter((edge) => edge.adjacentHexIds.length === 1)
@@ -236,7 +283,7 @@ function createPorts(topology: StandardTopology, seed: number): readonly MapPort
       return { edge, angle: Math.atan2((first.y + second.y) / 2, (first.x + second.x) / 2) };
     })
     .sort((first, second) => first.angle - second.angle);
-  const portTypes = shuffled(PORT_DECK, createSeededRandom(seed ^ 0x504f5254));
+  const portTypes = shuffled(portDeck, createSeededRandom(seed ^ 0x504f5254));
 
   return portTypes.map((portType, index): MapPort => {
     const coastIndex = Math.floor((index * coastline.length) / portTypes.length);

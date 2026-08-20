@@ -31,7 +31,7 @@ Primary verbs:
 
 - `base-3-4`: first complete rules target.
 - `two-player`: planned variant with its own setup and turn policy.
-- `extended-5-6`: planned larger-board profile with its own paired-turn policy.
+- `extended-5-6`: playable larger-board profile with expanded supplies and its own paired-turn policy.
 
 Player count is never used as a substitute for a named rule profile.
 

@@ -47,7 +47,7 @@ export async function startRoom(session: PlayerSession): Promise<RoomView> {
 export async function updateRoomSettings(
   session: PlayerSession,
   expectedRevision: number,
-  settings: Pick<RoomSettingsView, "playerLimit" | "victoryPointsToWin">,
+  settings: Pick<RoomSettingsView, "ruleProfile" | "playerLimit" | "victoryPointsToWin">,
 ): Promise<RoomView> {
   return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}/settings`, {
     method: "PATCH",

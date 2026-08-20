@@ -100,6 +100,7 @@ describe("room API", () => {
       payload: {
         seatToken: host.seatToken,
         expectedRevision: host.room.revision,
+        ruleProfile: "base-3-4",
         playerLimit: 3,
         victoryPointsToWin: 7,
       },
@@ -130,6 +131,7 @@ describe("room API", () => {
       payload: {
         seatToken: second.seatToken,
         expectedRevision: second.room.revision,
+        ruleProfile: "base-3-4",
         playerLimit: 4,
         victoryPointsToWin: 10,
       },
@@ -255,6 +257,52 @@ describe("room API", () => {
     });
     expect(staleResponse.statusCode).toBe(400);
     expect(staleResponse.json()).toMatchObject({ error: { code: "STALE_REVISION" } });
+  });
+
+  it("creates and starts a five-player extended room on the 30-hex map", async () => {
+    const app = await buildApp();
+    apps.push(app);
+    const host = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "一" },
+    })).json<PlayerSessionResponse>();
+
+    const settingsResponse = await app.inject({
+      method: "PATCH",
+      url: `/api/rooms/${host.roomId}/settings`,
+      payload: {
+        seatToken: host.seatToken,
+        expectedRevision: host.room.revision,
+        ruleProfile: "extended-5-6",
+        playerLimit: 6,
+        victoryPointsToWin: 10,
+      },
+    });
+    const configured = settingsResponse.json<RoomView>();
+    expect(settingsResponse.statusCode).toBe(200);
+    expect(configured.settings.ruleProfile).toBe("extended-5-6");
+    expect(configured.previewMap?.hexes).toHaveLength(30);
+
+    for (const playerName of ["二", "三", "四", "五"]) {
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/rooms/${host.roomId}/join`,
+        payload: { playerName },
+      });
+      expect(response.statusCode).toBe(200);
+    }
+
+    const startResponse = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/start`,
+      payload: { seatToken: host.seatToken },
+    });
+    const started = startResponse.json<RoomView>();
+    expect(startResponse.statusCode).toBe(200);
+    expect(started.game?.ruleProfile).toBe("extended-5-6");
+    expect(started.game?.map.hexes).toHaveLength(30);
+    expect(started.game?.developmentDeckCount).toBe(34);
   });
 
   it("prevents a room from starting with fewer than three players", async () => {

@@ -11,6 +11,7 @@ import {
 import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent } from "./commands.js";
 import { assertGameInvariant } from "./create-game.js";
 import type { GameState, PlayerState } from "./state.js";
+import { getRuleProfileDefinition } from "../rulesets/index.js";
 
 type DevelopmentCommand = Extract<
   GameCommand,
@@ -62,7 +63,7 @@ function buyCard(state: GameState, actorId: PlayerId): GameCommandResult {
   const cardType = state.developmentDeck[0];
   if (cardType === undefined) return reject(state, "DEVELOPMENT_DECK_EMPTY", "The development deck is empty");
   const card: DevelopmentCardState = {
-    id: `development_${25 - state.developmentDeck.length}`,
+    id: `development_${getRuleProfileDefinition(requirePlayableProfile(state)).developmentDeckSize - state.developmentDeck.length}`,
     type: cardType,
     acquiredTurn: turnNumber(state),
   };
@@ -255,19 +256,29 @@ function consumeCard(state: GameState, playerId: PlayerId, cardId: string): Game
 
 function canPlayNow(state: GameState, playerId: PlayerId): boolean {
   return state.phase.kind === "turn" &&
-    (state.phase.step === "roll" || state.phase.step === "action") &&
+    (state.phase.step === "roll" || state.phase.step === "action" || state.phase.step === "paired-action") &&
     state.phase.activePlayerId === playerId;
 }
 
-function currentPlayableStep(state: GameState): "roll" | "action" {
-  if (state.phase.kind !== "turn" || (state.phase.step !== "roll" && state.phase.step !== "action")) {
+function currentPlayableStep(state: GameState): "roll" | "action" | "paired-action" {
+  if (
+    state.phase.kind !== "turn" ||
+    (state.phase.step !== "roll" && state.phase.step !== "action" && state.phase.step !== "paired-action")
+  ) {
     throw new Error("Development card has no resumable phase");
   }
   return state.phase.step;
 }
 
 function isAction(state: GameState, actorId: PlayerId): boolean {
-  return state.phase.kind === "turn" && state.phase.step === "action" && state.phase.activePlayerId === actorId;
+  return state.phase.kind === "turn" &&
+    (state.phase.step === "action" || state.phase.step === "paired-action") &&
+    state.phase.activePlayerId === actorId;
+}
+
+function requirePlayableProfile(state: GameState): "base-3-4" | "extended-5-6" {
+  if (state.ruleProfile === "two-player") throw new Error("The two-player profile is not playable");
+  return state.ruleProfile;
 }
 
 function actionError(state: GameState, actorId: PlayerId, verb: string): GameCommandResult {

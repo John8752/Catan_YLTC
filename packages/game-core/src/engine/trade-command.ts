@@ -32,8 +32,14 @@ export function executeTradeCommand(
   actorId: PlayerId,
   command: TradeCommand,
 ): GameCommandResult {
-  if (state.phase.kind !== "turn" || state.phase.step !== "action") {
+  if (
+    state.phase.kind !== "turn" ||
+    (state.phase.step !== "action" && state.phase.step !== "paired-action")
+  ) {
     return reject(state, "WRONG_PHASE", "Trading is only allowed during the action stage");
+  }
+  if (state.phase.step === "paired-action" && command.type !== "MaritimeTrade") {
+    return reject(state, "INVALID_TRADE", "The paired player may only trade with the bank");
   }
 
   switch (command.type) {

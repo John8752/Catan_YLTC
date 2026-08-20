@@ -24,7 +24,7 @@ export function executeBuildCommand(
   actorId: PlayerId,
   command: BuildCommand,
 ): GameCommandResult {
-  if (state.phase.kind !== "turn" || state.phase.step !== "action") {
+  if (state.phase.kind !== "turn" || (state.phase.step !== "action" && state.phase.step !== "paired-action")) {
     return reject(state, "WRONG_PHASE", "Building is only allowed during the action stage");
   }
   if (state.phase.activePlayerId !== actorId) {
@@ -155,7 +155,9 @@ function paidBuild(
 }
 
 function canAct(state: GameState, actorId: PlayerId): boolean {
-  return state.phase.kind === "turn" && state.phase.step === "action" && state.phase.activePlayerId === actorId;
+  return state.phase.kind === "turn" &&
+    (state.phase.step === "action" || state.phase.step === "paired-action") &&
+    state.phase.activePlayerId === actorId;
 }
 
 function requirePlayer(state: GameState, actorId: PlayerId): PlayerState {

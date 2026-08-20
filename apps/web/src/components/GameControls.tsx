@@ -53,7 +53,12 @@ export function GameControls({
     return (
       <div className="action-stack xl:grid-cols-3 xl:items-start">
         <DevelopmentControls game={game} busy={busy} onCommand={onCommand} />
-        <TradeControls game={game} busy={busy} onCommand={onCommand} />
+        <TradeControls
+          game={game}
+          busy={busy}
+          onCommand={onCommand}
+          allowPlayerTrades={!game.interaction.pairedPlayer}
+        />
         <Button type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
           {busy ? "提交中…" : "结束回合"}
         </Button>

@@ -25,6 +25,7 @@ import {
   type ResourceType,
   type TradeOfferState,
   type RuleProfile,
+  type PlayableRuleProfile,
 } from "@catan/game-core";
 
 export interface PublicPlayerView {
@@ -120,6 +121,7 @@ export type GameInteractionView =
       readonly roadEdgeIds: readonly string[];
       readonly settlementVertexIds: readonly string[];
       readonly cityVertexIds: readonly string[];
+      readonly pairedPlayer: boolean;
     }
   | {
       readonly kind: "discard";
@@ -160,8 +162,8 @@ export interface LobbyMemberView {
 }
 
 export interface RoomSettingsView {
-  readonly ruleProfile: "base-3-4";
-  readonly playerLimit: 3 | 4;
+  readonly ruleProfile: PlayableRuleProfile;
+  readonly playerLimit: 3 | 4 | 5 | 6;
   readonly victoryPointsToWin: number;
   readonly mapSeed: number;
 }
@@ -385,12 +387,14 @@ function projectInteraction(state: GameState, viewerId: string): GameInteraction
     if (state.phase.step === "roll") {
       return { kind: "turn-roll", instruction: "轮到你了，请掷骰子", vertexIds: [], edgeIds: [] };
     }
-    if (state.phase.step === "action") {
+    if (state.phase.step === "action" || state.phase.step === "paired-action") {
       const player = state.players.find((candidate) => candidate.id === viewerId);
       if (player === undefined) throw new Error(`Player ${viewerId} is missing`);
       return {
         kind: "turn-action",
-        instruction: "你可以交易、建造或结束回合",
+        instruction: state.phase.step === "paired-action"
+          ? "搭档行动：可与银行交易、建造、使用发展牌或结束行动"
+          : "你可以交易、建造或结束回合",
         vertexIds: [],
         edgeIds: [],
         roadEdgeIds: player.pieces.roads > 0 && hasResources(player.resources, BUILD_COSTS.road)
@@ -402,6 +406,7 @@ function projectInteraction(state: GameState, viewerId: string): GameInteraction
         cityVertexIds: player.pieces.cities > 0 && hasResources(player.resources, BUILD_COSTS.city)
           ? legalCityVertices(state, viewerId)
           : [],
+        pairedPlayer: state.phase.step === "paired-action",
       };
     }
     if (state.phase.step === "robber") {

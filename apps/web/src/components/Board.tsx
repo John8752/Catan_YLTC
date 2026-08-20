@@ -5,6 +5,7 @@ import {
   BOARD_HEX_SIZE,
   BoardPorts,
   BoardTerrain,
+  boardViewBox,
   terrainLabel,
 } from "./BoardMap.js";
 import { ConstructionTargets } from "./ConstructionTargets.js";
@@ -41,9 +42,11 @@ export function Board({
       <div className="board-stage">
         <svg
           className="board-svg"
-          viewBox="-310 -260 620 520"
+          viewBox={boardViewBox(game.map)}
           role="img"
-          aria-label="由十九块六边形地形组成的游戏棋盘"
+          aria-label={game.map.hexes.length === 19
+            ? "由十九块六边形地形组成的游戏棋盘"
+            : "由三十块六边形地形组成的游戏棋盘"}
         >
           <defs>
             <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">

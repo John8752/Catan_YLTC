@@ -49,6 +49,39 @@ export const STANDARD_COORDINATES: readonly AxialCoordinate[] = [
   { q: 0, r: 2 },
 ];
 
+export const EXTENDED_COORDINATES: readonly AxialCoordinate[] = [
+  { q: 0, r: -3 },
+  { q: 1, r: -3 },
+  { q: 2, r: -3 },
+  { q: -1, r: -2 },
+  { q: 0, r: -2 },
+  { q: 1, r: -2 },
+  { q: 2, r: -2 },
+  { q: -2, r: -1 },
+  { q: -1, r: -1 },
+  { q: 0, r: -1 },
+  { q: 1, r: -1 },
+  { q: 2, r: -1 },
+  { q: -3, r: 0 },
+  { q: -2, r: 0 },
+  { q: -1, r: 0 },
+  { q: 0, r: 0 },
+  { q: 1, r: 0 },
+  { q: 2, r: 0 },
+  { q: -3, r: 1 },
+  { q: -2, r: 1 },
+  { q: -1, r: 1 },
+  { q: 0, r: 1 },
+  { q: 1, r: 1 },
+  { q: -3, r: 2 },
+  { q: -2, r: 2 },
+  { q: -1, r: 2 },
+  { q: 0, r: 2 },
+  { q: -3, r: 3 },
+  { q: -2, r: 3 },
+  { q: -1, r: 3 },
+];
+
 export function createStandardBoard(seed: number): readonly HexTile[] {
   const terrainDeck = shuffled(TERRAIN_DECK, createSeededRandom(seed));
   let numberIndex = 0;

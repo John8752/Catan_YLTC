@@ -1,8 +1,8 @@
 # Catan YLTC
 
-A server-authoritative browser board game for private groups. The first playable release supports complete 3–4 player base-rule matches; the architecture keeps 2–6 player profiles and future expansions as explicit follow-up work.
+A server-authoritative browser board game for private groups. Complete 3–4 player base matches and 5–6 player extended-board matches are playable as explicit rule profiles; the two-player profile remains planned.
 
-First playable status: room creation/join, independent per-tab seats, snake setup, dice production, robber/discard, building, player and maritime trade, development cards, awards, 10-point victory, reconnect and deterministic replay are implemented.
+Playable status: room creation/join, profile-specific seeded maps and supplies, independent per-tab seats, snake setup, dice production, robber/discard, building, player and maritime trade, development cards, 5–6 paired-player turns, awards, configurable victory, reconnect and deterministic replay are implemented.
 
 ## Start here
 

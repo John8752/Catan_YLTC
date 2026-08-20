@@ -45,9 +45,10 @@ export interface TradeControlsProps {
   readonly game: GameView;
   readonly busy: boolean;
   readonly onCommand: (command: GameCommand) => void;
+  readonly allowPlayerTrades?: boolean;
 }
 
-export function TradeControls({ game, busy, onCommand }: TradeControlsProps) {
+export function TradeControls({ game, busy, onCommand, allowPlayerTrades = true }: TradeControlsProps) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [offerOpen, setOfferOpen] = useState(true);
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
@@ -112,12 +113,12 @@ export function TradeControls({ game, busy, onCommand }: TradeControlsProps) {
           <DialogDescription>选择向其他玩家报价，或按你当前的港口比例与银行交易。</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="players" className="mt-2">
-          <TabsList className="grid w-full grid-cols-2 bg-[#e4d3b2]">
-            <TabsTrigger value="players"><Handshake className="size-4" />玩家交易</TabsTrigger>
+        <Tabs defaultValue={allowPlayerTrades ? "players" : "bank"} className="mt-2">
+          <TabsList className={cn("grid w-full bg-[#e4d3b2]", allowPlayerTrades ? "grid-cols-2" : "grid-cols-1")}>
+            {allowPlayerTrades ? <TabsTrigger value="players"><Handshake className="size-4" />玩家交易</TabsTrigger> : null}
             <TabsTrigger value="bank"><Landmark className="size-4" />银行与港口</TabsTrigger>
           </TabsList>
-          <TabsContent value="players">
+          {allowPlayerTrades ? <TabsContent value="players">
             <form
               className="mt-4 space-y-4"
               onSubmit={(event) => {
@@ -146,7 +147,7 @@ export function TradeControls({ game, busy, onCommand }: TradeControlsProps) {
                 向所有玩家发布报价
               </Button>
             </form>
-          </TabsContent>
+          </TabsContent> : null}
           <TabsContent value="bank">
             <form
               className="mt-4 space-y-4"

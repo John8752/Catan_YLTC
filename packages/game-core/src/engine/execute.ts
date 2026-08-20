@@ -21,6 +21,7 @@ import { executeTradeCommand } from "./trade-command.js";
 import { executeDevelopmentCommand } from "./development-command.js";
 import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent, ResourceGrantSource } from "./commands.js";
 import type { GamePhase, GameState, PlayerState } from "./state.js";
+import { getRuleProfileDefinition } from "../rulesets/index.js";
 
 export function executeGameCommand(
   state: GameState,
@@ -400,31 +401,45 @@ function moveRobber(
 }
 
 function endTurn(state: GameState, actorId: PlayerId): GameCommandResult {
-  if (state.phase.kind !== "turn" || state.phase.step !== "action") {
+  if (
+    state.phase.kind !== "turn" ||
+    (state.phase.step !== "action" && state.phase.step !== "paired-action")
+  ) {
     return reject(state, "WRONG_PHASE", "The turn cannot end during a mandatory resolution");
   }
   if (state.phase.activePlayerId !== actorId) {
     return reject(state, "NOT_YOUR_TURN", "Only the active player can end the turn");
   }
 
+  if (state.ruleProfile === "two-player") throw new Error("The two-player profile is not playable");
+  const profile = getRuleProfileDefinition(state.ruleProfile);
   const currentIndex = state.players.findIndex((player) => player.id === actorId);
   if (currentIndex < 0) throw new Error(`Unknown active player ${actorId}`);
-  const nextPlayer = state.players[(currentIndex + 1) % state.players.length];
+  const isPrimaryExtendedAction = profile.pairedPlayerTurns && state.phase.step === "action";
+  const primaryPlayerId = state.phase.primaryPlayerId ?? actorId;
+  const primaryIndex = state.players.findIndex((player) => player.id === primaryPlayerId);
+  if (primaryIndex < 0) throw new Error(`Unknown primary player ${primaryPlayerId}`);
+  const nextPlayer = state.players[
+    isPrimaryExtendedAction
+      ? (currentIndex + 3) % state.players.length
+      : (primaryIndex + 1) % state.players.length
+  ];
   if (nextPlayer === undefined) throw new Error("Game has no next player");
-  const turnNumber = state.phase.turnNumber + 1;
+  const turnNumber = isPrimaryExtendedAction ? state.phase.turnNumber : state.phase.turnNumber + 1;
 
   return accept(
     {
       ...state,
       revision: state.revision + 1,
-      lastRoll: null,
+      lastRoll: isPrimaryExtendedAction ? state.lastRoll : null,
       openTrade: null,
       developmentCardPlayedThisTurn: false,
       phase: {
         kind: "turn",
         activePlayerId: nextPlayer.id,
-        step: "roll",
+        step: isPrimaryExtendedAction ? "paired-action" : "roll",
         turnNumber,
+        ...(isPrimaryExtendedAction ? { primaryPlayerId: actorId } : {}),
       },
     },
     [{ type: "turn_ended", playerId: actorId, nextPlayerId: nextPlayer.id, turnNumber }],

@@ -1,17 +1,18 @@
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import {
-  createBaseGame,
-  createStandardMap,
+  createGame,
   DEFAULT_VICTORY_POINTS_TO_WIN,
   executeGameCommand,
   MAX_VICTORY_POINTS_TO_WIN,
   MIN_VICTORY_POINTS_TO_WIN,
+  getRuleProfileDefinition,
   PLAYER_COLORS,
   type GameCommand,
   type GameCommandErrorCode,
   type GameState,
   type GameEventRecord,
   type PlayerColor,
+  type PlayableRuleProfile,
 } from "@catan/game-core";
 import {
   type GameCommandResponse,
@@ -35,7 +36,8 @@ interface RoomRecord {
   revision: number;
   readonly members: RoomMember[];
   settings: {
-    readonly playerLimit: 3 | 4;
+    readonly ruleProfile: PlayableRuleProfile;
+    readonly playerLimit: 3 | 4 | 5 | 6;
     readonly victoryPointsToWin: number;
   };
   game: GameState | null;
@@ -97,7 +99,7 @@ export class RoomRegistry {
       seed: this.createSeed(),
       revision: 1,
       members: [{ id: playerId, seatToken, name, color: PLAYER_COLORS[0] }],
-      settings: { playerLimit: 4, victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN },
+      settings: { ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN },
       game: null,
       commandResults: new Map(),
       history: [],
@@ -151,11 +153,19 @@ export class RoomRegistry {
     roomId: string,
     seatToken: string,
     expectedRevision: number,
-    settings: { readonly playerLimit: number; readonly victoryPointsToWin: number },
+    settings: {
+      readonly ruleProfile: PlayableRuleProfile;
+      readonly playerLimit: 3 | 4 | 5 | 6;
+      readonly victoryPointsToWin: number;
+    },
   ): RoomView {
     const room = this.requireConfigurableRoom(roomId, seatToken, expectedRevision);
-    if (settings.playerLimit !== 3 && settings.playerLimit !== 4) {
-      throw new RoomError("INVALID_ROOM_SETTINGS", "Base 3–4 supports a player limit of three or four");
+    const profile = getRuleProfileDefinition(settings.ruleProfile);
+    if (settings.playerLimit < profile.minPlayers || settings.playerLimit > profile.maxPlayers) {
+      throw new RoomError(
+        "INVALID_ROOM_SETTINGS",
+        `${settings.ruleProfile} supports a player limit of ${profile.minPlayers}–${profile.maxPlayers}`,
+      );
     }
     if (
       !Number.isInteger(settings.victoryPointsToWin) ||
@@ -172,6 +182,7 @@ export class RoomRegistry {
     }
 
     room.settings = {
+      ruleProfile: settings.ruleProfile,
       playerLimit: settings.playerLimit,
       victoryPointsToWin: settings.victoryPointsToWin,
     };
@@ -231,15 +242,17 @@ export class RoomRegistry {
       throw new RoomError("ROOM_ALREADY_STARTED", "This room has already started");
     }
 
-    if (room.members.length < 3) {
-      throw new RoomError("NOT_ENOUGH_PLAYERS", "At least three players are required");
+    const profile = getRuleProfileDefinition(room.settings.ruleProfile);
+    if (room.members.length < profile.minPlayers) {
+      throw new RoomError("NOT_ENOUGH_PLAYERS", `At least ${profile.minPlayers} players are required`);
     }
 
-    room.game = createBaseGame({
+    room.game = createGame({
       id: `game_${room.id.toLowerCase()}`,
       seed: room.seed,
       players: room.members,
       victoryPointsToWin: room.settings.victoryPointsToWin,
+      ruleProfile: room.settings.ruleProfile,
     });
     room.revision += 1;
     this.notify(room);
@@ -383,12 +396,14 @@ export class RoomRegistry {
         isHost: member.id === room.hostPlayerId,
       })),
       settings: {
-        ruleProfile: "base-3-4",
+        ruleProfile: room.settings.ruleProfile,
         playerLimit: room.settings.playerLimit,
         victoryPointsToWin: room.settings.victoryPointsToWin,
         mapSeed: room.seed,
       },
-      previewMap: room.game === null ? createStandardMap(room.seed) : null,
+      previewMap: room.game === null
+        ? getRuleProfileDefinition(room.settings.ruleProfile).createMap(room.seed)
+        : null,
       game: room.game === null ? null : projectGameForPlayer(room.game, viewerId, room.history),
     };
   }

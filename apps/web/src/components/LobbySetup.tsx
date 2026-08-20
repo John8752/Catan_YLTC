@@ -1,7 +1,7 @@
 import type { RoomView } from "@catan/protocol";
 import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
-import { BoardPorts, BoardTerrain } from "./BoardMap.js";
+import { boardViewBox, BoardPorts, BoardTerrain } from "./BoardMap.js";
 
 export interface LobbySetupProps {
   readonly room: RoomView;
@@ -37,9 +37,11 @@ export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
       <div className="board-stage">
         <svg
           className="board-svg"
-          viewBox="-310 -260 620 520"
+          viewBox={boardViewBox(room.previewMap)}
           role="img"
-          aria-label="由十九块六边形地形组成的开局地图预览"
+          aria-label={room.previewMap.hexes.length === 19
+            ? "由十九块六边形地形组成的开局地图预览"
+            : "由三十块六边形地形组成的开局地图预览"}
         >
           <defs>
             <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">

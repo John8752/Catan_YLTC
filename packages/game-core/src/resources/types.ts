@@ -14,12 +14,16 @@ export function emptyResourceHand(): ResourceHand {
 }
 
 export function initialResourceBank(): ResourceHand {
+  return createResourceBank(19);
+}
+
+export function createResourceBank(cardsPerResource: number): ResourceHand {
   return {
-    brick: 19,
-    lumber: 19,
-    wool: 19,
-    grain: 19,
-    ore: 19,
+    brick: cardsPerResource,
+    lumber: cardsPerResource,
+    wool: cardsPerResource,
+    grain: cardsPerResource,
+    ore: cardsPerResource,
   };
 }
 

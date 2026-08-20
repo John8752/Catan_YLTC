@@ -1,28 +1,20 @@
 import { initialPieceSupply } from "../buildables/index.js";
-import { createDevelopmentDeck } from "../development/index.js";
-import { createStandardMap, type TerrainType } from "../map/index.js";
-import { emptyResourceHand, initialResourceBank, RESOURCE_TYPES } from "../resources/index.js";
+import { emptyResourceHand, RESOURCE_TYPES } from "../resources/index.js";
 import {
   DEFAULT_VICTORY_POINTS_TO_WIN,
+  getRuleProfileDefinition,
   MAX_VICTORY_POINTS_TO_WIN,
   MIN_VICTORY_POINTS_TO_WIN,
+  type PlayableRuleProfile,
 } from "../rulesets/index.js";
 import type { GameState, PlayerSeed } from "./state.js";
-
-const EXPECTED_TERRAIN_COUNTS: Readonly<Record<TerrainType, number>> = {
-  brick: 3,
-  lumber: 4,
-  wool: 4,
-  grain: 4,
-  ore: 3,
-  desert: 1,
-};
 
 export interface CreateGameInput {
   readonly id: string;
   readonly seed: number;
   readonly players: readonly PlayerSeed[];
   readonly victoryPointsToWin?: number;
+  readonly ruleProfile?: PlayableRuleProfile;
 }
 
 export class GameRuleError extends Error {
@@ -36,10 +28,18 @@ export class GameRuleError extends Error {
 }
 
 export function createBaseGame(input: CreateGameInput): GameState {
-  if (input.players.length < 3 || input.players.length > 4) {
+  return createGame({ ...input, ruleProfile: "base-3-4" });
+}
+
+export function createGame(input: CreateGameInput): GameState {
+  const ruleProfile = input.ruleProfile ?? "base-3-4";
+  const profile = getRuleProfileDefinition(ruleProfile);
+  if (input.players.length < profile.minPlayers || input.players.length > profile.maxPlayers) {
     throw new GameRuleError(
       "UNSUPPORTED_PLAYER_COUNT",
-      "The base-3-4 rule profile requires three or four players",
+      ruleProfile === "base-3-4"
+        ? "The base-3-4 rule profile requires three or four players"
+        : `The ${ruleProfile} rule profile requires ${profile.minPlayers}–${profile.maxPlayers} players`,
     );
   }
 
@@ -76,12 +76,12 @@ export function createBaseGame(input: CreateGameInput): GameState {
 
   const state: GameState = {
     id: input.id,
-    ruleProfile: "base-3-4",
+    ruleProfile,
     victoryPointsToWin,
     seed: input.seed,
     revision: 1,
-    map: createStandardMap(input.seed),
-    bank: initialResourceBank(),
+    map: profile.createMap(input.seed),
+    bank: profile.createBank(),
     buildings: [],
     roads: [],
     players: input.players.map((player) => ({
@@ -101,7 +101,7 @@ export function createBaseGame(input: CreateGameInput): GameState {
     lastRoll: null,
     pendingDiscards: [],
     openTrade: null,
-    developmentDeck: createDevelopmentDeck(input.seed),
+    developmentDeck: profile.createDevelopmentDeck(input.seed),
     developmentCardPlayedThisTurn: false,
     robberResumeStep: null,
     freeRoadsRemaining: 0,
@@ -122,8 +122,11 @@ export function assertGameInvariant(state: GameState): void {
     throw new Error(`Invalid victory target: ${state.victoryPointsToWin}`);
   }
 
-  if (state.map.hexes.length !== 19) {
-    throw new Error(`Expected 19 board hexes, received ${state.map.hexes.length}`);
+  if (state.ruleProfile === "two-player") throw new Error("The two-player profile is not playable");
+  const profile = getRuleProfileDefinition(state.ruleProfile);
+  const expectedHexCount = Object.values(profile.terrainCounts).reduce((total, count) => total + count, 0);
+  if (state.map.hexes.length !== expectedHexCount) {
+    throw new Error(`Expected ${expectedHexCount} board hexes, received ${state.map.hexes.length}`);
   }
 
   const coordinateKeys = new Set(state.map.hexes.map((tile) => `${tile.q},${tile.r}`));
@@ -132,7 +135,7 @@ export function assertGameInvariant(state: GameState): void {
     throw new Error("Board coordinates must be unique");
   }
 
-  for (const [terrain, expectedCount] of Object.entries(EXPECTED_TERRAIN_COUNTS)) {
+  for (const [terrain, expectedCount] of Object.entries(profile.terrainCounts)) {
     const actualCount = state.map.hexes.filter((tile) => tile.terrain === terrain).length;
 
     if (actualCount !== expectedCount) {

@@ -48,8 +48,9 @@ export type GamePhase =
   | {
       readonly kind: "turn";
       readonly activePlayerId: PlayerId;
-      readonly step: "roll" | "discard" | "robber" | "action" | "free-road";
+      readonly step: "roll" | "discard" | "robber" | "action" | "paired-action" | "free-road";
       readonly turnNumber: number;
+      readonly primaryPlayerId?: PlayerId;
     }
   | {
       readonly kind: "finished";
@@ -73,9 +74,9 @@ export interface GameState {
   readonly openTrade: TradeOfferState | null;
   readonly developmentDeck: readonly DevelopmentCardType[];
   readonly developmentCardPlayedThisTurn: boolean;
-  readonly robberResumeStep: "roll" | "action" | null;
+  readonly robberResumeStep: "roll" | "action" | "paired-action" | null;
   readonly freeRoadsRemaining: number;
-  readonly developmentResumeStep: "roll" | "action" | null;
+  readonly developmentResumeStep: "roll" | "action" | "paired-action" | null;
   readonly awards: AwardsState;
 }
 import type { AwardsState } from "../awards/index.js";

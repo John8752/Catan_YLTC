@@ -19,6 +19,10 @@ export interface BoardMapProps {
   readonly hexSize?: number;
 }
 
+export function boardViewBox(map: GameMapView): string {
+  return map.hexes.length > 19 ? "-420 -340 840 680" : "-310 -260 620 520";
+}
+
 export function BoardTerrain({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
   return (
     <g filter="url(#tile-shadow)">

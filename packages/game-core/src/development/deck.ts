@@ -1,7 +1,7 @@
 import { createSeededRandom, shuffled } from "../primitives/index.js";
 import type { DevelopmentCardType } from "./types.js";
 
-const DEVELOPMENT_DECK: readonly DevelopmentCardType[] = [
+export const BASE_DEVELOPMENT_CARDS: readonly DevelopmentCardType[] = [
   ...Array<DevelopmentCardType>(14).fill("knight"),
   ...Array<DevelopmentCardType>(5).fill("victory-point"),
   "road-building",
@@ -12,6 +12,16 @@ const DEVELOPMENT_DECK: readonly DevelopmentCardType[] = [
   "resource-choice",
 ];
 
-export function createDevelopmentDeck(seed: number): readonly DevelopmentCardType[] {
-  return shuffled(DEVELOPMENT_DECK, createSeededRandom(seed ^ 0x44455643));
+export const FIVE_SIX_PLAYER_ADDITIONAL_DEVELOPMENT_CARDS: readonly DevelopmentCardType[] = [
+  ...Array<DevelopmentCardType>(6).fill("knight"),
+  "road-building",
+  "monopoly",
+  "resource-choice",
+];
+
+export function createDevelopmentDeck(
+  seed: number,
+  cards: readonly DevelopmentCardType[] = BASE_DEVELOPMENT_CARDS,
+): readonly DevelopmentCardType[] {
+  return shuffled(cards, createSeededRandom(seed ^ 0x44455643));
 }

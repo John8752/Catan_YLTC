@@ -25,7 +25,8 @@ export interface RoomPanelProps {
   readonly busy: boolean;
   readonly onStart: () => void;
   readonly onSettingsChange: (settings: {
-    playerLimit: 3 | 4;
+    ruleProfile: "base-3-4" | "extended-5-6";
+    playerLimit: 3 | 4 | 5 | 6;
     victoryPointsToWin: number;
   }) => void;
   readonly onLeave: () => void | Promise<void>;
@@ -50,7 +51,9 @@ export function RoomPanel({
   onLeave,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
-  const canStart = isHost && room.members.length >= 3 && room.game === null;
+  const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 3;
+  const canStart = isHost && room.members.length >= minimumPlayers && room.game === null;
+  const playerLimits = room.settings.ruleProfile === "extended-5-6" ? ([5, 6] as const) : ([3, 4] as const);
 
   return (
     <aside className="min-h-0 lg:col-start-2 lg:row-span-3 lg:row-start-1" aria-label="房间状态">
@@ -106,11 +109,38 @@ export function RoomPanel({
               </div>
               <div className="space-y-1 rounded-xl border border-[#695237]/15 bg-white/35 p-3">
                 <SettingRow label="规则版本">
-                  <Badge variant="outline" className="border-[#386f62]/20 bg-white/35 text-[#37685d]">基础版 3–4 人</Badge>
+                  <div className="flex rounded-lg bg-[#ded0b2]/60 p-1" aria-label="规则版本">
+                    {([
+                      ["base-3-4", "基础 3–4", 4],
+                      ["extended-5-6", "扩展 5–6", 6],
+                    ] as const).map(([ruleProfile, label, playerLimit]) => (
+                      <Button
+                        key={ruleProfile}
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className={cn(
+                          "h-7 rounded-md px-2.5 text-xs",
+                          room.settings.ruleProfile === ruleProfile
+                            ? "bg-[#37685d] text-white hover:bg-[#315d53] hover:text-white"
+                            : "text-[#53665f] hover:bg-white/55",
+                        )}
+                        aria-pressed={room.settings.ruleProfile === ruleProfile}
+                        disabled={!isHost || busy || (ruleProfile === "base-3-4" && room.members.length > 4)}
+                        onClick={() => onSettingsChange({
+                          ruleProfile,
+                          playerLimit,
+                          victoryPointsToWin: room.settings.victoryPointsToWin,
+                        })}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
                 </SettingRow>
                 <SettingRow label="人数上限">
                   <div className="flex rounded-lg bg-[#ded0b2]/60 p-1" aria-label="人数上限">
-                    {([3, 4] as const).map((playerLimit) => (
+                    {playerLimits.map((playerLimit) => (
                       <Button
                         key={playerLimit}
                         type="button"
@@ -125,6 +155,7 @@ export function RoomPanel({
                         aria-pressed={room.settings.playerLimit === playerLimit}
                         disabled={!isHost || busy || room.members.length > playerLimit}
                         onClick={() => onSettingsChange({
+                          ruleProfile: room.settings.ruleProfile,
                           playerLimit,
                           victoryPointsToWin: room.settings.victoryPointsToWin,
                         })}
@@ -141,6 +172,7 @@ export function RoomPanel({
                     value={room.settings.victoryPointsToWin}
                     disabled={!isHost || busy}
                     onChange={(event) => onSettingsChange({
+                      ruleProfile: room.settings.ruleProfile,
                       playerLimit: room.settings.playerLimit,
                       victoryPointsToWin: Number(event.target.value),
                     })}
@@ -196,7 +228,7 @@ export function RoomPanel({
               {isHost ? (
                 <>
                   <Button className="w-full" disabled={!canStart || busy} onClick={onStart}>
-                    {room.members.length < 3 ? "等待至少 3 人" : busy ? "正在开局…" : "使用当前地图开局"}
+                    {room.members.length < minimumPlayers ? `等待至少 ${minimumPlayers} 人` : busy ? "正在开局…" : "使用当前地图开局"}
                   </Button>
                   <p className="mt-2 mb-0 text-xs">
                     当前地图 · {room.settings.playerLimit} 人上限 · {room.settings.victoryPointsToWin} 分获胜

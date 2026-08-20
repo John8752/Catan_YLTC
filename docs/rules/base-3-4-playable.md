@@ -4,7 +4,7 @@
 
 This document fixes the executable scope of the first complete playable version. It is a behavior contract for tests and implementation, not a reproduction of any commercial rulebook.
 
-The first playable version supports one named rule profile: `base-3-4`. A match has three or four human players, starts from an empty variable board and ends when a player wins. Two-player and 5–6 player behavior must be implemented later as separate profiles.
+This document defines the `base-3-4` rule profile. A match has three or four human players, starts from an empty variable board and ends when a player wins. The 5–6 player behavior is implemented separately by `extended-5-6`; the two-player profile remains planned.
 
 ## Included match loop
 
@@ -48,7 +48,7 @@ Map topology is independent from map content. Vertices, edges, adjacency and coa
 - The default room limit is four players. The host may set it to three or four before the game starts, but never below the number of occupied seats.
 - The default victory target is 10 points. The host may select any whole-number target from 5 through 15 before the game starts.
 - Only the host may change settings or reroll the map. Every mutation uses the current room revision, is broadcast to all members and is rejected after the game starts.
-- The rule profile remains `base-3-4`; two-player and 5–6-player options are not presented as working settings until their own rule profiles exist.
+- The rule profile remains `base-3-4`; switching to a 5–6-player game selects the separate `extended-5-6` profile and regenerates its larger map and supplies.
 - Before the game starts, an explicit leave releases that player's seat immediately. If the host leaves, ownership transfers to the earliest remaining seated player; if the last player leaves, the room is deleted.
 - A vacated player color becomes available to the next joining player. Existing members keep their colors and relative seat order.
 

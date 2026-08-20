@@ -15,10 +15,11 @@
 | ID | Question | Needed by |
 |---|---|---|
 | O1 | Exact two-player variant and neutral-player behavior | two-player milestone |
-| O2 | Exact 5–6 paired-turn interpretation | extended profile milestone |
 | O3 | Reconnection grace period and abandoned-seat policy | M1 |
 | O4 | Whether chat is in-product or external | trading UX milestone |
 | O5 | Public release name and rights review | public deployment |
+
+Resolved after M0: the 5–6 player profile follows the revised paired-player turn, with the player third to the primary player's left acting second and trading only with the bank.
 
 ## Risks
 

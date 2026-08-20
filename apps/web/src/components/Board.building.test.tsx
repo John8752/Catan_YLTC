@@ -99,6 +99,7 @@ function constructionView(): GameView {
       roadEdgeIds: [roadId],
       settlementVertexIds: [settlementId],
       cityVertexIds: [cityId],
+      pairedPlayer: false,
     },
   };
 }

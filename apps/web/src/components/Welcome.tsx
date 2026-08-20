@@ -31,7 +31,7 @@ export function Welcome({ busy, error, onCreate, onJoin }: WelcomeProps) {
         </p>
         <div className="milestone-note">
           <span>可玩版</span>
-          <p>3–4 人基础规则已贯通：摆放、生产、强盗、建造、交易、发展卡与胜负结算都由服务器统一裁定。</p>
+          <p>3–4 人基础岛与 5–6 人扩展岛均可游玩；地图、资源、交易、双玩家回合与胜负都由服务器统一裁定。</p>
         </div>
       </section>
 

@@ -16,7 +16,7 @@ export function TradeResourceBasket({ label, value, maximums, onChange }: TradeR
     <div className="grid gap-2" role="group" aria-label={label} data-trade-resource-basket={label}>
       <div className="grid grid-cols-5 gap-1.5">
         {TRADE_RESOURCES.map((resource) => {
-          const maximum = maximums?.[resource] ?? 19;
+          const maximum = maximums?.[resource];
           return (
             <label className="grid min-w-0 gap-1 rounded-lg border border-[#6d5434]/12 bg-[#fffaf0]/65 p-1.5" key={resource}>
               <span className="truncate text-[11px] font-bold text-[#5f665f]" title={resourceLabel(resource)}>
@@ -32,7 +32,7 @@ export function TradeResourceBasket({ label, value, maximums, onChange }: TradeR
                 aria-label={`${label}：${resourceLabel(resource)}数量`}
                 onChange={(event) => onChange({
                   ...value,
-                  [resource]: clampAmount(event.target.value, maximum),
+                  [resource]: clampAmount(event.target.value, maximum ?? Number.MAX_SAFE_INTEGER),
                 })}
               />
             </label>

@@ -44,11 +44,12 @@ describe("lobby setup", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "3 人" }));
-    expect(onSettingsChange).toHaveBeenCalledWith({ playerLimit: 3, victoryPointsToWin: 10 });
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 3, victoryPointsToWin: 10 });
 
     fireEvent.change(screen.getByRole("combobox", { name: "获胜分数" }), { target: { value: "12" } });
-    expect(onSettingsChange).toHaveBeenCalledWith({ playerLimit: 4, victoryPointsToWin: 12 });
-    expect(screen.getByText("基础版 3–4 人")).toBeTruthy();
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: 12 });
+    fireEvent.click(screen.getByRole("button", { name: "扩展 5–6" }));
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: 10 });
 
     fireEvent.click(screen.getByRole("button", { name: "离开房间" }));
     expect(screen.getByRole("dialog", { name: "确认离开房间？" }).textContent).toContain("房主将自动转交给 周");

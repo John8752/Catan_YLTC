@@ -78,6 +78,7 @@ export function createBaseGame(input: CreateGameInput): GameState {
     },
     lastRoll: null,
     pendingDiscards: [],
+    openTrade: null,
   };
 
   assertGameInvariant(state);

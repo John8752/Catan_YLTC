@@ -3,6 +3,7 @@ import type { GameMap } from "../map/index.js";
 import type { GameId, PlayerId } from "../primitives/index.js";
 import type { ResourceHand } from "../resources/index.js";
 import type { RuleProfile } from "../rulesets/index.js";
+import type { TradeOfferState } from "../trade/index.js";
 
 export const PLAYER_COLORS = [
   "terracotta",
@@ -65,4 +66,5 @@ export interface GameState {
   readonly phase: GamePhase;
   readonly lastRoll: readonly [number, number] | null;
   readonly pendingDiscards: readonly { readonly playerId: PlayerId; readonly count: number }[];
+  readonly openTrade: TradeOfferState | null;
 }

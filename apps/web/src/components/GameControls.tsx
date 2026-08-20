@@ -1,5 +1,6 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import { useEffect, useMemo, useState } from "react";
+import { TradeControls } from "./TradeControls.js";
 
 const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
 type Resource = (typeof RESOURCES)[number];
@@ -44,6 +45,7 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
   if (game.interaction.kind === "turn-action") {
     return (
       <div className="action-stack">
+        <TradeControls game={game} busy={busy} onCommand={onCommand} />
         <div className="build-buttons" aria-label="建造选项">
           {([
             ["road", "道路", game.interaction.roadEdgeIds.length],
@@ -138,6 +140,10 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
         <button className="primary-button" type="submit" disabled={busy || robberHexId === ""}>移动强盗</button>
       </form>
     );
+  }
+
+  if (game.interaction.kind === "trade-response") {
+    return <TradeControls game={game} busy={busy} onCommand={onCommand} />;
   }
 
   return <p>{game.interaction.instruction}</p>;

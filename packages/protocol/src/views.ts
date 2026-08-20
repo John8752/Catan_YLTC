@@ -6,6 +6,7 @@ import {
   legalRoadEdges,
   legalRobberTargets,
   legalSettlementVertices,
+  maritimeRatio,
   type BuildingState,
   type GamePhase,
   type GameState,
@@ -13,6 +14,9 @@ import {
   type PlayerColor,
   type ResourceHand,
   type RoadState,
+  RESOURCE_TYPES,
+  type ResourceType,
+  type TradeOfferState,
   type RuleProfile,
 } from "@catan/game-core";
 
@@ -31,6 +35,7 @@ export interface PublicPlayerView {
 
 export interface PrivatePlayerView extends PublicPlayerView {
   readonly resources: ResourceHand;
+  readonly maritimeRatios: Readonly<Record<ResourceType, 2 | 3 | 4>>;
 }
 
 export interface GameView {
@@ -46,6 +51,7 @@ export interface GameView {
   readonly lastRoll: readonly [number, number] | null;
   readonly you: PrivatePlayerView;
   readonly interaction: GameInteractionView;
+  readonly openTrade: TradeOfferState | null;
 }
 
 export type GameInteractionView =
@@ -96,6 +102,13 @@ export type GameInteractionView =
         readonly hexId: string;
         readonly victimIds: readonly string[];
       }[];
+      readonly vertexIds: readonly [];
+      readonly edgeIds: readonly [];
+    }
+  | {
+      readonly kind: "trade-response";
+      readonly instruction: string;
+      readonly offerId: string;
       readonly vertexIds: readonly [];
       readonly edgeIds: readonly [];
     };
@@ -151,8 +164,12 @@ export function projectGameForPlayer(state: GameState, viewerId: string): GameVi
     you: {
       ...publicViewer,
       resources: { ...viewer.resources },
+      maritimeRatios: Object.fromEntries(
+        RESOURCE_TYPES.map((resource) => [resource, maritimeRatio(state, viewerId, resource)]),
+      ) as Record<ResourceType, 2 | 3 | 4>,
     },
     interaction: projectInteraction(state, viewerId),
+    openTrade: state.openTrade,
   };
 }
 
@@ -169,6 +186,19 @@ function projectInteraction(state: GameState, viewerId: string): GameInteraction
             vertexIds: [],
             edgeIds: [],
           };
+    }
+    if (
+      state.phase.step === "action" &&
+      state.openTrade !== null &&
+      state.openTrade.proposerId !== viewerId
+    ) {
+      return {
+        kind: "trade-response",
+        instruction: "当前玩家发来一份交易报价",
+        offerId: state.openTrade.offerId,
+        vertexIds: [],
+        edgeIds: [],
+      };
     }
     if (state.phase.activePlayerId !== viewerId) {
       const activePlayerId = state.phase.activePlayerId;

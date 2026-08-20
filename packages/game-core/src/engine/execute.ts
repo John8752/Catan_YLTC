@@ -16,6 +16,7 @@ import {
 } from "../resources/index.js";
 import { assertGameInvariant } from "./create-game.js";
 import { executeBuildCommand } from "./build-command.js";
+import { executeTradeCommand } from "./trade-command.js";
 import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent } from "./commands.js";
 import type { GamePhase, GameState, PlayerState } from "./state.js";
 
@@ -40,6 +41,11 @@ export function executeGameCommand(
     case "BuildSettlement":
     case "BuildCity":
       return executeBuildCommand(state, actorId, command);
+    case "OpenTradeOffer":
+    case "AcceptTradeOffer":
+    case "CancelTradeOffer":
+    case "MaritimeTrade":
+      return executeTradeCommand(state, actorId, command);
     case "EndTurn":
       return endTurn(state, actorId);
   }
@@ -371,6 +377,7 @@ function endTurn(state: GameState, actorId: PlayerId): GameCommandResult {
       ...state,
       revision: state.revision + 1,
       lastRoll: null,
+      openTrade: null,
       phase: {
         kind: "turn",
         activePlayerId: nextPlayer.id,

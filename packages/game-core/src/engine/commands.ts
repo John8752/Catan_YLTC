@@ -11,6 +11,15 @@ export type GameCommand =
   | { readonly type: "BuildRoad"; readonly edgeId: EdgeId }
   | { readonly type: "BuildSettlement"; readonly vertexId: VertexId }
   | { readonly type: "BuildCity"; readonly vertexId: VertexId }
+  | {
+      readonly type: "OpenTradeOffer";
+      readonly offerId: string;
+      readonly give: ResourceHand;
+      readonly receive: ResourceHand;
+    }
+  | { readonly type: "AcceptTradeOffer"; readonly offerId: string }
+  | { readonly type: "CancelTradeOffer"; readonly offerId: string }
+  | { readonly type: "MaritimeTrade"; readonly give: ResourceType; readonly receive: ResourceType }
   | { readonly type: "EndTurn" };
 
 export type GameCommandErrorCode =
@@ -24,7 +33,10 @@ export type GameCommandErrorCode =
   | "INVALID_VICTIM"
   | "NO_PIECES_LEFT"
   | "INSUFFICIENT_RESOURCES"
-  | "ILLEGAL_PLACEMENT";
+  | "ILLEGAL_PLACEMENT"
+  | "INVALID_TRADE"
+  | "TRADE_NOT_FOUND"
+  | "BANK_SHORTAGE";
 
 export interface GameCommandError {
   readonly code: GameCommandErrorCode;
@@ -73,6 +85,21 @@ export type GameEvent =
       readonly playerId: PlayerId;
       readonly piece: "road" | "settlement" | "city";
       readonly locationId: EdgeId | VertexId;
+    }
+  | { readonly type: "trade_offered"; readonly offerId: string; readonly playerId: PlayerId }
+  | { readonly type: "trade_cancelled"; readonly offerId: string; readonly playerId: PlayerId }
+  | {
+      readonly type: "player_trade_completed";
+      readonly offerId: string;
+      readonly proposerId: PlayerId;
+      readonly accepterId: PlayerId;
+    }
+  | {
+      readonly type: "maritime_trade_completed";
+      readonly playerId: PlayerId;
+      readonly give: ResourceType;
+      readonly receive: ResourceType;
+      readonly ratio: number;
     };
 
 export type GameCommandResult =

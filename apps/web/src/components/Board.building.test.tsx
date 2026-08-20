@@ -32,6 +32,8 @@ describe("Board construction targets", () => {
     rerender(<Board game={game} buildMode="road" onCommand={onCommand} />);
     const roadTarget = screen.getByRole("button", { name: "在这里建造道路" });
     expect(roadTarget.getAttribute("data-build-target-id")).toBe(roadId);
+    expect(roadTarget.compareDocumentPosition(container.querySelector(".placed-buildings") as Node))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     fireEvent.click(roadTarget);
     expect(onCommand).toHaveBeenLastCalledWith({ type: "BuildRoad", edgeId: roadId });
 

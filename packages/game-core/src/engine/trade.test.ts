@@ -88,6 +88,78 @@ describe("atomic trading", () => {
     })).toMatchObject({ accepted: false, error: { code: "INVALID_TRADE" } });
   });
 
+  it("exchanges multiple resource types in one atomic player trade", () => {
+    let game = withHands(actionState(), {
+      player_1: resourceAmounts({ brick: 1, lumber: 2 }),
+      player_2: resourceAmounts({ grain: 1, ore: 2 }),
+    });
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_bundle",
+      give: resourceAmounts({ brick: 1, lumber: 2 }),
+      receive: resourceAmounts({ grain: 1, ore: 2 }),
+    }));
+    game = accept(executeGameCommand(game, "player_2", {
+      type: "AcceptTradeOffer",
+      offerId: "offer_bundle",
+    }));
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "CompleteTradeOffer",
+      offerId: "offer_bundle",
+      partnerId: "player_2",
+    }));
+
+    expect(game.players.find((player) => player.id === "player_1")?.resources)
+      .toEqual(resourceAmounts({ grain: 1, ore: 2 }));
+    expect(game.players.find((player) => player.id === "player_2")?.resources)
+      .toEqual(resourceAmounts({ brick: 1, lumber: 2 }));
+  });
+
+  it("allows either participant to offer no resources, but rejects an empty exchange", () => {
+    let gift = withHands(actionState(), {
+      player_1: resourceAmounts({ brick: 2 }),
+      player_2: resourceAmounts({}),
+    });
+    gift = accept(executeGameCommand(gift, "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_gift",
+      give: resourceAmounts({ brick: 2 }),
+      receive: resourceAmounts({}),
+    }));
+    gift = accept(executeGameCommand(gift, "player_2", { type: "AcceptTradeOffer", offerId: "offer_gift" }));
+    gift = accept(executeGameCommand(gift, "player_1", {
+      type: "CompleteTradeOffer",
+      offerId: "offer_gift",
+      partnerId: "player_2",
+    }));
+    expect(gift.players.find((player) => player.id === "player_2")?.resources.brick).toBe(2);
+
+    let request = withHands(actionState(), {
+      player_1: resourceAmounts({}),
+      player_2: resourceAmounts({ ore: 1 }),
+    });
+    request = accept(executeGameCommand(request, "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_request",
+      give: resourceAmounts({}),
+      receive: resourceAmounts({ ore: 1 }),
+    }));
+    request = accept(executeGameCommand(request, "player_2", { type: "AcceptTradeOffer", offerId: "offer_request" }));
+    request = accept(executeGameCommand(request, "player_1", {
+      type: "CompleteTradeOffer",
+      offerId: "offer_request",
+      partnerId: "player_2",
+    }));
+    expect(request.players.find((player) => player.id === "player_1")?.resources.ore).toBe(1);
+
+    expect(executeGameCommand(actionState(), "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_empty",
+      give: resourceAmounts({}),
+      receive: resourceAmounts({}),
+    })).toMatchObject({ accepted: false, error: { code: "INVALID_TRADE" } });
+  });
+
   it("derives a resource-port ratio and trades atomically with the bank", () => {
     let game = actionState();
     const port = game.map.ports.find((candidate) => candidate.kind === "resource");

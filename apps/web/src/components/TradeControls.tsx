@@ -17,9 +17,20 @@ import {
 import { Separator } from "@/components/ui/separator.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
 import { cn } from "@/lib/utils.js";
+import {
+  emptyTradeBasket,
+  hasTradeResources,
+  overlappingTradeResources,
+  resourceLabel,
+  resourceMark,
+  TRADE_RESOURCES,
+  TradeResourceBasket,
+  TradeResourceSummary,
+  tradeBasketTotal,
+  type TradeResource,
+} from "./TradeResourceBasket.js";
 
-const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
-type Resource = (typeof RESOURCES)[number];
+type Resource = TradeResource;
 
 const PLAYER_RING = {
   terracotta: "border-[#c85d42] bg-[#c85d42]/15 text-[#8e3d2b]",
@@ -40,10 +51,10 @@ export function TradeControls({ game, busy, onCommand }: TradeControlsProps) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [offerOpen, setOfferOpen] = useState(true);
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
+  const [playerGive, setPlayerGive] = useState(emptyTradeBasket);
+  const [playerReceive, setPlayerReceive] = useState(emptyTradeBasket);
   const [give, setGive] = useState<Resource>("brick");
-  const [giveCount, setGiveCount] = useState(1);
   const [receive, setReceive] = useState<Resource>("ore");
-  const [receiveCount, setReceiveCount] = useState(1);
   const offerId = game.openTrade?.offerId ?? null;
 
   useEffect(() => {
@@ -79,6 +90,14 @@ export function TradeControls({ game, busy, onCommand }: TradeControlsProps) {
 
   if (game.interaction.kind !== "turn-action") return null;
   const sameResource = give === receive;
+  const overlappingResources = overlappingTradeResources(playerGive, playerReceive);
+  const playerOfferProblem = tradeBasketTotal(playerGive) === 0 && tradeBasketTotal(playerReceive) === 0
+    ? "报价双方不能同时为空"
+    : overlappingResources.length > 0
+      ? `同一种资源不能同时出现在两侧：${overlappingResources.map(resourceLabel).join("、")}`
+      : !hasTradeResources(game.you.resources, playerGive)
+        ? "你提供的资源超过了当前持有数量"
+        : null;
 
   return (
     <Dialog open={composerOpen} onOpenChange={setComposerOpen}>
@@ -107,18 +126,23 @@ export function TradeControls({ game, busy, onCommand }: TradeControlsProps) {
                 onCommand({
                   type: "OpenTradeOffer",
                   offerId: crypto.randomUUID(),
-                  give: amounts(give, giveCount),
-                  receive: amounts(receive, receiveCount),
+                  give: playerGive,
+                  receive: playerReceive,
                 });
+                setPlayerGive(emptyTradeBasket());
+                setPlayerReceive(emptyTradeBasket());
               }}
             >
               <TradeExchange
                 giveLabel="你提供"
                 receiveLabel="你希望获得"
-                give={<ResourceAmount resource={give} count={giveCount} onResource={setGive} onCount={setGiveCount} />}
-                receive={<ResourceAmount resource={receive} count={receiveCount} onResource={setReceive} onCount={setReceiveCount} />}
+                give={<TradeResourceBasket label="你提供" value={playerGive} maximums={game.you.resources} onChange={setPlayerGive} />}
+                receive={<TradeResourceBasket label="你希望获得" value={playerReceive} onChange={setPlayerReceive} />}
               />
-              <Button className="w-full" type="submit" disabled={busy || sameResource || game.you.resources[give] < giveCount}>
+              <p className={cn("text-center text-xs", playerOfferProblem === null ? "text-[#68736d]" : "font-bold text-rose-700")}>
+                {playerOfferProblem ?? "任意一侧可以留空；五种资源可以自由组合。"}
+              </p>
+              <Button className="w-full" type="submit" disabled={busy || playerOfferProblem !== null}>
                 向所有玩家发布报价
               </Button>
             </form>
@@ -172,7 +196,7 @@ function OpenTradeDialog({
   const proposer = game.players.find((player) => player.id === offer.proposerId);
   const ownOffer = offer.proposerId === game.you.id;
   const ownResponse = offer.responses.find((response) => response.playerId === game.you.id)?.response;
-  const canAccept = hasResources(game.you.resources, offer.receive);
+  const canAccept = hasTradeResources(game.you.resources, offer.receive);
   const selectedAccepted = offer.responses.some((response) => response.playerId === selectedPartnerId && response.response === "accepted");
 
   return (
@@ -191,8 +215,8 @@ function OpenTradeDialog({
         <TradeExchange
           giveLabel={ownOffer ? "你提供" : "你将获得"}
           receiveLabel={ownOffer ? "你希望获得" : "你需要交出"}
-          give={<ResourceSummary resources={offer.give} />}
-          receive={<ResourceSummary resources={offer.receive} />}
+          give={<TradeResourceSummary resources={offer.give} />}
+          receive={<TradeResourceSummary resources={offer.receive} />}
         />
 
         <Separator className="bg-[#6d5434]/15" />
@@ -291,47 +315,10 @@ function PlayerResponseIcon({ response }: { readonly response: "accepted" | "dec
   return <span className="grid size-9 place-items-center rounded-full bg-stone-400 text-white"><CircleEllipsis className="size-5" /></span>;
 }
 
-function ResourceAmount({ resource, count, onResource, onCount }: { readonly resource: Resource; readonly count: number; readonly onResource: (resource: Resource) => void; readonly onCount: (count: number) => void }) {
-  return (
-    <div className="grid grid-cols-[1fr_5rem] gap-2">
-      <ResourcePicker resource={resource} onResource={onResource} />
-      <input className="w-full rounded-md border border-input bg-white/70 px-3 py-2 text-center font-black outline-none focus:ring-2 focus:ring-ring" type="number" min="1" max="19" value={count} onChange={(event) => onCount(Math.max(1, Number(event.target.value)))} />
-    </div>
-  );
-}
-
 function ResourcePicker({ resource, onResource }: { readonly resource: Resource; readonly onResource: (resource: Resource) => void }) {
   return (
     <select className="w-full rounded-md border border-input bg-white/70 px-3 py-2 font-bold outline-none focus:ring-2 focus:ring-ring" value={resource} onChange={(event) => onResource(event.target.value as Resource)}>
-      {RESOURCES.map((candidate) => <option key={candidate} value={candidate}>{resourceMark(candidate)} {resourceLabel(candidate)}</option>)}
+      {TRADE_RESOURCES.map((candidate) => <option key={candidate} value={candidate}>{resourceMark(candidate)} {resourceLabel(candidate)}</option>)}
     </select>
   );
-}
-
-function ResourceSummary({ resources }: { readonly resources: Record<Resource, number> }) {
-  return (
-    <div className="flex min-h-12 flex-wrap items-center justify-center gap-2">
-      {RESOURCES.filter((resource) => resources[resource] > 0).map((resource) => (
-        <Badge className="gap-1 bg-[#254f4b] px-3 py-1.5 text-sm text-[#fff8df]" key={resource}>
-          <span aria-hidden="true">{resourceMark(resource)}</span>{resources[resource]} {resourceLabel(resource)}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-
-function amounts(resource: Resource, count: number) {
-  return { brick: 0, lumber: 0, wool: 0, grain: 0, ore: 0, [resource]: count };
-}
-
-function hasResources(hand: Record<Resource, number>, cost: Record<Resource, number>): boolean {
-  return RESOURCES.every((resource) => hand[resource] >= cost[resource]);
-}
-
-function resourceLabel(resource: Resource): string {
-  return { brick: "砖", lumber: "木", wool: "羊", grain: "麦", ore: "矿" }[resource];
-}
-
-function resourceMark(resource: Resource): string {
-  return { brick: "▧", lumber: "♠", wool: "⌁", grain: "≋", ore: "◆" }[resource];
 }

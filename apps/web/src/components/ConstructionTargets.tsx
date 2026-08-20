@@ -5,6 +5,7 @@ export interface ConstructionTargetsProps {
   readonly game: GameView;
   readonly busy: boolean;
   readonly buildMode: "road" | "settlement" | "city" | null;
+  readonly layer: "roads" | "buildings";
   readonly coordinateScale: number;
   readonly onCommand: ((command: GameCommand) => void) | undefined;
 }
@@ -13,6 +14,7 @@ export function ConstructionTargets({
   game,
   busy,
   buildMode,
+  layer,
   coordinateScale,
   onCommand,
 }: ConstructionTargetsProps) {
@@ -38,7 +40,7 @@ export function ConstructionTargets({
 
   return (
     <g className="construction-targets" aria-label="可建造位置">
-      {edgeTargetKind === null ? null : game.map.edges.map((edge) => {
+      {layer !== "roads" || edgeTargetKind === null ? null : game.map.edges.map((edge) => {
         if (!selectableEdges.has(edge.id)) return null;
         const [firstId, secondId] = edge.vertexIds;
         const first = game.map.vertices.find((vertex) => vertex.id === firstId);
@@ -76,7 +78,7 @@ export function ConstructionTargets({
           </g>
         );
       })}
-      {vertexTargetKind === null ? null : game.map.vertices.map((vertex) => {
+      {layer !== "buildings" || vertexTargetKind === null ? null : game.map.vertices.map((vertex) => {
         if (!selectableVertices.has(vertex.id)) return null;
         const activate = () => {
           if (busy) return;

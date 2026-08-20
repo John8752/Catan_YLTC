@@ -69,10 +69,14 @@ function openOffer(
   if (state.openTrade !== null) return reject(state, "INVALID_TRADE", "A trade offer is already open");
   if (
     offerId.trim().length === 0 ||
-    totalResources(give) === 0 ||
-    totalResources(receive) === 0 ||
+    (totalResources(give) === 0 && totalResources(receive) === 0) ||
     RESOURCE_TYPES.some((resource) => give[resource] > 0 && receive[resource] > 0) ||
-    RESOURCE_TYPES.some((resource) => give[resource] < 0 || receive[resource] < 0)
+    RESOURCE_TYPES.some((resource) =>
+      !Number.isInteger(give[resource]) ||
+      !Number.isInteger(receive[resource]) ||
+      give[resource] < 0 ||
+      receive[resource] < 0
+    )
   ) {
     return reject(state, "INVALID_TRADE", "The trade offer is invalid");
   }

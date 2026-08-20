@@ -2,8 +2,8 @@
 
 import { createBaseGame, resourceAmounts, type GameState } from "@catan/game-core";
 import { projectGameForPlayer, type GameCommand } from "@catan/protocol";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TradeControls } from "./TradeControls.js";
 
 const players = [
@@ -12,7 +12,56 @@ const players = [
   { id: "player_3", name: "舟", color: "pine" as const },
 ];
 
+afterEach(() => cleanup());
+
 describe("TradeControls", () => {
+  it("composes a player offer from multiple resource types", () => {
+    const onCommand = vi.fn<(command: GameCommand) => void>();
+    render(<TradeControls game={composerView({ brick: 2, lumber: 1 })} busy={false} onCommand={onCommand} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "发起交易" }));
+    const publish = screen.getByRole("button", { name: "向所有玩家发布报价" }) as HTMLButtonElement;
+    expect(publish.disabled).toBe(true);
+
+    fireEvent.change(screen.getByRole("spinbutton", { name: "你提供：砖数量" }), { target: { value: "2" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "你提供：木数量" }), { target: { value: "1" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "你希望获得：麦数量" }), { target: { value: "1" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "你希望获得：矿数量" }), { target: { value: "2" } });
+    expect(publish.disabled).toBe(false);
+    fireEvent.click(publish);
+
+    expect(onCommand).toHaveBeenCalledWith(expect.objectContaining({
+      type: "OpenTradeOffer",
+      give: resourceAmounts({ brick: 2, lumber: 1 }),
+      receive: resourceAmounts({ grain: 1, ore: 2 }),
+    }));
+  });
+
+  it("allows either side of a player offer to contain no resources", () => {
+    const requestCommand = vi.fn<(command: GameCommand) => void>();
+    const requestView = render(
+      <TradeControls game={composerView({ brick: 1 })} busy={false} onCommand={requestCommand} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "发起交易" }));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "你希望获得：矿数量" }), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "向所有玩家发布报价" }));
+    expect(requestCommand).toHaveBeenCalledWith(expect.objectContaining({
+      give: resourceAmounts({}),
+      receive: resourceAmounts({ ore: 1 }),
+    }));
+    requestView.unmount();
+
+    const giftCommand = vi.fn<(command: GameCommand) => void>();
+    render(<TradeControls game={composerView({ brick: 1 })} busy={false} onCommand={giftCommand} />);
+    fireEvent.click(screen.getByRole("button", { name: "发起交易" }));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "你提供：砖数量" }), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "向所有玩家发布报价" }));
+    expect(giftCommand).toHaveBeenCalledWith(expect.objectContaining({
+      give: resourceAmounts({ brick: 1 }),
+      receive: resourceAmounts({}),
+    }));
+  });
+
   it("shows every response and lets the proposer choose an accepted partner", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
     render(<TradeControls game={tradeView("player_1")} busy={false} onCommand={onCommand} />);
@@ -42,6 +91,19 @@ describe("TradeControls", () => {
     expect(onCommand).not.toHaveBeenCalledWith(expect.objectContaining({ type: "CompleteTradeOffer" }));
   });
 });
+
+function composerView(resources: Partial<GameState["players"][number]["resources"]>) {
+  const base = createBaseGame({ id: "game_trade_composer", seed: 87, players });
+  const state: GameState = {
+    ...base,
+    phase: { kind: "turn", activePlayerId: "player_1", step: "action", turnNumber: 1 },
+    players: base.players.map((player) => ({
+      ...player,
+      resources: player.id === "player_1" ? resourceAmounts(resources) : player.resources,
+    })),
+  };
+  return projectGameForPlayer(state, "player_1");
+}
 
 function tradeView(viewerId: string) {
   const base = createBaseGame({ id: "game_trade_ui", seed: 88, players });

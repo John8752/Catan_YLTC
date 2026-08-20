@@ -162,6 +162,14 @@ export function Board({
               />
             ))}
           </g>
+          <ConstructionTargets
+            game={game}
+            busy={busy}
+            buildMode={buildMode}
+            layer="roads"
+            coordinateScale={HEX_SIZE}
+            onCommand={onCommand}
+          />
           <g className="placed-roads" aria-label="已建道路">
             {game.roads.map((road) => {
               const edge = game.map.edges.find((candidate) => candidate.id === road.edgeId);
@@ -226,6 +234,7 @@ export function Board({
             game={game}
             busy={busy}
             buildMode={buildMode}
+            layer="buildings"
             coordinateScale={HEX_SIZE}
             onCommand={onCommand}
           />

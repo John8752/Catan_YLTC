@@ -17,6 +17,7 @@ import {
 import { assertGameInvariant } from "./create-game.js";
 import { executeBuildCommand } from "./build-command.js";
 import { executeTradeCommand } from "./trade-command.js";
+import { executeDevelopmentCommand } from "./development-command.js";
 import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent } from "./commands.js";
 import type { GamePhase, GameState, PlayerState } from "./state.js";
 
@@ -46,6 +47,13 @@ export function executeGameCommand(
     case "CancelTradeOffer":
     case "MaritimeTrade":
       return executeTradeCommand(state, actorId, command);
+    case "BuyDevelopmentCard":
+    case "PlayKnight":
+    case "PlayRoadBuilding":
+    case "BuildFreeRoad":
+    case "PlayMonopoly":
+    case "PlayResourceChoice":
+      return executeDevelopmentCommand(state, actorId, command);
     case "EndTurn":
       return endTurn(state, actorId);
   }
@@ -352,7 +360,8 @@ function moveRobber(
       map: { ...state.map, robberHexId: hexId },
       players,
       pendingDiscards: [],
-      phase: { ...state.phase, step: "action" },
+      phase: { ...state.phase, step: state.robberResumeStep ?? "action" },
+      robberResumeStep: null,
     },
     [{ type: "robber_moved", playerId: actorId, hexId, victimId, stolenResource }],
   );
@@ -378,6 +387,7 @@ function endTurn(state: GameState, actorId: PlayerId): GameCommandResult {
       revision: state.revision + 1,
       lastRoll: null,
       openTrade: null,
+      developmentCardPlayedThisTurn: false,
       phase: {
         kind: "turn",
         activePlayerId: nextPlayer.id,

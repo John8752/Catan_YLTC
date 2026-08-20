@@ -29,4 +29,32 @@ describe("player-safe game projections", () => {
     expect(view.players.find((player) => player.id === "player_2")?.resourceCardCount).toBe(5);
     expect(serialized).not.toContain('"resources"');
   });
+
+  it("reveals development card identities only to their owner", () => {
+    const game = createBaseGame({
+      id: "game_cards",
+      seed: 7,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const withPrivateCard = {
+      ...game,
+      players: game.players.map((player) => player.id === "player_2"
+        ? {
+            ...player,
+            developmentCards: [{ id: "secret_card", type: "victory-point" as const, acquiredTurn: 1 }],
+          }
+        : player),
+    };
+
+    const opponentView = projectGameForPlayer(withPrivateCard, "player_1");
+    const ownerView = projectGameForPlayer(withPrivateCard, "player_2");
+
+    expect(opponentView.players.find((player) => player.id === "player_2")?.developmentCardCount).toBe(1);
+    expect(JSON.stringify(opponentView.players)).not.toContain("victory-point");
+    expect(ownerView.you.developmentCards).toContainEqual(expect.objectContaining({ id: "secret_card" }));
+  });
 });

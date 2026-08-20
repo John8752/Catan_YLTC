@@ -58,8 +58,8 @@ export function RoomPanel({
                 </small>
               </div>
               {gamePlayer === undefined ? null : (
-                <span className="resource-count" title="资源卡数量">
-                  {gamePlayer.resourceCardCount} 张
+                <span className="resource-count" title="资源卡与发展卡数量">
+                  {gamePlayer.resourceCardCount} 资源 · {gamePlayer.developmentCardCount} 发展
                 </span>
               )}
             </div>

@@ -50,6 +50,19 @@ const gameCommandSchema = z.object({
       give: z.enum(["brick", "lumber", "wool", "grain", "ore"]),
       receive: z.enum(["brick", "lumber", "wool", "grain", "ore"]),
     }),
+    z.object({ type: z.literal("BuyDevelopmentCard") }),
+    z.object({ type: z.literal("PlayKnight"), cardId: z.string().min(1) }),
+    z.object({ type: z.literal("PlayRoadBuilding"), cardId: z.string().min(1) }),
+    z.object({ type: z.literal("BuildFreeRoad"), edgeId: z.string().min(1) }),
+    z.object({ type: z.literal("PlayMonopoly"), cardId: z.string().min(1), resource: z.enum(["brick", "lumber", "wool", "grain", "ore"]) }),
+    z.object({
+      type: z.literal("PlayResourceChoice"),
+      cardId: z.string().min(1),
+      resources: z.tuple([
+        z.enum(["brick", "lumber", "wool", "grain", "ore"]),
+        z.enum(["brick", "lumber", "wool", "grain", "ore"]),
+      ]),
+    }),
     z.object({ type: z.literal("EndTurn") }),
   ]),
 });

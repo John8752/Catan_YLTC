@@ -106,14 +106,18 @@ export function Board({ game, busy = false, onCommand, buildMode = null }: Board
                     if (selectableEdges.has(edge.id) && !busy) {
                       onCommand?.(game.interaction.kind === "setup-road"
                         ? { type: "PlaceInitialRoad", edgeId: edge.id }
-                        : { type: "BuildRoad", edgeId: edge.id });
+                        : game.interaction.kind === "free-road"
+                          ? { type: "BuildFreeRoad", edgeId: edge.id }
+                          : { type: "BuildRoad", edgeId: edge.id });
                     }
                   }}
                   onKeyDown={(event) => activateOnKeyboard(event, () => {
                     if (selectableEdges.has(edge.id) && !busy) {
                       onCommand?.(game.interaction.kind === "setup-road"
                         ? { type: "PlaceInitialRoad", edgeId: edge.id }
-                        : { type: "BuildRoad", edgeId: edge.id });
+                        : game.interaction.kind === "free-road"
+                          ? { type: "BuildFreeRoad", edgeId: edge.id }
+                          : { type: "BuildRoad", edgeId: edge.id });
                     }
                   })}
                 />

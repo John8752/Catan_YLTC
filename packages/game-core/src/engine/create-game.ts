@@ -1,4 +1,5 @@
 import { initialPieceSupply } from "../buildables/index.js";
+import { createDevelopmentDeck } from "../development/index.js";
 import { createStandardMap, type TerrainType } from "../map/index.js";
 import { emptyResourceHand, initialResourceBank, RESOURCE_TYPES } from "../resources/index.js";
 import type { GameState, PlayerSeed } from "./state.js";
@@ -69,6 +70,8 @@ export function createBaseGame(input: CreateGameInput): GameState {
       resources: emptyResourceHand(),
       pieces: initialPieceSupply(),
       visibleVictoryPoints: 0,
+      developmentCards: [],
+      playedKnights: 0,
     })),
     phase: {
       kind: "setup",
@@ -79,6 +82,11 @@ export function createBaseGame(input: CreateGameInput): GameState {
     lastRoll: null,
     pendingDiscards: [],
     openTrade: null,
+    developmentDeck: createDevelopmentDeck(input.seed),
+    developmentCardPlayedThisTurn: false,
+    robberResumeStep: null,
+    freeRoadsRemaining: 0,
+    developmentResumeStep: null,
   };
 
   assertGameInvariant(state);

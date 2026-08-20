@@ -1,6 +1,7 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import { useEffect, useMemo, useState } from "react";
 import { TradeControls } from "./TradeControls.js";
+import { DevelopmentControls } from "./DevelopmentControls.js";
 
 const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
 type Resource = (typeof RESOURCES)[number];
@@ -36,15 +37,19 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
 
   if (game.interaction.kind === "turn-roll") {
     return (
-      <button className="primary-button" type="button" disabled={busy} onClick={() => onCommand({ type: "RollDice" })}>
-        {busy ? "掷骰中…" : "掷骰子"}
-      </button>
+      <div className="action-stack">
+        <DevelopmentControls game={game} busy={busy} onCommand={onCommand} />
+        <button className="primary-button" type="button" disabled={busy} onClick={() => onCommand({ type: "RollDice" })}>
+          {busy ? "掷骰中…" : "掷骰子"}
+        </button>
+      </div>
     );
   }
 
   if (game.interaction.kind === "turn-action") {
     return (
       <div className="action-stack">
+        <DevelopmentControls game={game} busy={busy} onCommand={onCommand} />
         <TradeControls game={game} busy={busy} onCommand={onCommand} />
         <div className="build-buttons" aria-label="建造选项">
           {([
@@ -144,6 +149,10 @@ export function GameControls({ game, busy, onCommand, buildMode, onBuildModeChan
 
   if (game.interaction.kind === "trade-response") {
     return <TradeControls game={game} busy={busy} onCommand={onCommand} />;
+  }
+
+  if (game.interaction.kind === "free-road") {
+    return <p>请在棋盘高亮边上放置免费道路。</p>;
   }
 
   return <p>{game.interaction.instruction}</p>;

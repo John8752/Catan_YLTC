@@ -20,6 +20,16 @@ export type GameCommand =
   | { readonly type: "AcceptTradeOffer"; readonly offerId: string }
   | { readonly type: "CancelTradeOffer"; readonly offerId: string }
   | { readonly type: "MaritimeTrade"; readonly give: ResourceType; readonly receive: ResourceType }
+  | { readonly type: "BuyDevelopmentCard" }
+  | { readonly type: "PlayKnight"; readonly cardId: string }
+  | { readonly type: "PlayRoadBuilding"; readonly cardId: string }
+  | { readonly type: "BuildFreeRoad"; readonly edgeId: EdgeId }
+  | { readonly type: "PlayMonopoly"; readonly cardId: string; readonly resource: ResourceType }
+  | {
+      readonly type: "PlayResourceChoice";
+      readonly cardId: string;
+      readonly resources: readonly [ResourceType, ResourceType];
+    }
   | { readonly type: "EndTurn" };
 
 export type GameCommandErrorCode =
@@ -36,7 +46,11 @@ export type GameCommandErrorCode =
   | "ILLEGAL_PLACEMENT"
   | "INVALID_TRADE"
   | "TRADE_NOT_FOUND"
-  | "BANK_SHORTAGE";
+  | "BANK_SHORTAGE"
+  | "DEVELOPMENT_DECK_EMPTY"
+  | "DEVELOPMENT_CARD_NOT_FOUND"
+  | "DEVELOPMENT_CARD_BOUGHT_THIS_TURN"
+  | "DEVELOPMENT_CARD_ALREADY_PLAYED";
 
 export interface GameCommandError {
   readonly code: GameCommandErrorCode;
@@ -100,7 +114,15 @@ export type GameEvent =
       readonly give: ResourceType;
       readonly receive: ResourceType;
       readonly ratio: number;
-    };
+    }
+  | {
+      readonly type: "development_card_bought";
+      readonly playerId: PlayerId;
+      readonly cardId: string;
+      readonly cardType: string;
+    }
+  | { readonly type: "development_card_played"; readonly playerId: PlayerId; readonly cardId: string; readonly cardType: string }
+  | { readonly type: "free_road_built"; readonly playerId: PlayerId; readonly edgeId: EdgeId };
 
 export type GameCommandResult =
   | {

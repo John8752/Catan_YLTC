@@ -1,4 +1,5 @@
 import type { BuildingState, PieceSupply, RoadState } from "../buildables/index.js";
+import type { DevelopmentCardState, DevelopmentCardType } from "../development/index.js";
 import type { GameMap } from "../map/index.js";
 import type { GameId, PlayerId } from "../primitives/index.js";
 import type { ResourceHand } from "../resources/index.js";
@@ -26,6 +27,8 @@ export interface PlayerState extends PlayerSeed {
   readonly resources: ResourceHand;
   readonly pieces: PieceSupply;
   readonly visibleVictoryPoints: number;
+  readonly developmentCards: readonly DevelopmentCardState[];
+  readonly playedKnights: number;
 }
 
 export type GamePhase =
@@ -45,7 +48,7 @@ export type GamePhase =
   | {
       readonly kind: "turn";
       readonly activePlayerId: PlayerId;
-      readonly step: "roll" | "discard" | "robber" | "action";
+      readonly step: "roll" | "discard" | "robber" | "action" | "free-road";
       readonly turnNumber: number;
     }
   | {
@@ -67,4 +70,9 @@ export interface GameState {
   readonly lastRoll: readonly [number, number] | null;
   readonly pendingDiscards: readonly { readonly playerId: PlayerId; readonly count: number }[];
   readonly openTrade: TradeOfferState | null;
+  readonly developmentDeck: readonly DevelopmentCardType[];
+  readonly developmentCardPlayedThisTurn: boolean;
+  readonly robberResumeStep: "roll" | "action" | null;
+  readonly freeRoadsRemaining: number;
+  readonly developmentResumeStep: "roll" | "action" | null;
 }

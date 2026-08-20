@@ -3,11 +3,13 @@ import {
   legalInitialRoadEdges,
   legalInitialSettlementVertices,
   legalCityVertices,
+  legalFreeRoadEdges,
   legalRoadEdges,
   legalRobberTargets,
   legalSettlementVertices,
   maritimeRatio,
   type BuildingState,
+  type DevelopmentCardState,
   type GamePhase,
   type GameState,
   type GameMap,
@@ -31,11 +33,14 @@ export interface PublicPlayerView {
     readonly settlements: number;
     readonly cities: number;
   };
+  readonly developmentCardCount: number;
+  readonly playedKnights: number;
 }
 
 export interface PrivatePlayerView extends PublicPlayerView {
   readonly resources: ResourceHand;
   readonly maritimeRatios: Readonly<Record<ResourceType, 2 | 3 | 4>>;
+  readonly developmentCards: readonly DevelopmentCardState[];
 }
 
 export interface GameView {
@@ -52,6 +57,8 @@ export interface GameView {
   readonly you: PrivatePlayerView;
   readonly interaction: GameInteractionView;
   readonly openTrade: TradeOfferState | null;
+  readonly developmentDeckCount: number;
+  readonly developmentCardPlayedThisTurn: boolean;
 }
 
 export type GameInteractionView =
@@ -111,6 +118,12 @@ export type GameInteractionView =
       readonly offerId: string;
       readonly vertexIds: readonly [];
       readonly edgeIds: readonly [];
+    }
+  | {
+      readonly kind: "free-road";
+      readonly instruction: string;
+      readonly vertexIds: readonly [];
+      readonly edgeIds: readonly string[];
     };
 
 export interface LobbyMemberView {
@@ -142,6 +155,8 @@ export function projectGameForPlayer(state: GameState, viewerId: string): GameVi
     visibleVictoryPoints: player.visibleVictoryPoints,
     resourceCardCount: resourceCardCount(player.resources),
     remainingPieces: { ...player.pieces },
+    developmentCardCount: player.developmentCards.length,
+    playedKnights: player.playedKnights,
   }));
 
   const publicViewer = players.find((player) => player.id === viewerId);
@@ -167,9 +182,12 @@ export function projectGameForPlayer(state: GameState, viewerId: string): GameVi
       maritimeRatios: Object.fromEntries(
         RESOURCE_TYPES.map((resource) => [resource, maritimeRatio(state, viewerId, resource)]),
       ) as Record<ResourceType, 2 | 3 | 4>,
+      developmentCards: viewer.developmentCards.map((card) => ({ ...card })),
     },
     interaction: projectInteraction(state, viewerId),
     openTrade: state.openTrade,
+    developmentDeckCount: state.developmentDeck.length,
+    developmentCardPlayedThisTurn: state.developmentCardPlayedThisTurn,
   };
 }
 
@@ -234,6 +252,14 @@ function projectInteraction(state: GameState, viewerId: string): GameInteraction
         targets: legalRobberTargets(state, viewerId),
         vertexIds: [],
         edgeIds: [],
+      };
+    }
+    if (state.phase.step === "free-road") {
+      return {
+        kind: "free-road",
+        instruction: `请选择免费道路（剩余 ${state.freeRoadsRemaining} 条）`,
+        vertexIds: [],
+        edgeIds: legalFreeRoadEdges(state, viewerId),
       };
     }
     return { kind: "waiting", instruction: "正在处理强制事件", vertexIds: [], edgeIds: [] };

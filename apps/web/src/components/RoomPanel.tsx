@@ -1,4 +1,5 @@
 import type { GameCommand, RoomView } from "@catan/protocol";
+import { GameControls } from "./GameControls.js";
 
 export interface RoomPanelProps {
   readonly room: RoomView;
@@ -91,16 +92,7 @@ export function RoomPanel({
             {room.game.lastRoll === null ? null : (
               <p className="dice-result">骰子：{room.game.lastRoll[0]} + {room.game.lastRoll[1]}</p>
             )}
-            {room.game.interaction.kind === "turn-roll" ? (
-              <button className="primary-button" type="button" disabled={busy} onClick={() => onGameCommand({ type: "RollDice" })}>
-                {busy ? "掷骰中…" : "掷骰子"}
-              </button>
-            ) : null}
-            {room.game.interaction.kind === "turn-action" ? (
-              <button className="primary-button" type="button" disabled={busy} onClick={() => onGameCommand({ type: "EndTurn" })}>
-                {busy ? "提交中…" : "结束回合"}
-              </button>
-            ) : null}
+            <GameControls game={room.game} busy={busy} onCommand={onGameCommand} />
             <p>{room.game.interaction.instruction}</p>
           </div>
         </>

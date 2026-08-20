@@ -77,6 +77,7 @@ export function createBaseGame(input: CreateGameInput): GameState {
       placementIndex: 0,
     },
     lastRoll: null,
+    pendingDiscards: [],
   };
 
   assertGameInvariant(state);

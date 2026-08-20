@@ -1,5 +1,12 @@
 import type { BuildingState, RoadState } from "../buildables/index.js";
-import { createSeededRandom, type EdgeId, type PlayerId, type RandomSource, type VertexId } from "../primitives/index.js";
+import {
+  createSeededRandom,
+  type EdgeId,
+  type HexId,
+  type PlayerId,
+  type RandomSource,
+  type VertexId,
+} from "../primitives/index.js";
 import {
   calculateProductionClaims,
   resolveProductionClaims,
@@ -24,9 +31,42 @@ export function executeGameCommand(
       return placeInitialRoad(state, actorId, command.edgeId);
     case "RollDice":
       return rollDice(state, actorId, random);
+    case "DiscardResources":
+      return discardResources(state, actorId, command.resources);
+    case "MoveRobber":
+      return moveRobber(state, actorId, command.hexId, command.victimId, random);
     case "EndTurn":
       return endTurn(state, actorId);
   }
+}
+
+export interface RobberTarget {
+  readonly hexId: HexId;
+  readonly victimIds: readonly PlayerId[];
+}
+
+export function legalRobberTargets(state: GameState, actorId: PlayerId): readonly RobberTarget[] {
+  if (
+    state.phase.kind !== "turn" ||
+    state.phase.step !== "robber" ||
+    state.phase.activePlayerId !== actorId
+  ) {
+    return [];
+  }
+  const buildingByVertex = new Map(state.buildings.map((building) => [building.vertexId, building]));
+
+  return state.map.hexes
+    .filter((hex) => hex.id !== state.map.robberHexId)
+    .map((hex) => {
+      const victimIds = new Set<PlayerId>();
+      for (const vertexId of hex.vertexIds) {
+        const building = buildingByVertex.get(vertexId);
+        if (building === undefined || building.ownerId === actorId) continue;
+        const victim = state.players.find((player) => player.id === building.ownerId);
+        if (victim !== undefined && totalHand(victim.resources) > 0) victimIds.add(victim.id);
+      }
+      return { hexId: hex.id, victimIds: [...victimIds].sort() };
+    });
 }
 
 export function legalInitialSettlementVertices(
@@ -173,7 +213,19 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
   const dice: readonly [number, number] = [die(random), die(random)];
   const total = dice[0] + dice[1];
   if (total === 7) {
-    return reject(state, "SEVEN_NOT_IMPLEMENTED", "Seven resolution is not available yet");
+    const pendingDiscards = state.players
+      .map((player) => ({ playerId: player.id, count: Math.floor(totalHand(player.resources) / 2) }))
+      .filter(({ count }) => count > 3);
+    return accept(
+      {
+        ...state,
+        revision: state.revision + 1,
+        lastRoll: dice,
+        pendingDiscards,
+        phase: { ...state.phase, step: pendingDiscards.length > 0 ? "discard" : "robber" },
+      },
+      [{ type: "dice_rolled", playerId: actorId, dice }],
+    );
   }
 
   const claims = calculateProductionClaims(state.map, state.buildings, total);
@@ -198,6 +250,100 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
       { type: "dice_rolled", playerId: actorId, dice },
       { type: "resources_produced", total: claims.reduce((sum, claim) => sum + claim.amount, 0) },
     ],
+  );
+}
+
+function discardResources(
+  state: GameState,
+  actorId: PlayerId,
+  resources: ResourceHand,
+): GameCommandResult {
+  if (state.phase.kind !== "turn" || state.phase.step !== "discard") {
+    return reject(state, "WRONG_PHASE", "Resources are not being discarded now");
+  }
+  const requirement = state.pendingDiscards.find((pending) => pending.playerId === actorId);
+  const player = state.players.find((candidate) => candidate.id === actorId);
+  if (requirement === undefined || player === undefined) {
+    return reject(state, "NOT_YOUR_TURN", "This player does not need to discard");
+  }
+  if (
+    totalHand(resources) !== requirement.count ||
+    RESOURCE_TYPES.some((resource) => resources[resource] < 0 || resources[resource] > player.resources[resource])
+  ) {
+    return reject(state, "INVALID_DISCARD", `Exactly ${requirement.count} held cards must be discarded`);
+  }
+
+  const pendingDiscards = state.pendingDiscards.filter((pending) => pending.playerId !== actorId);
+  return accept(
+    {
+      ...state,
+      revision: state.revision + 1,
+      bank: addHand(state.bank, resources),
+      players: updatePlayer(state.players, actorId, (candidate) => ({
+        ...candidate,
+        resources: subtractHand(candidate.resources, resources),
+      })),
+      pendingDiscards,
+      phase: pendingDiscards.length === 0 ? { ...state.phase, step: "robber" } : state.phase,
+    },
+    [{ type: "resources_discarded", playerId: actorId, total: requirement.count }],
+  );
+}
+
+function moveRobber(
+  state: GameState,
+  actorId: PlayerId,
+  hexId: HexId,
+  victimId: PlayerId | null,
+  random: RandomSource,
+): GameCommandResult {
+  if (state.phase.kind !== "turn" || state.phase.step !== "robber") {
+    return reject(state, "WRONG_PHASE", "The robber cannot move now");
+  }
+  if (state.phase.activePlayerId !== actorId) {
+    return reject(state, "NOT_YOUR_TURN", "Only the active player moves the robber");
+  }
+  if (hexId === state.map.robberHexId) {
+    return reject(state, "ROBBER_MUST_MOVE", "The robber must move to a different hex");
+  }
+  const target = legalRobberTargets(state, actorId).find((candidate) => candidate.hexId === hexId);
+  if (target === undefined) return reject(state, "INVALID_LOCATION", "The robber hex does not exist");
+  if (
+    (target.victimIds.length > 0 && (victimId === null || !target.victimIds.includes(victimId))) ||
+    (target.victimIds.length === 0 && victimId !== null)
+  ) {
+    return reject(state, "INVALID_VICTIM", "Choose an eligible adjacent player");
+  }
+
+  let players = state.players;
+  let stolenResource: ResourceType | null = null;
+  if (victimId !== null) {
+    const victim = state.players.find((player) => player.id === victimId);
+    if (victim === undefined) return reject(state, "INVALID_VICTIM", "The victim does not exist");
+    stolenResource = randomResourceFromHand(victim.resources, random);
+    if (stolenResource !== null) {
+      const transfer = { ...emptyAmounts(), [stolenResource]: 1 };
+      players = updatePlayer(players, victimId, (player) => ({
+        ...player,
+        resources: subtractHand(player.resources, transfer),
+      }));
+      players = updatePlayer(players, actorId, (player) => ({
+        ...player,
+        resources: addHand(player.resources, transfer),
+      }));
+    }
+  }
+
+  return accept(
+    {
+      ...state,
+      revision: state.revision + 1,
+      map: { ...state.map, robberHexId: hexId },
+      players,
+      pendingDiscards: [],
+      phase: { ...state.phase, step: "action" },
+    },
+    [{ type: "robber_moved", playerId: actorId, hexId, victimId, stolenResource }],
   );
 }
 
@@ -233,6 +379,17 @@ function endTurn(state: GameState, actorId: PlayerId): GameCommandResult {
 
 function die(random: RandomSource): number {
   return Math.floor(random.next() * 6) + 1;
+}
+
+function randomResourceFromHand(hand: ResourceHand, random: RandomSource): ResourceType | null {
+  const total = totalHand(hand);
+  if (total === 0) return null;
+  let target = Math.floor(random.next() * total);
+  for (const resource of RESOURCE_TYPES) {
+    if (target < hand[resource]) return resource;
+    target -= hand[resource];
+  }
+  throw new Error("Random resource selection escaped the hand");
 }
 
 function startingResourceGrant(state: GameState, vertexId: VertexId): ResourceHand {

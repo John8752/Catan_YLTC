@@ -44,7 +44,7 @@ export type GamePhase =
   | {
       readonly kind: "turn";
       readonly activePlayerId: PlayerId;
-      readonly step: "roll" | "resolve-seven" | "action";
+      readonly step: "roll" | "discard" | "robber" | "action";
       readonly turnNumber: number;
     }
   | {
@@ -64,4 +64,5 @@ export interface GameState {
   readonly players: readonly PlayerState[];
   readonly phase: GamePhase;
   readonly lastRoll: readonly [number, number] | null;
+  readonly pendingDiscards: readonly { readonly playerId: PlayerId; readonly count: number }[];
 }

@@ -2,6 +2,7 @@ import {
   resourceCardCount,
   legalInitialRoadEdges,
   legalInitialSettlementVertices,
+  legalRobberTargets,
   type BuildingState,
   type GamePhase,
   type GameState,
@@ -74,6 +75,23 @@ export type GameInteractionView =
       readonly instruction: string;
       readonly vertexIds: readonly [];
       readonly edgeIds: readonly [];
+    }
+  | {
+      readonly kind: "discard";
+      readonly instruction: string;
+      readonly requiredCount: number;
+      readonly vertexIds: readonly [];
+      readonly edgeIds: readonly [];
+    }
+  | {
+      readonly kind: "robber";
+      readonly instruction: string;
+      readonly targets: readonly {
+        readonly hexId: string;
+        readonly victimIds: readonly string[];
+      }[];
+      readonly vertexIds: readonly [];
+      readonly edgeIds: readonly [];
     };
 
 export interface LobbyMemberView {
@@ -134,6 +152,18 @@ export function projectGameForPlayer(state: GameState, viewerId: string): GameVi
 
 function projectInteraction(state: GameState, viewerId: string): GameInteractionView {
   if (state.phase.kind === "turn") {
+    if (state.phase.step === "discard") {
+      const required = state.pendingDiscards.find((pending) => pending.playerId === viewerId);
+      return required === undefined
+        ? { kind: "waiting", instruction: "等待其他玩家弃牌", vertexIds: [], edgeIds: [] }
+        : {
+            kind: "discard",
+            instruction: `请选择 ${required.count} 张资源弃回银行`,
+            requiredCount: required.count,
+            vertexIds: [],
+            edgeIds: [],
+          };
+    }
     if (state.phase.activePlayerId !== viewerId) {
       const activePlayerId = state.phase.activePlayerId;
       const actor = state.players.find((player) => player.id === activePlayerId);
@@ -155,7 +185,19 @@ function projectInteraction(state: GameState, viewerId: string): GameInteraction
         edgeIds: [],
       };
     }
-    return { kind: "waiting", instruction: "正在处理七点事件", vertexIds: [], edgeIds: [] };
+    if (state.phase.step === "robber") {
+      if (state.phase.activePlayerId !== viewerId) {
+        return { kind: "waiting", instruction: "等待当前玩家移动强盗", vertexIds: [], edgeIds: [] };
+      }
+      return {
+        kind: "robber",
+        instruction: "移动强盗，并在可选时选择一名相邻玩家",
+        targets: legalRobberTargets(state, viewerId),
+        vertexIds: [],
+        edgeIds: [],
+      };
+    }
+    return { kind: "waiting", instruction: "正在处理强制事件", vertexIds: [], edgeIds: [] };
   }
 
   if (state.phase.kind !== "setup") {

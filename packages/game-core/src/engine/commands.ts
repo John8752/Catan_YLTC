@@ -1,10 +1,13 @@
-import type { EdgeId, PlayerId, VertexId } from "../primitives/index.js";
+import type { EdgeId, HexId, PlayerId, VertexId } from "../primitives/index.js";
+import type { ResourceHand, ResourceType } from "../resources/index.js";
 import type { GameState } from "./state.js";
 
 export type GameCommand =
   | { readonly type: "PlaceInitialSettlement"; readonly vertexId: VertexId }
   | { readonly type: "PlaceInitialRoad"; readonly edgeId: EdgeId }
   | { readonly type: "RollDice" }
+  | { readonly type: "DiscardResources"; readonly resources: ResourceHand }
+  | { readonly type: "MoveRobber"; readonly hexId: HexId; readonly victimId: PlayerId | null }
   | { readonly type: "EndTurn" };
 
 export type GameCommandErrorCode =
@@ -13,7 +16,9 @@ export type GameCommandErrorCode =
   | "INVALID_LOCATION"
   | "DISTANCE_RULE"
   | "ROAD_NOT_ADJACENT"
-  | "SEVEN_NOT_IMPLEMENTED";
+  | "INVALID_DISCARD"
+  | "ROBBER_MUST_MOVE"
+  | "INVALID_VICTIM";
 
 export interface GameCommandError {
   readonly code: GameCommandErrorCode;
@@ -43,6 +48,14 @@ export type GameEvent =
       readonly dice: readonly [number, number];
     }
   | { readonly type: "resources_produced"; readonly total: number }
+  | { readonly type: "resources_discarded"; readonly playerId: PlayerId; readonly total: number }
+  | {
+      readonly type: "robber_moved";
+      readonly playerId: PlayerId;
+      readonly hexId: HexId;
+      readonly victimId: PlayerId | null;
+      readonly stolenResource: ResourceType | null;
+    }
   | {
       readonly type: "turn_ended";
       readonly playerId: PlayerId;

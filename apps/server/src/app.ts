@@ -19,6 +19,21 @@ const gameCommandSchema = z.object({
     z.object({ type: z.literal("PlaceInitialSettlement"), vertexId: z.string().min(1) }),
     z.object({ type: z.literal("PlaceInitialRoad"), edgeId: z.string().min(1) }),
     z.object({ type: z.literal("RollDice") }),
+    z.object({
+      type: z.literal("DiscardResources"),
+      resources: z.object({
+        brick: z.number().int().nonnegative(),
+        lumber: z.number().int().nonnegative(),
+        wool: z.number().int().nonnegative(),
+        grain: z.number().int().nonnegative(),
+        ore: z.number().int().nonnegative(),
+      }),
+    }),
+    z.object({
+      type: z.literal("MoveRobber"),
+      hexId: z.string().min(1),
+      victimId: z.string().min(1).nullable(),
+    }),
     z.object({ type: z.literal("EndTurn") }),
   ]),
 });

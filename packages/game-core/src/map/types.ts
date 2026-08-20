@@ -52,7 +52,7 @@ export type MapPort =
     };
 
 export interface GameMap {
-  readonly generationVersion: 1;
+  readonly generationVersion: 2;
   readonly hexes: readonly BoardHex[];
   readonly vertices: readonly MapVertex[];
   readonly edges: readonly MapEdge[];

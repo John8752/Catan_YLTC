@@ -12,6 +12,7 @@ The implementation follows the current official 5–6 player extension rules pub
 - The 28 producing hexes receive number tokens. Sixes and eights may not be adjacent in generated maps.
 - The coastline has 11 ports: five generic ports, one port for brick, lumber, grain and ore, and two wool ports.
 - The robber starts on one of the two desert hexes selected deterministically by the seeded generator.
+- As in the base profile, generation evaluates a fixed set of valid candidates and selects the best fairness score rather than accepting the first legal shuffle.
 - The resource bank starts with 24 cards of each resource, for 120 resource cards total.
 - The development deck contains 34 cards: 20 knights, 5 victory points, and 3 each of road building, monopoly and resource choice.
 - Player piece supplies and build costs remain the same as the base profile.
@@ -30,6 +31,8 @@ The profile uses the revised paired-player turn instead of the retired special b
 2. When the primary player ends their action, the player third to their left becomes the paired player for the same turn number.
 3. The paired player does not roll. They may trade only with the bank or their ports, build, play at most one development card, and then end their action.
 4. The next primary player is the player immediately to the left of the previous primary player. A new turn number begins and dice must be rolled.
+
+Only primary-player rolls consume the shared 72-roll balanced dice bag. Paired-player actions never advance it.
 
 If the primary player reaches the victory target, the game ends before the paired player acts. This preserves primary-player priority from the official paired-player rule.
 

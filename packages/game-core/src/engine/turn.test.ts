@@ -18,6 +18,15 @@ const players: readonly PlayerSeed[] = [
 ];
 
 describe("normal turn commands", () => {
+  it("draws normal server rolls from the shared balanced bag", () => {
+    const game = completeSetup();
+    const expectedDice = game.diceBag.rolls[game.diceBag.cursor];
+    const rolled = accept(executeGameCommand(game, "player_1", { type: "RollDice" }));
+
+    expect(rolled.lastRoll).toEqual(expectedDice);
+    expect(rolled.diceBag.cursor).toBe(game.diceBag.cursor + 1);
+  });
+
   it("rolls injected dice, produces once and advances to the next player", () => {
     const setup = completeSetup();
     const producingHex = setup.map.hexes.find(

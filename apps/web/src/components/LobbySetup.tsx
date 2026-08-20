@@ -2,6 +2,7 @@ import type { RoomView } from "@catan/protocol";
 import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
 import { boardViewBox, BoardPorts, BoardTerrain } from "./BoardMap.js";
+import { MapAnalysisPanel } from "./MapAnalysisPanel.js";
 
 export interface LobbySetupProps {
   readonly room: RoomView;
@@ -52,6 +53,7 @@ export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
           <BoardPorts map={room.previewMap} />
         </svg>
       </div>
+      <MapAnalysisPanel map={room.previewMap} />
       <p className="board-instruction">
         开局会原样使用这张地图。重新随机只会更换地图，不会影响已落座玩家。
       </p>

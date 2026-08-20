@@ -22,12 +22,9 @@ export function replayRecordedCommands(
   const events: GameEvent[] = [];
 
   for (const recorded of commands) {
-    const result = executeGameCommand(
-      state,
-      recorded.actorId,
-      recorded.command,
-      sequenceRandom(recorded.randomValues ?? []),
-    );
+    const result = recorded.randomValues === undefined
+      ? executeGameCommand(state, recorded.actorId, recorded.command)
+      : executeGameCommand(state, recorded.actorId, recorded.command, sequenceRandom(recorded.randomValues));
     if (!result.accepted) {
       throw new Error(`Replay rejected ${recorded.command.type}: ${result.error.code}`);
     }

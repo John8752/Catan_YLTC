@@ -22,14 +22,21 @@ import { executeDevelopmentCommand } from "./development-command.js";
 import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent, ResourceGrantSource } from "./commands.js";
 import type { GamePhase, GameState, PlayerState } from "./state.js";
 import { getRuleProfileDefinition } from "../rulesets/index.js";
+import { drawBalancedDice } from "./dice-bag.js";
 
 export function executeGameCommand(
   state: GameState,
   actorId: PlayerId,
   command: GameCommand,
-  random: RandomSource = createSeededRandom(state.seed ^ state.revision),
+  random?: RandomSource,
 ): GameCommandResult {
-  return finalizeAcceptedTransition(dispatchGameCommand(state, actorId, command, random));
+  return finalizeAcceptedTransition(dispatchGameCommand(
+    state,
+    actorId,
+    command,
+    random ?? createSeededRandom(state.seed ^ state.revision),
+    random !== undefined,
+  ));
 }
 
 function dispatchGameCommand(
@@ -37,6 +44,7 @@ function dispatchGameCommand(
   actorId: PlayerId,
   command: GameCommand,
   random: RandomSource,
+  hasInjectedRandom: boolean,
 ): GameCommandResult {
   switch (command.type) {
     case "PlaceInitialSettlement":
@@ -44,7 +52,7 @@ function dispatchGameCommand(
     case "PlaceInitialRoad":
       return placeInitialRoad(state, actorId, command.edgeId);
     case "RollDice":
-      return rollDice(state, actorId, random);
+      return rollDice(state, actorId, hasInjectedRandom ? random : undefined);
     case "DiscardResources":
       return discardResources(state, actorId, command.resources);
     case "MoveRobber":
@@ -240,7 +248,7 @@ function placeInitialRoad(
   );
 }
 
-function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): GameCommandResult {
+function rollDice(state: GameState, actorId: PlayerId, injectedRandom?: RandomSource): GameCommandResult {
   if (state.phase.kind !== "turn" || state.phase.step !== "roll") {
     return reject(state, "WRONG_PHASE", "Dice can only be rolled at the start of a turn");
   }
@@ -248,7 +256,10 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
     return reject(state, "NOT_YOUR_TURN", "Only the active player can roll");
   }
 
-  const dice: readonly [number, number] = [die(random), die(random)];
+  const drawn = drawBalancedDice(state.seed, state.diceBag);
+  const dice: readonly [number, number] = injectedRandom === undefined
+    ? drawn.dice
+    : [die(injectedRandom), die(injectedRandom)];
   const total = dice[0] + dice[1];
   if (total === 7) {
     const pendingDiscards = state.players
@@ -258,6 +269,7 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
       {
         ...state,
         revision: state.revision + 1,
+        diceBag: drawn.state,
         lastRoll: dice,
         pendingDiscards,
         phase: { ...state.phase, step: pendingDiscards.length > 0 ? "discard" : "robber" },
@@ -287,6 +299,7 @@ function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): Ga
     {
       ...state,
       revision: state.revision + 1,
+      diceBag: drawn.state,
       bank: production.bank,
       players,
       lastRoll: dice,

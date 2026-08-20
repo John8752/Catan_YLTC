@@ -10,6 +10,7 @@
     "test": "vitest run src"
   },
   "dependencies": {
+    "@catan/game-core": "workspace:*",
     "@catan/protocol": "workspace:*",
     "@vitejs/plugin-react": "^6.0.5",
     "class-variance-authority": "^0.7.1",
@@ -22,7 +23,6 @@
     "vite": "^8.2.1"
   },
   "devDependencies": {
-    "@catan/game-core": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.5",

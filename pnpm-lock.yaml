@@ -57,6 +57,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@catan/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@catan/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -88,9 +91,6 @@ importers:
         specifier: ^8.2.1
         version: 8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)
     devDependencies:
-      '@catan/game-core':
-        specifier: workspace:*
-        version: link:../../packages/game-core
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))

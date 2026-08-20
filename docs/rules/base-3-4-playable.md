@@ -36,6 +36,7 @@ A complete match includes:
 - The robber starts on the desert.
 - Nine coastal ports are present: one 2:1 port for each resource and four generic 3:1 ports.
 - Terrain, number and port assignments are deterministic for a recorded seed and generation version.
+- A seed evaluates a fixed set of valid map candidates and selects the best fairness score instead of accepting the first legal shuffle. The score balances production strength per terrain tile, competitive starting locations and terrain dispersion; it never changes the profile's component counts.
 - While the room is waiting, every member sees the map generated from the room's authoritative seed. A host reroll replaces that seed; starting the game uses the currently previewed seed unchanged.
 - The bank starts with 19 cards of each resource.
 - Each player starts with 15 roads, 5 settlements and 4 cities in their piece supply.
@@ -65,7 +66,8 @@ Map topology is independent from map content. Vertices, edges, adjacency and coa
 ## Turn and production
 
 - A normal turn starts in `awaiting-roll` and ends only after the active player submits `EndTurn` from the action stage.
-- The server records the two injected die results and their total. The client never generates a roll.
+- Normal rolls draw from a 72-roll bag containing two copies of every ordered two-die outcome. This preserves the exact two-die distribution over each bag while reducing extreme single-match droughts. The server records both dice and their total; the client never generates a roll.
+- The bag shuffle avoids three equal totals in a row and strongly penalizes long gaps for 6, 7 and 8. It never reacts to player position, resources, buildings or score.
 - A result other than 7 produces resources for every settlement or city adjacent to an unblocked matching token: settlements produce one and cities produce two.
 - Production is transferred atomically from the bank. If a resource type cannot satisfy all production owed for that roll, nobody receives that resource type.
 - After normal production the active player enters the action stage.

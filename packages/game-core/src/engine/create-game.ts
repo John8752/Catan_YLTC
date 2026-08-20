@@ -8,6 +8,7 @@ import {
   type PlayableRuleProfile,
 } from "../rulesets/index.js";
 import type { GameState, PlayerSeed } from "./state.js";
+import { createInitialDiceBag } from "./dice-bag.js";
 
 export interface CreateGameInput {
   readonly id: string;
@@ -98,6 +99,7 @@ export function createGame(input: CreateGameInput): GameState {
       placementOrder,
       placementIndex: 0,
     },
+    diceBag: createInitialDiceBag(input.seed),
     lastRoll: null,
     pendingDiscards: [],
     openTrade: null,
@@ -127,6 +129,16 @@ export function assertGameInvariant(state: GameState): void {
   const expectedHexCount = Object.values(profile.terrainCounts).reduce((total, count) => total + count, 0);
   if (state.map.hexes.length !== expectedHexCount) {
     throw new Error(`Expected ${expectedHexCount} board hexes, received ${state.map.hexes.length}`);
+  }
+
+  if (
+    state.diceBag.rolls.length !== 72 ||
+    !Number.isInteger(state.diceBag.cursor) ||
+    state.diceBag.cursor < 0 ||
+    state.diceBag.cursor > state.diceBag.rolls.length ||
+    state.diceBag.rolls.some((dice) => dice.length !== 2 || dice.some((die) => !Number.isInteger(die) || die < 1 || die > 6))
+  ) {
+    throw new Error("Balanced dice bag is invalid");
   }
 
   const coordinateKeys = new Set(state.map.hexes.map((tile) => `${tile.q},${tile.r}`));

@@ -17,7 +17,11 @@ M0 starts a room in `setup` and records the first player expected to place. Plac
 
 ## Randomness
 
-Board terrain order is generated from an explicit integer seed. Number tokens use a stable sequence in M0. Dice, development-card decks and any future shuffles must use the same injected-randomness policy.
+Board terrain, number and port assignments are generated from an explicit integer seed. Map generation evaluates a fixed number of deterministic candidates and selects the highest-scoring valid candidate; the score favors even per-tile resource production, enough competitive starting intersections and dispersed terrain while preserving the profile's exact component counts. Sixes and eights remain non-adjacent hard constraints.
+
+Normal turn rolls use a deterministic 72-roll balanced bag made from two complete sets of the 36 ordered outcomes of two six-sided dice. Every face pair therefore appears exactly twice per bag. Candidate shuffles are scored to avoid three equal totals in a row and excessive gaps between common totals without changing the bag's exact probability distribution. The bag is independent from map generation and ordinary command revision counts. Tests may still inject explicit random outcomes for focused rule and replay coverage.
+
+Development-card decks, robber steals and any future shuffles continue to use the injected-randomness policy. No random result may depend on React or ambient browser randomness.
 
 ## Hidden information
 

@@ -7,6 +7,7 @@ import {
 } from "../primitives/index.js";
 import { RESOURCE_TYPES, type ResourceType } from "../resources/index.js";
 import { EXTENDED_COORDINATES, STANDARD_COORDINATES } from "./standard-board.js";
+import { analyzeMap } from "./map-analysis.js";
 import type {
   AxialCoordinate,
   BoardHex,
@@ -88,6 +89,7 @@ interface BoardTopology {
 
 const STANDARD_TOPOLOGY = createTopology(STANDARD_COORDINATES);
 const EXTENDED_TOPOLOGY = createTopology(EXTENDED_COORDINATES);
+const MAP_CANDIDATE_COUNT = 48;
 
 export function createStandardMap(seed: number): GameMap {
   return createMap(seed, STANDARD_TOPOLOGY, STANDARD_TERRAIN_DECK, STANDARD_NUMBER_TOKENS, STANDARD_PORT_DECK);
@@ -104,7 +106,31 @@ function createMap(
   numberTokens: readonly number[],
   portDeck: readonly (ResourceType | typeof GENERIC_PORT)[],
 ): GameMap {
-  const terrains = shuffled(terrainDeck, createSeededRandom(seed ^ 0x4d415000));
+  let bestMap: GameMap | undefined;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (let candidateIndex = 0; candidateIndex < MAP_CANDIDATE_COUNT; candidateIndex += 1) {
+    const candidateSeed = deriveCandidateSeed(seed, candidateIndex);
+    const candidate = createMapCandidate(candidateSeed, topology, terrainDeck, numberTokens, portDeck);
+    const candidateScore = analyzeMap(candidate).score;
+    if (candidateScore > bestScore) {
+      bestMap = candidate;
+      bestScore = candidateScore;
+    }
+  }
+
+  if (bestMap === undefined) throw new Error("Unable to generate a map candidate");
+  return bestMap;
+}
+
+function createMapCandidate(
+  candidateSeed: number,
+  topology: BoardTopology,
+  terrainDeck: readonly TerrainType[],
+  numberTokens: readonly number[],
+  portDeck: readonly (ResourceType | typeof GENERIC_PORT)[],
+): GameMap {
+  const terrains = shuffled(terrainDeck, createSeededRandom(candidateSeed ^ 0x4d415000));
   const terrainByHex = new Map<HexId, TerrainType>();
   let desertHexId: HexId | undefined;
 
@@ -118,7 +144,7 @@ function createMap(
 
   if (desertHexId === undefined) throw new Error("Map requires a desert");
 
-  const numberByHex = assignFairNumbers(topology, terrainByHex, numberTokens, seed);
+  const numberByHex = assignFairNumbers(topology, terrainByHex, numberTokens, candidateSeed);
   const hexes: BoardHex[] = topology.hexes.map((hex) => ({
     ...hex,
     terrain: requireValue(terrainByHex.get(hex.id), `Missing terrain for ${hex.id}`),
@@ -126,13 +152,20 @@ function createMap(
   }));
 
   return {
-    generationVersion: 1,
+    generationVersion: 2,
     hexes,
     vertices: topology.vertices,
     edges: topology.edges,
-    ports: createPorts(topology, portDeck, seed),
+    ports: createPorts(topology, portDeck, candidateSeed),
     robberHexId: desertHexId,
   };
+}
+
+function deriveCandidateSeed(seed: number, candidateIndex: number): number {
+  let value = seed ^ Math.imul(candidateIndex + 1, 0x9e3779b1);
+  value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
+  value = Math.imul(value ^ (value >>> 15), 0x735a2d97);
+  return (value ^ (value >>> 15)) >>> 0;
 }
 
 function createTopology(coordinates: readonly AxialCoordinate[]): BoardTopology {

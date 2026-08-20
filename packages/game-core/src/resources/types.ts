@@ -13,6 +13,16 @@ export function emptyResourceHand(): ResourceHand {
   };
 }
 
+export function initialResourceBank(): ResourceHand {
+  return {
+    brick: 19,
+    lumber: 19,
+    wool: 19,
+    grain: 19,
+    ore: 19,
+  };
+}
+
 export function resourceCardCount(hand: ResourceHand): number {
   return RESOURCE_TYPES.reduce((total, resource) => total + hand[resource], 0);
 }

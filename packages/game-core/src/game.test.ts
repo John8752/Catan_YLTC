@@ -40,6 +40,7 @@ describe("base game creation", () => {
 
     expect(game.phase).toEqual({
       kind: "setup",
+      step: "settlement",
       placementOrder: [
         "player_1",
         "player_2",

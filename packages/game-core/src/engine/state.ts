@@ -1,3 +1,4 @@
+import type { BuildingState, PieceSupply, RoadState } from "../buildables/index.js";
 import type { GameMap } from "../map/index.js";
 import type { GameId, PlayerId } from "../primitives/index.js";
 import type { ResourceHand } from "../resources/index.js";
@@ -22,14 +23,23 @@ export interface PlayerSeed {
 
 export interface PlayerState extends PlayerSeed {
   readonly resources: ResourceHand;
+  readonly pieces: PieceSupply;
   readonly visibleVictoryPoints: number;
 }
 
 export type GamePhase =
   | {
       readonly kind: "setup";
+      readonly step: "settlement";
       readonly placementOrder: readonly PlayerId[];
       readonly placementIndex: number;
+    }
+  | {
+      readonly kind: "setup";
+      readonly step: "road";
+      readonly placementOrder: readonly PlayerId[];
+      readonly placementIndex: number;
+      readonly settlementVertexId: string;
     }
   | {
       readonly kind: "turn";
@@ -48,6 +58,9 @@ export interface GameState {
   readonly seed: number;
   readonly revision: number;
   readonly map: GameMap;
+  readonly bank: ResourceHand;
+  readonly buildings: readonly BuildingState[];
+  readonly roads: readonly RoadState[];
   readonly players: readonly PlayerState[];
   readonly phase: GamePhase;
 }

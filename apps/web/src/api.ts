@@ -1,5 +1,7 @@
 import type {
   ApiErrorResponse,
+  GameCommand,
+  GameCommandResponse,
   PlayerSessionResponse,
   RoomServerMessage,
   RoomView,
@@ -36,6 +38,23 @@ export async function startRoom(session: PlayerSession): Promise<RoomView> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ playerId: session.playerId }),
+  });
+}
+
+export async function submitGameCommand(
+  session: PlayerSession,
+  expectedRevision: number,
+  command: GameCommand,
+): Promise<GameCommandResponse> {
+  return request<GameCommandResponse>(`/api/rooms/${encodeURIComponent(session.roomId)}/commands`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      playerId: session.playerId,
+      commandId: crypto.randomUUID(),
+      expectedRevision,
+      command,
+    }),
   });
 }
 

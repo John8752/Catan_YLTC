@@ -184,8 +184,14 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .token.hot text { fill: #9f3227; }.token.hot circle { stroke: #b5523f; stroke-width: 2.5; }
 .board-edges line { stroke: rgba(250,239,208,.32); stroke-width: 5; stroke-linecap: round; pointer-events: stroke; }
 .board-vertices circle { fill: rgba(255,247,218,.78); stroke: rgba(68,48,31,.6); stroke-width: 1.5; }
+.board-edges .is-selectable { stroke: #fff2a8; stroke-width: 10; cursor: pointer; filter: drop-shadow(0 0 5px rgba(255,221,91,.9)); }
+.board-vertices .is-selectable { fill: #fff2a8; stroke: #8d5b24; stroke-width: 3; r: 8px; cursor: pointer; filter: drop-shadow(0 0 5px rgba(255,221,91,.9)); }
 .board-ports circle { fill: #efe1ba; stroke: rgba(63,81,83,.7); stroke-width: 2; }
 .board-ports text { fill: #354649; font-size: 8px; font-weight: 800; pointer-events: none; }
+.placed-roads line { stroke-width: 9; stroke-linecap: round; stroke: #777; pointer-events: none; filter: drop-shadow(0 2px 1px rgba(0,0,0,.35)); }
+.placed-buildings circle { stroke: #f7e8c5; stroke-width: 2; pointer-events: none; filter: drop-shadow(0 3px 2px rgba(0,0,0,.35)); }
+.placed-roads .piece-color-terracotta,.placed-buildings .piece-color-terracotta { stroke: #b65f43; fill: #b65f43; }.placed-roads .piece-color-ocean,.placed-buildings .piece-color-ocean { stroke: #387d95; fill: #387d95; }.placed-roads .piece-color-pine,.placed-buildings .piece-color-pine { stroke: #3f7452; fill: #3f7452; }.placed-roads .piece-color-wheat,.placed-buildings .piece-color-wheat { stroke: #d4a93f; fill: #d4a93f; }.placed-roads .piece-color-plum,.placed-buildings .piece-color-plum { stroke: #74526f; fill: #74526f; }.placed-roads .piece-color-charcoal,.placed-buildings .piece-color-charcoal { stroke: #424a49; fill: #424a49; }
+.board-instruction { margin: .35rem 0 0; color: #f4e6c5; font-weight: 700; text-align: center; }
 .toast-error { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 10; margin: 0; box-shadow: var(--shadow); }
 .loading-table { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 1rem; color: var(--pine); }
 

@@ -11,6 +11,16 @@ const startRoomSchema = z.object({
   playerId: z.string().min(1),
 });
 
+const gameCommandSchema = z.object({
+  playerId: z.string().min(1),
+  commandId: z.string().min(1).max(100),
+  expectedRevision: z.number().int().positive(),
+  command: z.discriminatedUnion("type", [
+    z.object({ type: z.literal("PlaceInitialSettlement"), vertexId: z.string().min(1) }),
+    z.object({ type: z.literal("PlaceInitialRoad"), edgeId: z.string().min(1) }),
+  ]),
+});
+
 export async function buildApp(registry = new RoomRegistry()) {
   const app = Fastify({ logger: false });
   await app.register(websocket);
@@ -55,6 +65,23 @@ export async function buildApp(registry = new RoomRegistry()) {
       }
     },
   );
+
+  app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/commands", async (request, reply) => {
+    try {
+      const body = gameCommandSchema.parse(request.body);
+      return reply.code(200).send(
+        registry.executeCommand(
+          request.params.roomId,
+          body.playerId,
+          body.commandId,
+          body.expectedRevision,
+          body.command,
+        ),
+      );
+    } catch (error) {
+      return sendError(reply, error);
+    }
+  });
 
   app.get<{ Querystring: { roomId?: string; playerId?: string } }>(
     "/ws",

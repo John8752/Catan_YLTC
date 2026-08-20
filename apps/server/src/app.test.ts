@@ -43,6 +43,44 @@ describe("room API", () => {
     expect(startResponse.statusCode).toBe(200);
     expect(room.game?.map.hexes).toHaveLength(19);
     expect(room.game?.phase.kind).toBe("setup");
+
+    const vertexId = room.game?.interaction.vertexIds[0];
+    const expectedRevision = room.game?.revision;
+    if (vertexId === undefined || expectedRevision === undefined) {
+      throw new Error("Host has no initial placement target");
+    }
+    const commandPayload = {
+      playerId: host.playerId,
+      commandId: "command_setup_1",
+      expectedRevision,
+      command: { type: "PlaceInitialSettlement", vertexId },
+    };
+    const commandResponse = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/commands`,
+      payload: commandPayload,
+    });
+    const commandRoom = commandResponse.json<{ room: RoomView }>().room;
+
+    expect(commandResponse.statusCode).toBe(200);
+    expect(commandRoom.game?.buildings).toHaveLength(1);
+    expect(commandRoom.game?.interaction.kind).toBe("setup-road");
+
+    const duplicateResponse = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/commands`,
+      payload: commandPayload,
+    });
+    expect(duplicateResponse.statusCode).toBe(200);
+    expect(duplicateResponse.json<{ room: RoomView }>().room.game?.buildings).toHaveLength(1);
+
+    const staleResponse = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/commands`,
+      payload: { ...commandPayload, commandId: "command_setup_stale" },
+    });
+    expect(staleResponse.statusCode).toBe(400);
+    expect(staleResponse.json()).toMatchObject({ error: { code: "STALE_REVISION" } });
   });
 
   it("prevents a room from starting with fewer than three players", async () => {

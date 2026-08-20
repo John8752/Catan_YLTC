@@ -1,4 +1,5 @@
-import type { GameView } from "@catan/protocol";
+import type { GameCommand, GameView } from "@catan/protocol";
+import type { KeyboardEvent } from "react";
 
 const TERRAIN_LABELS = {
   brick: "砖土",
@@ -13,9 +14,14 @@ const HEX_SIZE = 56;
 
 export interface BoardProps {
   readonly game: GameView;
+  readonly busy?: boolean;
+  readonly onCommand?: (command: GameCommand) => void;
 }
 
-export function Board({ game }: BoardProps) {
+export function Board({ game, busy = false, onCommand }: BoardProps) {
+  const selectableVertices = new Set(game.interaction.vertexIds);
+  const selectableEdges = new Set(game.interaction.edgeIds);
+
   return (
     <section className="board-shell" aria-labelledby="board-title">
       <div className="board-heading">
@@ -80,10 +86,24 @@ export function Board({ game }: BoardProps) {
                 <line
                   key={edge.id}
                   data-edge-id={edge.id}
+                  className={selectableEdges.has(edge.id) ? "is-selectable" : undefined}
                   x1={first.x * HEX_SIZE}
                   y1={first.y * HEX_SIZE}
                   x2={second.x * HEX_SIZE}
                   y2={second.y * HEX_SIZE}
+                  role={selectableEdges.has(edge.id) ? "button" : undefined}
+                  tabIndex={selectableEdges.has(edge.id) ? 0 : undefined}
+                  aria-label={selectableEdges.has(edge.id) ? "在这里放置道路" : undefined}
+                  onClick={() => {
+                    if (selectableEdges.has(edge.id) && !busy) {
+                      onCommand?.({ type: "PlaceInitialRoad", edgeId: edge.id });
+                    }
+                  }}
+                  onKeyDown={(event) => activateOnKeyboard(event, () => {
+                    if (selectableEdges.has(edge.id) && !busy) {
+                      onCommand?.({ type: "PlaceInitialRoad", edgeId: edge.id });
+                    }
+                  })}
                 />
               );
             })}
@@ -93,11 +113,62 @@ export function Board({ game }: BoardProps) {
               <circle
                 key={vertex.id}
                 data-vertex-id={vertex.id}
+                className={selectableVertices.has(vertex.id) ? "is-selectable" : undefined}
                 cx={vertex.x * HEX_SIZE}
                 cy={vertex.y * HEX_SIZE}
                 r="4.5"
+                role={selectableVertices.has(vertex.id) ? "button" : undefined}
+                tabIndex={selectableVertices.has(vertex.id) ? 0 : undefined}
+                aria-label={selectableVertices.has(vertex.id) ? "在这里放置定居点" : undefined}
+                onClick={() => {
+                  if (selectableVertices.has(vertex.id) && !busy) {
+                    onCommand?.({ type: "PlaceInitialSettlement", vertexId: vertex.id });
+                  }
+                }}
+                onKeyDown={(event) => activateOnKeyboard(event, () => {
+                  if (selectableVertices.has(vertex.id) && !busy) {
+                    onCommand?.({ type: "PlaceInitialSettlement", vertexId: vertex.id });
+                  }
+                })}
               />
             ))}
+          </g>
+          <g className="placed-roads" aria-label="已建道路">
+            {game.roads.map((road) => {
+              const edge = game.map.edges.find((candidate) => candidate.id === road.edgeId);
+              if (edge === undefined) return null;
+              const [firstId, secondId] = edge.vertexIds;
+              const first = game.map.vertices.find((vertex) => vertex.id === firstId);
+              const second = game.map.vertices.find((vertex) => vertex.id === secondId);
+              const player = game.players.find((candidate) => candidate.id === road.ownerId);
+              if (first === undefined || second === undefined || player === undefined) return null;
+              return (
+                <line
+                  key={road.edgeId}
+                  className={`piece-color-${player.color}`}
+                  x1={first.x * HEX_SIZE}
+                  y1={first.y * HEX_SIZE}
+                  x2={second.x * HEX_SIZE}
+                  y2={second.y * HEX_SIZE}
+                />
+              );
+            })}
+          </g>
+          <g className="placed-buildings" aria-label="已建建筑">
+            {game.buildings.map((building) => {
+              const vertex = game.map.vertices.find((candidate) => candidate.id === building.vertexId);
+              const player = game.players.find((candidate) => candidate.id === building.ownerId);
+              if (vertex === undefined || player === undefined) return null;
+              return (
+                <circle
+                  key={building.vertexId}
+                  className={`piece-color-${player.color}`}
+                  cx={vertex.x * HEX_SIZE}
+                  cy={vertex.y * HEX_SIZE}
+                  r={building.kind === "city" ? 10 : 7}
+                />
+              );
+            })}
           </g>
           <g className="board-ports" aria-label="港口">
             {game.map.ports.map((port) => {
@@ -120,8 +191,16 @@ export function Board({ game }: BoardProps) {
           </g>
         </svg>
       </div>
+      <p className="board-instruction" aria-live="polite">{game.interaction.instruction}</p>
     </section>
   );
+}
+
+function activateOnKeyboard(event: KeyboardEvent<SVGElement>, action: () => void): void {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    action();
+  }
 }
 
 function axialToPixel(q: number, r: number) {

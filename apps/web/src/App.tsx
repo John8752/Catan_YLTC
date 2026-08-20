@@ -1,4 +1,4 @@
-import type { RoomView } from "@catan/protocol";
+import type { GameCommand, RoomView } from "@catan/protocol";
 import { useEffect, useState } from "react";
 import {
   connectToRoom,
@@ -6,6 +6,7 @@ import {
   getRoom,
   joinRoom,
   startRoom,
+  submitGameCommand,
   type PlayerSession,
 } from "./api.js";
 import { Board } from "./components/Board.js";
@@ -80,6 +81,14 @@ export function App() {
     await runBusy(async () => setRoom(await startRoom(session)));
   }
 
+  async function handleGameCommand(command: GameCommand) {
+    if (session === null || room?.game === null || room?.game === undefined) return;
+    await runBusy(async () => {
+      const response = await submitGameCommand(session, room.game?.revision ?? 0, command);
+      setRoom(response.room);
+    });
+  }
+
   function handleLeave() {
     playerSessionStore.clear();
     setSession(null);
@@ -134,7 +143,7 @@ export function App() {
             <p>把房间码 <strong>{room.id}</strong> 发给朋友。第三位玩家加入后，房主即可生成岛屿。</p>
           </section>
         ) : (
-          <Board game={room.game} />
+          <Board game={room.game} busy={busy} onCommand={handleGameCommand} />
         )}
       </div>
       <RoomPanel

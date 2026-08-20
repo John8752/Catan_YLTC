@@ -1,6 +1,15 @@
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
-import { createBaseGame, PLAYER_COLORS, type GameState, type PlayerColor } from "@catan/game-core";
 import {
+  createBaseGame,
+  executeGameCommand,
+  PLAYER_COLORS,
+  type GameCommand,
+  type GameCommandErrorCode,
+  type GameState,
+  type PlayerColor,
+} from "@catan/game-core";
+import {
+  type GameCommandResponse,
   projectGameForPlayer,
   type PlayerSessionResponse,
   type RoomView,
@@ -19,6 +28,7 @@ interface RoomRecord {
   revision: number;
   readonly members: RoomMember[];
   game: GameState | null;
+  readonly commandResults: Map<string, GameCommandResponse>;
 }
 
 type RoomListener = (room: RoomView) => void;
@@ -35,7 +45,10 @@ export type RoomErrorCode =
   | "ROOM_FULL"
   | "INVALID_PLAYER_NAME"
   | "ONLY_HOST_CAN_START"
-  | "NOT_ENOUGH_PLAYERS";
+  | "NOT_ENOUGH_PLAYERS"
+  | "GAME_NOT_STARTED"
+  | "STALE_REVISION"
+  | GameCommandErrorCode;
 
 export class RoomError extends Error {
   constructor(
@@ -62,6 +75,7 @@ export class RoomRegistry {
       revision: 1,
       members: [{ id: playerId, name, color: PLAYER_COLORS[0] }],
       game: null,
+      commandResults: new Map(),
     };
 
     this.rooms.set(roomId, room);
@@ -134,6 +148,37 @@ export class RoomRegistry {
     const room = this.requireRoom(roomId);
     this.requireMember(room, playerId);
     return this.projectRoom(room, playerId);
+  }
+
+  executeCommand(
+    roomId: string,
+    playerId: string,
+    commandId: string,
+    expectedRevision: number,
+    command: GameCommand,
+  ): GameCommandResponse {
+    const room = this.requireRoom(roomId);
+    this.requireMember(room, playerId);
+    const cacheKey = `${playerId}:${commandId}`;
+    const cached = room.commandResults.get(cacheKey);
+    if (cached !== undefined) return cached;
+    if (room.game === null) throw new RoomError("GAME_NOT_STARTED", "The game has not started");
+    if (room.game.revision !== expectedRevision) {
+      throw new RoomError("STALE_REVISION", "Game state changed; refresh and try again");
+    }
+
+    const result = executeGameCommand(room.game, playerId, command);
+    if (!result.accepted) throw new RoomError(result.error.code, result.error.message);
+
+    room.game = result.state;
+    room.revision += 1;
+    const response: GameCommandResponse = {
+      commandId,
+      room: this.projectRoom(room, playerId),
+    };
+    room.commandResults.set(cacheKey, response);
+    this.notify(room);
+    return response;
   }
 
   subscribe(roomId: string, playerId: string, listener: RoomListener): () => void {

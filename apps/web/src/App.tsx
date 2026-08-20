@@ -42,22 +42,35 @@ export function App() {
         if (active) setError(errorMessage(caught));
       });
 
-    const socket = connectToRoom(session, (message) => {
-      if (!active) return;
+    let socket: WebSocket | null = null;
+    let reconnectTimer: number | undefined;
 
-      if (message.type === "room_state") {
-        setRoom(message.room);
-        setError(null);
-      } else {
-        setError(message.message);
-      }
-    });
-    socket.addEventListener("open", () => active && setConnectionState("live"));
-    socket.addEventListener("close", () => active && setConnectionState("offline"));
+    const openSocket = () => {
+      if (!active) return;
+      setConnectionState("connecting");
+      socket = connectToRoom(session, (message) => {
+        if (!active) return;
+
+        if (message.type === "room_state") {
+          setRoom(message.room);
+          setError(null);
+        } else {
+          setError(message.message);
+        }
+      });
+      socket.addEventListener("open", () => active && setConnectionState("live"));
+      socket.addEventListener("close", () => {
+        if (!active) return;
+        setConnectionState("offline");
+        reconnectTimer = window.setTimeout(openSocket, 1_000);
+      });
+    };
+    openSocket();
 
     return () => {
       active = false;
-      closeSocket(socket);
+      if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
+      if (socket !== null) closeSocket(socket);
     };
   }, [session]);
 
@@ -68,7 +81,7 @@ export function App() {
   async function handleCreate(playerName: string) {
     await runBusy(async () => {
       const response = await createRoom(playerName);
-      storeSession({ roomId: response.roomId, playerId: response.playerId });
+      storeSession({ roomId: response.roomId, playerId: response.playerId, seatToken: response.seatToken });
       setRoom(response.room);
       setBuildMode(null);
     });
@@ -77,7 +90,7 @@ export function App() {
   async function handleJoin(roomId: string, playerName: string) {
     await runBusy(async () => {
       const response = await joinRoom(roomId, playerName);
-      storeSession({ roomId: response.roomId, playerId: response.playerId });
+      storeSession({ roomId: response.roomId, playerId: response.playerId, seatToken: response.seatToken });
       setRoom(response.room);
     });
   }
@@ -90,8 +103,13 @@ export function App() {
   async function handleGameCommand(command: GameCommand) {
     if (session === null || room?.game === null || room?.game === undefined) return;
     await runBusy(async () => {
-      const response = await submitGameCommand(session, room.game?.revision ?? 0, command);
-      setRoom(response.room);
+      try {
+        const response = await submitGameCommand(session, room.game?.revision ?? 0, command);
+        setRoom(response.room);
+      } catch (caught) {
+        setRoom(await getRoom(session));
+        throw caught;
+      }
     });
   }
 

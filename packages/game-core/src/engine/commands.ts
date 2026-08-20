@@ -142,3 +142,8 @@ export type GameCommandResult =
       readonly events: readonly [];
       readonly error: GameCommandError;
     };
+
+export interface GameEventRecord {
+  readonly revision: number;
+  readonly event: GameEvent;
+}

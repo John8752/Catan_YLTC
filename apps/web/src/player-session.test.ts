@@ -6,20 +6,20 @@ describe("per-tab player sessions", () => {
     const firstTab = createPlayerSessionStore(createMemoryStorage());
     const secondTab = createPlayerSessionStore(createMemoryStorage());
 
-    firstTab.write({ roomId: "A1B2C3", playerId: "player_host" });
+    firstTab.write({ roomId: "A1B2C3", playerId: "player_host", seatToken: "seat_host" });
 
-    expect(firstTab.read()).toEqual({ roomId: "A1B2C3", playerId: "player_host" });
+    expect(firstTab.read()).toEqual({ roomId: "A1B2C3", playerId: "player_host", seatToken: "seat_host" });
     expect(secondTab.read()).toBeNull();
   });
 
   it("restores an identity from the same tab storage after a refresh", () => {
     const storage = createMemoryStorage();
     const beforeRefresh = createPlayerSessionStore(storage);
-    beforeRefresh.write({ roomId: "A1B2C3", playerId: "player_guest" });
+    beforeRefresh.write({ roomId: "A1B2C3", playerId: "player_guest", seatToken: "seat_guest" });
 
     const afterRefresh = createPlayerSessionStore(storage);
 
-    expect(afterRefresh.read()).toEqual({ roomId: "A1B2C3", playerId: "player_guest" });
+    expect(afterRefresh.read()).toEqual({ roomId: "A1B2C3", playerId: "player_guest", seatToken: "seat_guest" });
   });
 });
 

@@ -10,6 +10,7 @@ import type {
 export interface PlayerSession {
   readonly roomId: string;
   readonly playerId: string;
+  readonly seatToken: string;
 }
 
 export async function createRoom(playerName: string): Promise<PlayerSessionResponse> {
@@ -29,7 +30,7 @@ export async function joinRoom(roomId: string, playerName: string): Promise<Play
 }
 
 export async function getRoom(session: PlayerSession): Promise<RoomView> {
-  const query = new URLSearchParams({ playerId: session.playerId });
+  const query = new URLSearchParams({ seatToken: session.seatToken });
   return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}?${query}`);
 }
 
@@ -37,7 +38,7 @@ export async function startRoom(session: PlayerSession): Promise<RoomView> {
   return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}/start`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ playerId: session.playerId }),
+    body: JSON.stringify({ seatToken: session.seatToken }),
   });
 }
 
@@ -50,7 +51,7 @@ export async function submitGameCommand(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      playerId: session.playerId,
+      seatToken: session.seatToken,
       commandId: crypto.randomUUID(),
       expectedRevision,
       command,
@@ -65,7 +66,7 @@ export function connectToRoom(
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const url = new URL("/ws", `${protocol}//${window.location.host}`);
   url.searchParams.set("roomId", session.roomId);
-  url.searchParams.set("playerId", session.playerId);
+  url.searchParams.set("seatToken", session.seatToken);
 
   const socket = new WebSocket(url);
   socket.addEventListener("message", (event) => {

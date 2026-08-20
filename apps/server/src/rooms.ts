@@ -6,6 +6,7 @@ import {
   type GameCommand,
   type GameCommandErrorCode,
   type GameState,
+  type GameEventRecord,
   type PlayerColor,
 } from "@catan/game-core";
 import {
@@ -17,6 +18,7 @@ import {
 
 interface RoomMember {
   readonly id: string;
+  readonly seatToken: string;
   readonly name: string;
   readonly color: PlayerColor;
 }
@@ -29,6 +31,7 @@ interface RoomRecord {
   readonly members: RoomMember[];
   game: GameState | null;
   readonly commandResults: Map<string, GameCommandResponse>;
+  readonly history: GameEventRecord[];
 }
 
 type RoomListener = (room: RoomView) => void;
@@ -68,14 +71,16 @@ export class RoomRegistry {
     const name = normalizePlayerName(playerName);
     const roomId = this.createRoomId();
     const playerId = `player_${randomUUID()}`;
+    const seatToken = randomBytes(24).toString("base64url");
     const room: RoomRecord = {
       id: roomId,
       hostPlayerId: playerId,
       seed: randomInt(1, 2_147_483_647),
       revision: 1,
-      members: [{ id: playerId, name, color: PLAYER_COLORS[0] }],
+      members: [{ id: playerId, seatToken, name, color: PLAYER_COLORS[0] }],
       game: null,
       commandResults: new Map(),
+      history: [],
     };
 
     this.rooms.set(roomId, room);
@@ -83,6 +88,7 @@ export class RoomRegistry {
     return {
       roomId,
       playerId,
+      seatToken,
       room: this.projectRoom(room, playerId),
     };
   }
@@ -106,20 +112,23 @@ export class RoomRegistry {
     }
 
     const playerId = `player_${randomUUID()}`;
-    room.members.push({ id: playerId, name, color });
+    const seatToken = randomBytes(24).toString("base64url");
+    room.members.push({ id: playerId, seatToken, name, color });
     room.revision += 1;
     this.notify(room);
 
     return {
       roomId: room.id,
       playerId,
+      seatToken,
       room: this.projectRoom(room, playerId),
     };
   }
 
-  startRoom(roomId: string, playerId: string): RoomView {
+  startRoom(roomId: string, seatToken: string): RoomView {
     const room = this.requireRoom(roomId);
-    this.requireMember(room, playerId);
+    const member = this.requireCredential(room, seatToken);
+    const playerId = member.id;
 
     if (playerId !== room.hostPlayerId) {
       throw new RoomError("ONLY_HOST_CAN_START", "Only the room host can start the game");
@@ -144,21 +153,22 @@ export class RoomRegistry {
     return this.projectRoom(room, playerId);
   }
 
-  getRoom(roomId: string, playerId: string): RoomView {
+  getRoom(roomId: string, seatToken: string): RoomView {
     const room = this.requireRoom(roomId);
-    this.requireMember(room, playerId);
-    return this.projectRoom(room, playerId);
+    const member = this.requireCredential(room, seatToken);
+    return this.projectRoom(room, member.id);
   }
 
   executeCommand(
     roomId: string,
-    playerId: string,
+    seatToken: string,
     commandId: string,
     expectedRevision: number,
     command: GameCommand,
   ): GameCommandResponse {
     const room = this.requireRoom(roomId);
-    this.requireMember(room, playerId);
+    const member = this.requireCredential(room, seatToken);
+    const playerId = member.id;
     const cacheKey = `${playerId}:${commandId}`;
     const cached = room.commandResults.get(cacheKey);
     if (cached !== undefined) return cached;
@@ -171,6 +181,7 @@ export class RoomRegistry {
     if (!result.accepted) throw new RoomError(result.error.code, result.error.message);
 
     room.game = result.state;
+    room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
     room.revision += 1;
     const response: GameCommandResponse = {
       commandId,
@@ -181,9 +192,10 @@ export class RoomRegistry {
     return response;
   }
 
-  subscribe(roomId: string, playerId: string, listener: RoomListener): () => void {
+  subscribe(roomId: string, seatToken: string, listener: RoomListener): () => void {
     const room = this.requireRoom(roomId);
-    this.requireMember(room, playerId);
+    const member = this.requireCredential(room, seatToken);
+    const playerId = member.id;
 
     const subscription: Subscription = { playerId, listener };
     const roomSubscriptions = this.subscriptions.get(room.id) ?? new Set<Subscription>();
@@ -232,6 +244,14 @@ export class RoomRegistry {
     return member;
   }
 
+  private requireCredential(room: RoomRecord, seatToken: string): RoomMember {
+    const member = room.members.find((candidate) => candidate.seatToken === seatToken);
+    if (member === undefined) {
+      throw new RoomError("PLAYER_NOT_FOUND", "Seat credential is invalid");
+    }
+    return member;
+  }
+
   private projectRoom(room: RoomRecord, viewerId: string): RoomView {
     this.requireMember(room, viewerId);
 
@@ -240,10 +260,12 @@ export class RoomRegistry {
       revision: room.revision,
       hostPlayerId: room.hostPlayerId,
       members: room.members.map((member) => ({
-        ...member,
+        id: member.id,
+        name: member.name,
+        color: member.color,
         isHost: member.id === room.hostPlayerId,
       })),
-      game: room.game === null ? null : projectGameForPlayer(room.game, viewerId),
+      game: room.game === null ? null : projectGameForPlayer(room.game, viewerId, room.history),
     };
   }
 

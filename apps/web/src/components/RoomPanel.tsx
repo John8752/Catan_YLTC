@@ -110,6 +110,16 @@ export function RoomPanel({
             />
             <p>{room.game.interaction.instruction}</p>
           </div>
+          <details className="history-panel">
+            <summary>公开记录（{room.game.history.length}）</summary>
+            <ol>
+              {room.game.history.slice(-10).map((entry, index) => (
+                <li key={`${entry.revision}-${entry.type}-${index}`}>
+                  {entry.message}{entry.privateDetail === null ? "" : ` · ${entry.privateDetail}`}
+                </li>
+              ))}
+            </ol>
+          </details>
         </>
       )}
 

@@ -23,8 +23,8 @@ export function createPlayerSessionStore(storage: SessionStorageArea): PlayerSes
 
       try {
         const value = JSON.parse(serialized) as Partial<PlayerSession>;
-        return typeof value.roomId === "string" && typeof value.playerId === "string"
-          ? { roomId: value.roomId, playerId: value.playerId }
+        return typeof value.roomId === "string" && typeof value.playerId === "string" && typeof value.seatToken === "string"
+          ? { roomId: value.roomId, playerId: value.playerId, seatToken: value.seatToken }
           : null;
       } catch {
         return null;

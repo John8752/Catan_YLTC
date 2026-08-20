@@ -11,11 +11,12 @@ export interface JoinRoomRequest {
 export interface PlayerSessionResponse {
   readonly roomId: string;
   readonly playerId: string;
+  readonly seatToken: string;
   readonly room: RoomView;
 }
 
 export interface StartRoomRequest {
-  readonly playerId: string;
+  readonly seatToken: string;
 }
 
 export type RoomServerMessage =

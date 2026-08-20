@@ -57,4 +57,28 @@ describe("player-safe game projections", () => {
     expect(JSON.stringify(opponentView.players)).not.toContain("victory-point");
     expect(ownerView.you.developmentCards).toContainEqual(expect.objectContaining({ id: "secret_card" }));
   });
+
+  it("redacts private event details from public history", () => {
+    const game = createBaseGame({
+      id: "game_history",
+      seed: 9,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [{
+      revision: 2,
+      event: {
+        type: "development_card_bought" as const,
+        playerId: "player_2",
+        cardId: "secret_card",
+        cardType: "victory-point",
+      },
+    }];
+
+    expect(projectGameForPlayer(game, "player_1", records).history[0]?.privateDetail).toBeNull();
+    expect(projectGameForPlayer(game, "player_2", records).history[0]?.privateDetail).toContain("victory-point");
+  });
 });

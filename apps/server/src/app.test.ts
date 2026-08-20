@@ -22,6 +22,15 @@ describe("room API", () => {
 
     expect(createResponse.statusCode).toBe(201);
     expect(host.room.members).toHaveLength(1);
+    expect(host.seatToken).not.toBe(host.playerId);
+    expect(JSON.stringify(host.room)).not.toContain(host.seatToken);
+
+    const publicIdAuth = await app.inject({
+      method: "GET",
+      url: `/api/rooms/${host.roomId}?seatToken=${encodeURIComponent(host.playerId)}`,
+    });
+    expect(publicIdAuth.statusCode).toBe(400);
+    expect(publicIdAuth.json()).toMatchObject({ error: { code: "PLAYER_NOT_FOUND" } });
 
     for (const playerName of ["周", "陈"]) {
       const joinResponse = await app.inject({
@@ -36,7 +45,7 @@ describe("room API", () => {
     const startResponse = await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/start`,
-      payload: { playerId: host.playerId },
+      payload: { seatToken: host.seatToken },
     });
     const room = startResponse.json<RoomView>();
 
@@ -50,7 +59,7 @@ describe("room API", () => {
       throw new Error("Host has no initial placement target");
     }
     const commandPayload = {
-      playerId: host.playerId,
+      seatToken: host.seatToken,
       commandId: "command_setup_1",
       expectedRevision,
       command: { type: "PlaceInitialSettlement", vertexId },
@@ -65,6 +74,7 @@ describe("room API", () => {
     expect(commandResponse.statusCode).toBe(200);
     expect(commandRoom.game?.buildings).toHaveLength(1);
     expect(commandRoom.game?.interaction.kind).toBe("setup-road");
+    expect(commandRoom.game?.history.at(-1)?.type).toBe("initial_settlement_placed");
 
     const duplicateResponse = await app.inject({
       method: "POST",
@@ -95,7 +105,7 @@ describe("room API", () => {
     const startResponse = await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/start`,
-      payload: { playerId: host.playerId },
+      payload: { seatToken: host.seatToken },
     });
 
     expect(startResponse.statusCode).toBe(400);

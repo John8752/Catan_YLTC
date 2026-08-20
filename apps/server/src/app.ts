@@ -8,11 +8,11 @@ const playerNameSchema = z.object({
 });
 
 const startRoomSchema = z.object({
-  playerId: z.string().min(1),
+  seatToken: z.string().min(1),
 });
 
 const gameCommandSchema = z.object({
-  playerId: z.string().min(1),
+  seatToken: z.string().min(1),
   commandId: z.string().min(1).max(100),
   expectedRevision: z.number().int().positive(),
   command: z.discriminatedUnion("type", [
@@ -94,18 +94,18 @@ export async function buildApp(registry = new RoomRegistry()) {
   app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/start", async (request, reply) => {
     try {
       const body = startRoomSchema.parse(request.body);
-      return reply.code(200).send(registry.startRoom(request.params.roomId, body.playerId));
+      return reply.code(200).send(registry.startRoom(request.params.roomId, body.seatToken));
     } catch (error) {
       return sendError(reply, error);
     }
   });
 
-  app.get<{ Params: { roomId: string }; Querystring: { playerId?: string } }>(
+  app.get<{ Params: { roomId: string }; Querystring: { seatToken?: string } }>(
     "/api/rooms/:roomId",
     async (request, reply) => {
       try {
-        const playerId = z.string().min(1).parse(request.query.playerId);
-        return reply.code(200).send(registry.getRoom(request.params.roomId, playerId));
+        const seatToken = z.string().min(1).parse(request.query.seatToken);
+        return reply.code(200).send(registry.getRoom(request.params.roomId, seatToken));
       } catch (error) {
         return sendError(reply, error);
       }
@@ -118,7 +118,7 @@ export async function buildApp(registry = new RoomRegistry()) {
       return reply.code(200).send(
         registry.executeCommand(
           request.params.roomId,
-          body.playerId,
+          body.seatToken,
           body.commandId,
           body.expectedRevision,
           body.command,
@@ -129,14 +129,14 @@ export async function buildApp(registry = new RoomRegistry()) {
     }
   });
 
-  app.get<{ Querystring: { roomId?: string; playerId?: string } }>(
+  app.get<{ Querystring: { roomId?: string; seatToken?: string } }>(
     "/ws",
     { websocket: true },
     (socket, request) => {
       try {
         const roomId = z.string().min(1).parse(request.query.roomId);
-        const playerId = z.string().min(1).parse(request.query.playerId);
-        const unsubscribe = registry.subscribe(roomId, playerId, (room) => {
+        const seatToken = z.string().min(1).parse(request.query.seatToken);
+        const unsubscribe = registry.subscribe(roomId, seatToken, (room) => {
           socket.send(JSON.stringify({ type: "room_state", room }));
         });
 

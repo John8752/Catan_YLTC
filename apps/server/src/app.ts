@@ -18,6 +18,8 @@ const gameCommandSchema = z.object({
   command: z.discriminatedUnion("type", [
     z.object({ type: z.literal("PlaceInitialSettlement"), vertexId: z.string().min(1) }),
     z.object({ type: z.literal("PlaceInitialRoad"), edgeId: z.string().min(1) }),
+    z.object({ type: z.literal("RollDice") }),
+    z.object({ type: z.literal("EndTurn") }),
   ]),
 });
 

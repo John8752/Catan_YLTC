@@ -44,7 +44,7 @@ export type GamePhase =
   | {
       readonly kind: "turn";
       readonly activePlayerId: PlayerId;
-      readonly step: "roll" | "resolve-seven" | "trade-build";
+      readonly step: "roll" | "resolve-seven" | "action";
       readonly turnNumber: number;
     }
   | {
@@ -63,4 +63,5 @@ export interface GameState {
   readonly roads: readonly RoadState[];
   readonly players: readonly PlayerState[];
   readonly phase: GamePhase;
+  readonly lastRoll: readonly [number, number] | null;
 }

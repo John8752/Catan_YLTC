@@ -1,6 +1,12 @@
 import type { BuildingState, RoadState } from "../buildables/index.js";
-import type { EdgeId, PlayerId, VertexId } from "../primitives/index.js";
-import { RESOURCE_TYPES, type ResourceHand, type ResourceType } from "../resources/index.js";
+import { createSeededRandom, type EdgeId, type PlayerId, type RandomSource, type VertexId } from "../primitives/index.js";
+import {
+  calculateProductionClaims,
+  resolveProductionClaims,
+  RESOURCE_TYPES,
+  type ResourceHand,
+  type ResourceType,
+} from "../resources/index.js";
 import { assertGameInvariant } from "./create-game.js";
 import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent } from "./commands.js";
 import type { GamePhase, GameState, PlayerState } from "./state.js";
@@ -9,12 +15,17 @@ export function executeGameCommand(
   state: GameState,
   actorId: PlayerId,
   command: GameCommand,
+  random: RandomSource = createSeededRandom(state.seed ^ state.revision),
 ): GameCommandResult {
   switch (command.type) {
     case "PlaceInitialSettlement":
       return placeInitialSettlement(state, actorId, command.vertexId);
     case "PlaceInitialRoad":
       return placeInitialRoad(state, actorId, command.edgeId);
+    case "RollDice":
+      return rollDice(state, actorId, random);
+    case "EndTurn":
+      return endTurn(state, actorId);
   }
 }
 
@@ -149,6 +160,79 @@ function placeInitialRoad(
     },
     events,
   );
+}
+
+function rollDice(state: GameState, actorId: PlayerId, random: RandomSource): GameCommandResult {
+  if (state.phase.kind !== "turn" || state.phase.step !== "roll") {
+    return reject(state, "WRONG_PHASE", "Dice can only be rolled at the start of a turn");
+  }
+  if (state.phase.activePlayerId !== actorId) {
+    return reject(state, "NOT_YOUR_TURN", "Only the active player can roll");
+  }
+
+  const dice: readonly [number, number] = [die(random), die(random)];
+  const total = dice[0] + dice[1];
+  if (total === 7) {
+    return reject(state, "SEVEN_NOT_IMPLEMENTED", "Seven resolution is not available yet");
+  }
+
+  const claims = calculateProductionClaims(state.map, state.buildings, total);
+  const production = resolveProductionClaims(state.bank, claims);
+  const players = state.players.map((player) => {
+    const grant = production.grants.get(player.id);
+    return grant === undefined
+      ? player
+      : { ...player, resources: addHand(player.resources, grant) };
+  });
+
+  return accept(
+    {
+      ...state,
+      revision: state.revision + 1,
+      bank: production.bank,
+      players,
+      lastRoll: dice,
+      phase: { ...state.phase, step: "action" },
+    },
+    [
+      { type: "dice_rolled", playerId: actorId, dice },
+      { type: "resources_produced", total: claims.reduce((sum, claim) => sum + claim.amount, 0) },
+    ],
+  );
+}
+
+function endTurn(state: GameState, actorId: PlayerId): GameCommandResult {
+  if (state.phase.kind !== "turn" || state.phase.step !== "action") {
+    return reject(state, "WRONG_PHASE", "The turn cannot end during a mandatory resolution");
+  }
+  if (state.phase.activePlayerId !== actorId) {
+    return reject(state, "NOT_YOUR_TURN", "Only the active player can end the turn");
+  }
+
+  const currentIndex = state.players.findIndex((player) => player.id === actorId);
+  if (currentIndex < 0) throw new Error(`Unknown active player ${actorId}`);
+  const nextPlayer = state.players[(currentIndex + 1) % state.players.length];
+  if (nextPlayer === undefined) throw new Error("Game has no next player");
+  const turnNumber = state.phase.turnNumber + 1;
+
+  return accept(
+    {
+      ...state,
+      revision: state.revision + 1,
+      lastRoll: null,
+      phase: {
+        kind: "turn",
+        activePlayerId: nextPlayer.id,
+        step: "roll",
+        turnNumber,
+      },
+    },
+    [{ type: "turn_ended", playerId: actorId, nextPlayerId: nextPlayer.id, turnNumber }],
+  );
+}
+
+function die(random: RandomSource): number {
+  return Math.floor(random.next() * 6) + 1;
 }
 
 function startingResourceGrant(state: GameState, vertexId: VertexId): ResourceHand {

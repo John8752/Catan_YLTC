@@ -3,14 +3,17 @@ import type { GameState } from "./state.js";
 
 export type GameCommand =
   | { readonly type: "PlaceInitialSettlement"; readonly vertexId: VertexId }
-  | { readonly type: "PlaceInitialRoad"; readonly edgeId: EdgeId };
+  | { readonly type: "PlaceInitialRoad"; readonly edgeId: EdgeId }
+  | { readonly type: "RollDice" }
+  | { readonly type: "EndTurn" };
 
 export type GameCommandErrorCode =
   | "WRONG_PHASE"
   | "NOT_YOUR_TURN"
   | "INVALID_LOCATION"
   | "DISTANCE_RULE"
-  | "ROAD_NOT_ADJACENT";
+  | "ROAD_NOT_ADJACENT"
+  | "SEVEN_NOT_IMPLEMENTED";
 
 export interface GameCommandError {
   readonly code: GameCommandErrorCode;
@@ -33,7 +36,19 @@ export type GameEvent =
       readonly playerId: PlayerId;
       readonly total: number;
     }
-  | { readonly type: "setup_completed"; readonly firstPlayerId: PlayerId };
+  | { readonly type: "setup_completed"; readonly firstPlayerId: PlayerId }
+  | {
+      readonly type: "dice_rolled";
+      readonly playerId: PlayerId;
+      readonly dice: readonly [number, number];
+    }
+  | { readonly type: "resources_produced"; readonly total: number }
+  | {
+      readonly type: "turn_ended";
+      readonly playerId: PlayerId;
+      readonly nextPlayerId: PlayerId;
+      readonly turnNumber: number;
+    };
 
 export type GameCommandResult =
   | {

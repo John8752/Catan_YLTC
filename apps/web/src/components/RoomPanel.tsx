@@ -1,4 +1,4 @@
-import type { RoomView } from "@catan/protocol";
+import type { GameCommand, RoomView } from "@catan/protocol";
 
 export interface RoomPanelProps {
   readonly room: RoomView;
@@ -7,6 +7,7 @@ export interface RoomPanelProps {
   readonly busy: boolean;
   readonly onStart: () => void;
   readonly onLeave: () => void;
+  readonly onGameCommand: (command: GameCommand) => void;
 }
 
 export function RoomPanel({
@@ -16,6 +17,7 @@ export function RoomPanel({
   busy,
   onStart,
   onLeave,
+  onGameCommand,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
   const canStart = isHost && room.members.length >= 3 && room.game === null;
@@ -74,16 +76,34 @@ export function RoomPanel({
           )}
         </div>
       ) : (
-        <div className="your-hand">
-          <p className="section-label">你的资源</p>
-          <div className="resource-grid">
-            {Object.entries(room.game.you.resources).map(([resource, count]) => (
-              <span key={resource} className={`resource-chip resource-${resource}`}>
-                {resourceLabel(resource)} <strong>{count}</strong>
-              </span>
-            ))}
+        <>
+          <div className="your-hand">
+            <p className="section-label">你的资源</p>
+            <div className="resource-grid">
+              {Object.entries(room.game.you.resources).map(([resource, count]) => (
+                <span key={resource} className={`resource-chip resource-${resource}`}>
+                  {resourceLabel(resource)} <strong>{count}</strong>
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+          <div className="room-action game-actions">
+            {room.game.lastRoll === null ? null : (
+              <p className="dice-result">骰子：{room.game.lastRoll[0]} + {room.game.lastRoll[1]}</p>
+            )}
+            {room.game.interaction.kind === "turn-roll" ? (
+              <button className="primary-button" type="button" disabled={busy} onClick={() => onGameCommand({ type: "RollDice" })}>
+                {busy ? "掷骰中…" : "掷骰子"}
+              </button>
+            ) : null}
+            {room.game.interaction.kind === "turn-action" ? (
+              <button className="primary-button" type="button" disabled={busy} onClick={() => onGameCommand({ type: "EndTurn" })}>
+                {busy ? "提交中…" : "结束回合"}
+              </button>
+            ) : null}
+            <p>{room.game.interaction.instruction}</p>
+          </div>
+        </>
       )}
 
       <button className="quiet-button" type="button" onClick={onLeave}>

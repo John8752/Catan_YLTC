@@ -39,6 +39,7 @@ export interface GameView {
   readonly roads: readonly RoadState[];
   readonly players: readonly PublicPlayerView[];
   readonly phase: GamePhase;
+  readonly lastRoll: readonly [number, number] | null;
   readonly you: PrivatePlayerView;
   readonly interaction: GameInteractionView;
 }
@@ -58,6 +59,18 @@ export type GameInteractionView =
     }
   | {
       readonly kind: "waiting";
+      readonly instruction: string;
+      readonly vertexIds: readonly [];
+      readonly edgeIds: readonly [];
+    }
+  | {
+      readonly kind: "turn-roll";
+      readonly instruction: string;
+      readonly vertexIds: readonly [];
+      readonly edgeIds: readonly [];
+    }
+  | {
+      readonly kind: "turn-action";
       readonly instruction: string;
       readonly vertexIds: readonly [];
       readonly edgeIds: readonly [];
@@ -110,6 +123,7 @@ export function projectGameForPlayer(state: GameState, viewerId: string): GameVi
     roads: state.roads,
     players,
     phase: state.phase,
+    lastRoll: state.lastRoll,
     you: {
       ...publicViewer,
       resources: { ...viewer.resources },
@@ -119,8 +133,33 @@ export function projectGameForPlayer(state: GameState, viewerId: string): GameVi
 }
 
 function projectInteraction(state: GameState, viewerId: string): GameInteractionView {
+  if (state.phase.kind === "turn") {
+    if (state.phase.activePlayerId !== viewerId) {
+      const activePlayerId = state.phase.activePlayerId;
+      const actor = state.players.find((player) => player.id === activePlayerId);
+      return {
+        kind: "waiting",
+        instruction: `等待 ${actor?.name ?? "当前玩家"} 行动`,
+        vertexIds: [],
+        edgeIds: [],
+      };
+    }
+    if (state.phase.step === "roll") {
+      return { kind: "turn-roll", instruction: "轮到你了，请掷骰子", vertexIds: [], edgeIds: [] };
+    }
+    if (state.phase.step === "action") {
+      return {
+        kind: "turn-action",
+        instruction: "你可以交易、建造或结束回合",
+        vertexIds: [],
+        edgeIds: [],
+      };
+    }
+    return { kind: "waiting", instruction: "正在处理七点事件", vertexIds: [], edgeIds: [] };
+  }
+
   if (state.phase.kind !== "setup") {
-    return { kind: "waiting", instruction: "等待当前玩家行动", vertexIds: [], edgeIds: [] };
+    return { kind: "waiting", instruction: "对局已经结束", vertexIds: [], edgeIds: [] };
   }
 
   const actorId = state.phase.placementOrder[state.phase.placementIndex];

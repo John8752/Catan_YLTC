@@ -153,6 +153,7 @@ export function App() {
         busy={busy}
         onStart={handleStart}
         onLeave={handleLeave}
+        onGameCommand={handleGameCommand}
       />
       {error === null ? null : <p className="toast-error" role="alert">{error}</p>}
     </main>

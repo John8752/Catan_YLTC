@@ -223,9 +223,14 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .hex-tile:hover polygon { transform: scale(1.035); filter: brightness(1.08); }
 .terrain-lumber polygon { fill: #3f7148; }.terrain-wool polygon { fill: #85a467; }.terrain-grain polygon { fill: #d2a948; }.terrain-brick polygon { fill: #a95842; }.terrain-ore polygon { fill: #65757b; }.terrain-desert polygon { fill: #d9bc78; }
 .terrain-mark { fill: rgba(255,255,255,.46); font-family: Georgia, serif; font-size: 28px; pointer-events: none; }
-.token circle { fill: #f6e7c3; stroke: rgba(75,49,26,.3); stroke-width: 1.5; }
-.token text { fill: #3c3529; font-family: Georgia, serif; font-size: 15px; font-weight: 800; }
-.token.hot text { fill: #9f3227; }.token.hot circle { stroke: #b5523f; stroke-width: 2.5; }
+.terrain-icon-wool { pointer-events: none; filter: drop-shadow(0 2px 1px rgba(33,66,43,.24)); }
+.terrain-icon-wool .wool-body,.terrain-icon-wool .wool-head,.terrain-icon-wool .wool-ear { fill: rgba(255,255,255,.72); stroke: rgba(52,91,59,.62); stroke-width: 1.1; }
+.terrain-icon-wool .wool-legs { fill: none; stroke: rgba(255,255,255,.78); stroke-width: 2.2; stroke-linecap: round; }
+.terrain-icon-wool .wool-eye { fill: #38513b; }
+.token > circle { fill: #f6e7c3; stroke: rgba(75,49,26,.3); stroke-width: 1.5; }
+.token-number { fill: #3c3529; font-family: Georgia, serif; font-size: 15px; font-weight: 800; }
+.token-pips circle { fill: #6f5130; stroke: none; }
+.token.hot .token-number,.token.hot .token-pips circle { fill: #9f3227; }.token.hot > circle { stroke: #b5523f; stroke-width: 2.5; }
 .robber-layer { isolation: isolate; }
 .robber-piece { pointer-events: none; filter: drop-shadow(0 4px 3px rgba(8,24,23,.52)); }
 .robber-shadow { fill: rgba(8,24,23,.38); }
@@ -260,8 +265,14 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .construction-target-setup:hover .construction-target-vertex-ring,.construction-target-setup:focus-visible .construction-target-vertex-ring { fill: rgba(255,253,240,.52); stroke: #fff0a0; stroke-width: 2.5; filter: drop-shadow(0 0 3px rgba(255,221,91,.68)); transform: scale(1.45); }
 .construction-target-setup:hover .construction-target-house-mark,.construction-target-setup:focus-visible .construction-target-house-mark { opacity: 1; transform: scale(1); }
 .board-ports { pointer-events: none; }
-.board-ports circle { fill: #efe1ba; stroke: rgba(63,81,83,.7); stroke-width: 2; }
-.board-ports text { fill: #354649; font-size: 8px; font-weight: 800; pointer-events: none; }
+.board-ports rect { fill: #efe1ba; stroke: rgba(63,81,83,.72); stroke-width: 2; filter: drop-shadow(0 3px 2px rgba(12,35,35,.24)); }
+.board-ports text { fill: #354649; pointer-events: none; }
+.port-ratio { font-size: 10px; font-weight: 900; }
+.port-resource-mark { font-family: Georgia, serif; font-size: 12px; font-weight: 800; }
+.port-resource-icon { pointer-events: none; }
+.port-resource-icon .wool-body,.port-resource-icon .wool-head,.port-resource-icon .wool-ear { fill: #fffdf4; stroke: #47604e; stroke-width: 1.8; }
+.port-resource-icon .wool-legs { fill: none; stroke: #47604e; stroke-width: 2.4; stroke-linecap: round; }
+.port-resource-icon .wool-eye { fill: #263d39; }
 .placed-roads,.placed-buildings { pointer-events: none; }
 .piece-color-terracotta { --piece: #c85d42; --piece-dark: #7f3025; --piece-light: #ffd1bd; }
 .piece-color-ocean { --piece: #3383a5; --piece-dark: #17506a; --piece-light: #bcecff; }

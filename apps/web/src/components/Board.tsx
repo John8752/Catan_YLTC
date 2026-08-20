@@ -61,7 +61,7 @@ export function Board({
                 role="img"
                 aria-label={`强盗位于${terrainLabel(robberHex.terrain)}`}
               >
-                <title>强盗位于{terrainLabel(robberHex.terrain)}</title>
+                <title>{`强盗位于${terrainLabel(robberHex.terrain)}`}</title>
                 <ellipse className="robber-shadow" cy="16" rx="13" ry="5" />
                 <path className="robber-body" d="M-12 13Q-10-1-5-5Q0-8 5-5Q10-1 12 13Q0 18-12 13Z" />
                 <circle className="robber-head" cy="-10" r="6" />

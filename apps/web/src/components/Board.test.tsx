@@ -21,6 +21,11 @@ describe("Board", () => {
     expect(markup.match(/data-vertex-id=/g)).toHaveLength(54);
     expect(markup.match(/data-edge-id=/g)).toHaveLength(72);
     expect(markup.match(/data-port-id=/g)).toHaveLength(9);
+    expect(markup.match(/data-port-sign=/g)).toHaveLength(9);
+    expect(markup.match(/data-probability-pips=/g)).toHaveLength(18);
+    expect(markup.match(/data-probability-pips="5"/g)).toHaveLength(4);
+    expect(markup.match(/data-tile-resource-icon="wool"/g)).toHaveLength(4);
+    expect(markup).toContain('data-port-resource="wool"');
     expect(markup.match(/data-robber-piece=/g)).toHaveLength(1);
     expect(markup).toContain("强盗位于荒漠");
     expect(markup).toContain("群岛初现");

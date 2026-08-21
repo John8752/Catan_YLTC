@@ -8,5 +8,6 @@
 | [ADR-0004](./adr-0004-modular-domain-boundaries.md) | Decoupled map, resource, buildable and trade domains | Accepted |
 | [ADR-0005](./adr-0005-frontend-stack.md) | React, Tailwind CSS v4, shadcn/ui and Radix UI | Accepted |
 | [ADR-0006](./adr-0006-event-driven-game-effects.md) | Server-event-driven, reconnect-safe game effects | Accepted |
+| [ADR-0007](./adr-0007-in-memory-single-instance-runtime.md) | In-memory, single-instance runtime with idle room eviction | Accepted |
 
 Add a new ADR when reversing an accepted decision. Do not silently rewrite the historical reason.

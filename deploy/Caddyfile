@@ -1,0 +1,47 @@
+# Caddy reverse proxy for Catan YLTC.
+#
+# - Serves the built web app (apps/web/dist) as static files with SPA fallback.
+# - Proxies /api/* and the /ws WebSocket to the Node server on 127.0.0.1:8787.
+#
+# CURRENT SETUP (v1): IP access over plain HTTP on port 80 -- no domain yet.
+# The client picks ws:// or wss:// from the page protocol, so no client rebuild
+# is needed when the site moves to HTTPS.
+#
+# WHEN A DOMAIN ARRIVES: replace `:80` with the domain (e.g. catan.example.com).
+# Caddy then obtains and renews the certificate automatically, and the browser
+# upgrades the game socket to wss:// on its own.
+#
+# Install:
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+
+:80 {
+	encode gzip
+
+	# The room socket. Caddy handles the Upgrade handshake natively; no extra
+	# header juggling is required. Omitting this block breaks every live game
+	# while the lobby keeps working, which is a confusing way to find out.
+	handle /ws {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	handle {
+		root * /opt/catan/apps/web/dist
+
+		# index.html must revalidate every time, otherwise a returning browser
+		# loads yesterday's HTML pointing at a JS bundle the release deleted.
+		# Build assets carry a content hash, so they can cache forever.
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -23,6 +23,9 @@ pnpm validate  run the complete local quality gate
 pnpm validate:full  run validation plus replay and browser E2E
 ```
 
+Deployment is documented in [docs/deployment.md](./docs/deployment.md); server
+templates live in `deploy/`.
+
 The API listens on `http://localhost:8787` by default. Vite proxies `/api` and `/ws` to it during development.
 
 ## Workspace

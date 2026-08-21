@@ -1,0 +1,57 @@
+# systemd unit for the Catan YLTC game server (single instance -- see ADR-0007).
+#
+# Install:
+#   sudo cp deploy/catan.service /etc/systemd/system/catan.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now catan
+#
+# Adjust paths / user below to the actual server. See docs/deployment.md.
+
+[Unit]
+Description=Catan YLTC game server
+After=network.target
+
+[Service]
+Type=simple
+# Dedicated non-login user that owns /opt/catan:
+#   sudo useradd --system --home /opt/catan --shell /usr/sbin/nologin catan
+User=catan
+Group=catan
+WorkingDirectory=/opt/catan/apps/server
+
+Environment=NODE_ENV=production
+# API only listens for the local reverse proxy; Caddy owns the public port.
+Environment=HOST=127.0.0.1
+Environment=PORT=8787
+Environment=LOG_LEVEL=info
+# Rooms with no connected socket are collected after this many minutes (default 60).
+#Environment=ROOM_IDLE_TTL_MINUTES=60
+# Per-IP cap on room creation, the only unbounded allocation a stranger can trigger.
+#Environment=ROOM_CREATIONS_PER_MINUTE=10
+# Which hop's X-Forwarded-For to believe. The default trusts the local Caddy, which
+# is what makes the cap above per-player instead of per-site. Change only if another
+# proxy (CDN, load balancer) is placed in front of Caddy.
+#Environment=TRUST_PROXY=127.0.0.1
+
+# tsup bundles the workspace packages into dist, so plain node runs the build.
+ExecStart=/usr/bin/node /opt/catan/apps/server/dist/index.js
+
+# Rooms live in RAM (ADR-0007) and are the only thing that grows without bound.
+# The cap turns a leak or a flood into "Catan restarts" instead of "the box OOMs".
+# 512M is far above the measured working set: 200 idle rooms cost ~10MB.
+MemoryMax=512M
+
+# The process writes nothing to disk -- logs go to journald over stdout.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+# index.ts traps SIGTERM and closes listeners and live sockets before exiting.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

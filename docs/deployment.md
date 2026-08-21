@@ -241,8 +241,37 @@ pnpm --filter @catan/web exec vite preview --host
 ```
 
 演练能覆盖：生产构建可运行、启动横幅、`/health`、限流、SIGTERM 优雅停机、
-WebSocket 通路。未覆盖：systemd 单元、Caddyfile 本身、80 端口 —— 这三样在云服务器上
-首次部署时验证即可。注意本地开发的 API 若也在 8787 运行，先停掉再演练。
+WebSocket 通路。未覆盖：systemd 单元、80 端口。注意本地开发的 API 若也在 8787 运行，
+先停掉再演练。
+
+### 连 Caddyfile 一起演练（更接近生产）
+
+装了 Caddy 的话，可以直接用 `deploy/Caddyfile` 跑，把反代行为也一并验掉。只需改两处：
+站点地址换成 `:8080`（免 sudo），`root` 换成本地 `apps/web/dist` 的绝对路径。
+
+```bash
+brew install caddy          # 或 apt install caddy
+caddy validate --config deploy/Caddyfile --adapter caddyfile   # 先查语法
+sed -e 's|^:80 {|:8080 {|' \
+    -e "s|root \* /opt/catan/apps/web/dist|root * $PWD/apps/web/dist|" \
+    deploy/Caddyfile > /tmp/Caddyfile.local
+
+pnpm build
+NODE_ENV=production HOST=127.0.0.1 PORT=8787 node apps/server/dist/index.js &
+caddy run --config /tmp/Caddyfile.local --adapter caddyfile
+# 浏览器打开 http://127.0.0.1:8080
+```
+
+2026-08-21 实测走通：静态托管、`index.html` 的 `no-cache` 与构建产物的 `immutable`
+缓存头、gzip、SPA 回退、`/api` 反代、`/ws` 的 WebSocket 升级，以及经由 Caddy 打完的
+一整局（225 条命令分出胜负）。`/health` 确认从 Caddy 这一侧访问不到（落到静态回退返回
+页面而非 JSON），符合预期。
+
+> 顺带实测了漏掉 `handle /ws` 会怎样：首页 200、建房 201，大厅完全正常，只有对局的
+> WebSocket 连不上。这就是那条规则值得单独强调的原因 —— 症状不指向反代配置。
+
+API 挂掉时 Caddy 仍然照常返回页面，只有 `/api` 返回 502。所以"页面打得开"不代表服务
+是好的，判断服务健康要看 `/health` 而不是首页。
 
 ## 迁移到新服务器
 

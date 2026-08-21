@@ -41,7 +41,8 @@ interface RoomRecord {
     readonly victoryPointsToWin: number;
   };
   game: GameState | null;
-  readonly commandResults: Map<string, GameCommandResponse>;
+  /** Keys of commands already applied, so a client retry is not replayed. */
+  readonly appliedCommands: Set<string>;
   readonly history: GameEventRecord[];
   lastActiveAt: number;
 }
@@ -106,7 +107,7 @@ export class RoomRegistry {
       members: [{ id: playerId, seatToken, name, color: PLAYER_COLORS[0] }],
       settings: { ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN },
       game: null,
-      commandResults: new Map(),
+      appliedCommands: new Set(),
       history: [],
       lastActiveAt: this.now(),
     };
@@ -308,8 +309,12 @@ export class RoomRegistry {
     const member = this.requireCredential(room, seatToken);
     const playerId = member.id;
     const cacheKey = `${playerId}:${commandId}`;
-    const cached = room.commandResults.get(cacheKey);
-    if (cached !== undefined) return cached;
+    if (room.appliedCommands.has(cacheKey)) {
+      // Answer a retry from live state. Keeping the original response per command
+      // meant retaining a full room projection -- map and entire history -- for
+      // every move ever made, which made room memory quadratic in game length.
+      return { commandId, room: this.projectRoom(room, playerId) };
+    }
     if (room.game === null) throw new RoomError("GAME_NOT_STARTED", "The game has not started");
     if (room.game.revision !== expectedRevision) {
       throw new RoomError("STALE_REVISION", "Game state changed; refresh and try again");
@@ -321,11 +326,11 @@ export class RoomRegistry {
     room.game = result.state;
     room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
     room.revision += 1;
+    room.appliedCommands.add(cacheKey);
     const response: GameCommandResponse = {
       commandId,
       room: this.projectRoom(room, playerId),
     };
-    room.commandResults.set(cacheKey, response);
     this.notify(room);
     return response;
   }

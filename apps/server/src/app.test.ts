@@ -259,6 +259,70 @@ describe("room API", () => {
     expect(staleResponse.json()).toMatchObject({ error: { code: "STALE_REVISION" } });
   });
 
+  it("answers a retried command from live state instead of a stored snapshot", async () => {
+    const app = await buildApp(new RoomRegistry({ nextSeed: () => 202 }));
+    apps.push(app);
+    const host = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "林" },
+    })).json<PlayerSessionResponse>();
+    for (const playerName of ["周", "陈"]) {
+      await app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/join`, payload: { playerName } });
+    }
+    const started = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/start`,
+      payload: { seatToken: host.seatToken },
+    })).json<RoomView>();
+
+    const settle = async (commandId: string, revision: number, vertexId: string) =>
+      app.inject({
+        method: "POST",
+        url: `/api/rooms/${host.roomId}/commands`,
+        payload: {
+          seatToken: host.seatToken,
+          commandId,
+          expectedRevision: revision,
+          command: { type: "PlaceInitialSettlement", vertexId },
+        },
+      });
+
+    const vertexId = started.game?.interaction.vertexIds[0];
+    const revision = started.game?.revision;
+    if (vertexId === undefined || revision === undefined) throw new Error("No placement target");
+
+    const first = await settle("command_a", revision, vertexId);
+    expect(first.statusCode).toBe(200);
+
+    // Place the road that follows, so the room has moved on from the command above.
+    const afterSettlement = first.json<{ room: RoomView }>().room;
+    const edgeId = afterSettlement.game?.interaction.edgeIds[0];
+    const roadRevision = afterSettlement.game?.revision;
+    if (edgeId === undefined || roadRevision === undefined) throw new Error("No road target");
+    const afterRoad = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/commands`,
+      payload: {
+        seatToken: host.seatToken,
+        commandId: "command_b",
+        expectedRevision: roadRevision,
+        command: { type: "PlaceInitialRoad", edgeId },
+      },
+    })).json<{ room: RoomView }>().room;
+
+    // Retrying the first command must not replay it, and must not answer with the
+    // room as it looked back then -- storing that snapshot per command is what made
+    // memory grow with the square of the number of moves.
+    const retry = await settle("command_a", revision, vertexId);
+    const retried = retry.json<{ room: RoomView }>().room;
+
+    expect(retry.statusCode).toBe(200);
+    expect(retried.game?.buildings).toHaveLength(1);
+    expect(retried.game?.roads).toHaveLength(1);
+    expect(retried.game?.revision).toBe(afterRoad.game?.revision);
+  });
+
   it("creates and starts a five-player extended room on the 30-hex map", async () => {
     const app = await buildApp();
     apps.push(app);

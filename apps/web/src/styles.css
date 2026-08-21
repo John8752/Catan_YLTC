@@ -265,6 +265,16 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .construction-target-setup .construction-target-house-mark { opacity: .38; transform: scale(.58); transform-box: fill-box; transform-origin: center; transition: opacity .15s ease, transform .15s ease; }
 .construction-target-setup:hover .construction-target-vertex-ring,.construction-target-setup:focus-visible .construction-target-vertex-ring { fill: rgba(255,253,240,.52); stroke: #fff0a0; stroke-width: 2.5; filter: drop-shadow(0 0 3px rgba(255,221,91,.68)); transform: scale(1.45); }
 .construction-target-setup:hover .construction-target-house-mark,.construction-target-setup:focus-visible .construction-target-house-mark { opacity: 1; transform: scale(1); }
+/* Touch has no hover, so the emphasis the design reveals on hover never arrives:
+   a phone shows the dim 8px dot right up to the moment the placement commits.
+   Vertex pitch is 56 units, and the hit area already spans 46 of them, so there
+   is no room to enlarge the target -- what a finger needs is to see it. Apply the
+   hovered appearance by default instead, and leave the hit geometry alone so a
+   tap that lands between two vertices still does nothing rather than guessing. */
+@media (pointer: coarse) {
+  .construction-target-setup .construction-target-vertex-ring { fill: rgba(255,253,240,.52); stroke: #fff0a0; stroke-width: 2.5; filter: drop-shadow(0 0 3px rgba(255,221,91,.68)); transform: scale(1.45); }
+  .construction-target-setup .construction-target-house-mark { opacity: 1; transform: scale(1); }
+}
 .board-ports { pointer-events: none; }
 .board-ports rect { fill: #efe1ba; stroke: rgba(63,81,83,.72); stroke-width: 2; filter: drop-shadow(0 3px 2px rgba(12,35,35,.24)); }
 .board-ports text { fill: #354649; pointer-events: none; }

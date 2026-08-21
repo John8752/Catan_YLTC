@@ -1,8 +1,44 @@
 import { createBaseGame, resourceAmounts, type GameEventRecord } from "@catan/game-core";
 import { describe, expect, it } from "vitest";
-import { projectGameForPlayer } from "./views.js";
+import { MAX_PROJECTED_EVENT_RECORDS, projectGameForPlayer } from "./views.js";
 
 describe("player-safe game projections", () => {
+  it("carries only the most recent event records, keeping the newest", () => {
+    const game = createBaseGame({
+      id: "game_capped",
+      seed: 42,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const overflow = MAX_PROJECTED_EVENT_RECORDS + 50;
+    const hexId = game.map.hexes[0]?.id ?? "hex_0_0";
+    const vertexId = game.map.vertices[0]?.id ?? "vertex_00";
+    // Production events, so the cap is exercised on effects as well as the log.
+    const records: GameEventRecord[] = Array.from({ length: overflow }, (_, index) => ({
+      revision: index + 1,
+      event: {
+        type: "resources_produced",
+        total: 1,
+        grants: [{ playerId: "player_1", resources: resourceAmounts({ grain: 1 }) }],
+        sources: [{ playerId: "player_1", resource: "grain", amount: 1, hexId, vertexId }],
+        triggeredHexIds: [hexId],
+      },
+    }));
+
+    const view = projectGameForPlayer(game, "player_1", records);
+    const oldestKept = overflow - MAX_PROJECTED_EVENT_RECORDS + 1;
+
+    expect(view.history).toHaveLength(MAX_PROJECTED_EVENT_RECORDS);
+    // The tail is what players and the effect queue need; the oldest entries go.
+    expect(view.history.at(-1)?.revision).toBe(overflow);
+    expect(view.history.at(0)?.revision).toBe(oldestKept);
+    expect(view.effects).toHaveLength(MAX_PROJECTED_EVENT_RECORDS);
+    expect(view.effects.at(0)?.revision).toBe(oldestKept);
+  });
+
   it("exposes the viewer hand and redacts every opponent hand", () => {
     const game = createBaseGame({
       id: "game_1",

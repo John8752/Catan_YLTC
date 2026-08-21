@@ -178,6 +178,17 @@ export interface RoomView {
   readonly game: GameView | null;
 }
 
+/**
+ * How many trailing event records a projection carries.
+ *
+ * The complete log stays on the server for replay; a view only needs what a
+ * player can meaningfully scroll back through. Without a cap the entire history
+ * rides along on every room update, and since each accepted command pushes the
+ * whole room to every seat, a long match ends up sending hundreds of kilobytes
+ * per move to every player.
+ */
+export const MAX_PROJECTED_EVENT_RECORDS = 200;
+
 export function projectGameForPlayer(
   state: GameState,
   viewerId: string,
@@ -206,6 +217,11 @@ export function projectGameForPlayer(
     throw new Error(`Projected player ${viewerId} is missing`);
   }
 
+  const recentRecords =
+    eventRecords.length > MAX_PROJECTED_EVENT_RECORDS
+      ? eventRecords.slice(-MAX_PROJECTED_EVENT_RECORDS)
+      : eventRecords;
+
   return {
     id: state.id,
     ruleProfile: state.ruleProfile,
@@ -231,8 +247,8 @@ export function projectGameForPlayer(
     developmentDeckCount: state.developmentDeck.length,
     developmentCardPlayedThisTurn: state.developmentCardPlayedThisTurn,
     awards: state.awards,
-    history: eventRecords.flatMap((record) => projectHistoryRecord(state, viewerId, record)),
-    effects: eventRecords.flatMap(projectPublicEffect),
+    history: recentRecords.flatMap((record) => projectHistoryRecord(state, viewerId, record)),
+    effects: recentRecords.flatMap(projectPublicEffect),
   };
 }
 

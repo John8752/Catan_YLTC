@@ -30,6 +30,8 @@ export interface RoomPanelProps {
     victoryPointsToWin: number;
   }) => void;
   readonly onLeave: () => void | Promise<void>;
+  readonly onAbandonSeat: () => void;
+  readonly onOpenExtraSeat: (() => void) | null;
 }
 
 const PLAYER_COLORS = {
@@ -49,6 +51,8 @@ export function RoomPanel({
   onStart,
   onSettingsChange,
   onLeave,
+  onAbandonSeat,
+  onOpenExtraSeat,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
   const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 3;
@@ -239,8 +243,53 @@ export function RoomPanel({
           ) : null}
         </CardContent>
 
-        {room.game === null ? (
-          <CardFooter className="border-t border-[#5f4b31]/15 px-5 py-3">
+        {room.game !== null ? (
+          <CardFooter className="flex-col gap-1 border-t border-[#5f4b31]/15 px-5 py-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" className="w-full text-[#3f5b55] hover:bg-white/45">
+                  <LogOut className="size-4" />
+                  {room.game.phase.kind === "finished" ? "离开这一局" : "退出座位"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="border-[#f7e6bf]/30 bg-[#f8ecd2] text-[#263d39] sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {room.game.phase.kind === "finished" ? "离开这一局？" : "确认退出座位？"}
+                  </DialogTitle>
+                  <DialogDescription className="leading-relaxed text-[#66716b]">
+                    {room.game.phase.kind === "finished"
+                      ? "这局已经结束，离开后可以开一局新的。"
+                      : "对局还在进行，座位无法交还给其他人。退出后这个位置就回不去了。"}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">留在这里</Button>
+                  </DialogClose>
+                  <Button
+                    type="button"
+                    className="bg-[#a94f3a] text-white hover:bg-[#93432f]"
+                    onClick={onAbandonSeat}
+                  >
+                    {room.game.phase.kind === "finished" ? "确认离开" : "确认退出"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {onOpenExtraSeat === null ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full text-[#66716b] hover:bg-white/45"
+                onClick={onOpenExtraSeat}
+              >
+                在新标签页开一个座位
+              </Button>
+            )}
+          </CardFooter>
+        ) : (
+          <CardFooter className="flex-col gap-1 border-t border-[#5f4b31]/15 px-5 py-3">
             <Dialog>
               <DialogTrigger asChild>
                 <Button
@@ -273,8 +322,18 @@ export function RoomPanel({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            {onOpenExtraSeat === null ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full text-[#66716b] hover:bg-white/45"
+                onClick={onOpenExtraSeat}
+              >
+                在新标签页开一个座位
+              </Button>
+            )}
           </CardFooter>
-        ) : null}
+        )}
       </Card>
     </aside>
   );

@@ -19,10 +19,19 @@ import { RoomPanel } from "./components/RoomPanel.js";
 import { Welcome } from "./components/Welcome.js";
 import { ResourceEffectLayer } from "./effects/ResourceEffectLayer.js";
 import { useGameEffectQueue } from "./effects/use-game-effect-queue.js";
-import { clearLegacySharedSession, createPlayerSessionStore } from "./player-session.js";
+import {
+  adoptLegacyTabSession,
+  createPlayerSessionStore,
+  nextFreeSeatSlot,
+  seatSlotFromLocation,
+} from "./player-session.js";
 
-clearLegacySharedSession(window.localStorage);
-const playerSessionStore = createPlayerSessionStore(window.sessionStorage);
+adoptLegacyTabSession(window.sessionStorage, window.localStorage);
+const seatSlot = seatSlotFromLocation(window.location.search);
+const playerSessionStore = createPlayerSessionStore(window.localStorage, seatSlot);
+// Driving several seats from one browser is a local-testing need, so the shortcut
+// for it only appears there rather than confusing a table of real players.
+const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
 export function App() {
   const [session, setSession] = useState<PlayerSession | null>(() => readSession());
@@ -180,6 +189,17 @@ export function App() {
     });
   }
 
+  // A seat cannot be released once the game starts, so this only forgets it here.
+  // It is the way out of a finished match, and the price of leaving a live one.
+  function handleAbandonSeat() {
+    clearCurrentSession();
+  }
+
+  function handleOpenExtraSeat() {
+    const slot = nextFreeSeatSlot(window.localStorage);
+    window.open(`${window.location.pathname}?seat=${slot}`, "_blank", "noopener");
+  }
+
   function clearCurrentSession() {
     playerSessionStore.clear();
     setSession(null);
@@ -273,6 +293,8 @@ export function App() {
         onStart={handleStart}
         onSettingsChange={handleRoomSettingsChange}
         onLeave={handleLeave}
+        onAbandonSeat={handleAbandonSeat}
+        onOpenExtraSeat={isLocalHost ? handleOpenExtraSeat : null}
       />
       <ResourceEffectLayer effect={activeEffect} onComplete={completeActiveEffect} />
       {error === null ? null : <p className="toast-error" role="alert">{error}</p>}

@@ -44,6 +44,8 @@ describe("lobby setup", () => {
         onStart={vi.fn()}
         onSettingsChange={onSettingsChange}
         onLeave={onLeave}
+        onAbandonSeat={vi.fn()}
+        onOpenExtraSeat={null}
       />,
     );
 
@@ -71,6 +73,8 @@ describe("lobby setup", () => {
         onStart={vi.fn()}
         onSettingsChange={vi.fn()}
         onLeave={vi.fn()}
+        onAbandonSeat={vi.fn()}
+        onOpenExtraSeat={null}
       />,
     );
 

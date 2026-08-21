@@ -2,7 +2,7 @@
 
 A server-authoritative browser board game for private groups. Complete 3–4 player base matches and 5–6 player extended-board matches are playable as explicit rule profiles; the two-player profile remains planned.
 
-Playable status: room creation/join, profile-specific seeded maps and supplies, independent per-tab seats, snake setup, dice production, robber/discard, building, player and maritime trade, development cards, 5–6 paired-player turns, awards, configurable victory, reconnect and deterministic replay are implemented.
+Playable status: room creation/join, profile-specific seeded maps and supplies, browser-persistent seats, snake setup, dice production, robber/discard, building, player and maritime trade, development cards, 5–6 paired-player turns, awards, configurable victory, reconnect and deterministic replay are implemented.
 
 ## Start here
 
@@ -27,6 +27,12 @@ Deployment is documented in [docs/deployment.md](./docs/deployment.md); server
 templates live in `deploy/`.
 
 The API listens on `http://localhost:8787` by default. Vite proxies `/api` and `/ws` to it during development.
+
+A seat belongs to the browser, not the tab, so closing a tab or restarting the
+browser keeps it. To hold a second seat in one browser — which is mainly useful
+when testing locally — open `?seat=2` (`?seat=3`, and so on); on localhost the
+room panel offers a button that does it. A seat cannot be released once the game
+starts, so leaving mid-match gives it up for good.
 
 ## Workspace
 

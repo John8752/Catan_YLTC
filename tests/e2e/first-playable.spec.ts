@@ -116,11 +116,19 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await expect(second.locator(".room-code")).toHaveText(roomCode ?? "");
     await expect(second.locator('[data-current-player="true"]')).toContainText("岚");
 
-    const extraTab = await contexts[0]?.newPage();
-    if (extraTab === undefined) throw new Error("Missing host browser context");
-    await extraTab.goto("/");
-    await expect(extraTab.getByRole("button", { name: "创建今晚的岛" })).toBeVisible();
-    await expect(extraTab.locator(".room-code")).toHaveCount(0);
+    // A seat belongs to the browser, not the tab: reopening the app finds it again,
+    // which is what makes closing a tab or restarting the browser survivable.
+    const reopenedTab = await contexts[0]?.newPage();
+    if (reopenedTab === undefined) throw new Error("Missing host browser context");
+    await reopenedTab.goto("/");
+    await expect(reopenedTab.locator(".room-code")).toHaveText(roomCode ?? "");
+
+    // Taking a second seat in the same browser is asked for explicitly.
+    const extraSeatTab = await contexts[0]?.newPage();
+    if (extraSeatTab === undefined) throw new Error("Missing host browser context");
+    await extraSeatTab.goto("/?seat=2");
+    await expect(extraSeatTab.getByRole("button", { name: "创建今晚的岛" })).toBeVisible();
+    await expect(extraSeatTab.locator(".room-code")).toHaveCount(0);
 
     await host.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => host.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

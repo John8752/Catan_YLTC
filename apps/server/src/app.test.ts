@@ -1,5 +1,5 @@
 import type { PlayerSessionResponse, RoomView } from "@catan/protocol";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
 import { RoomRegistry } from "./rooms.js";
 
@@ -303,6 +303,112 @@ describe("room API", () => {
     expect(started.game?.ruleProfile).toBe("extended-5-6");
     expect(started.game?.map.hexes).toHaveLength(30);
     expect(started.game?.developmentDeckCount).toBe(34);
+  });
+
+  it("evicts abandoned rooms but keeps rooms that still have a live subscriber", async () => {
+    let now = 1_000_000;
+    const registry = new RoomRegistry({ now: () => now });
+    const app = await buildApp(registry, { idleRoomTtlMs: 60_000 });
+    apps.push(app);
+
+    const abandoned = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "林" },
+    })).json<PlayerSessionResponse>();
+    const watched = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "周" },
+    })).json<PlayerSessionResponse>();
+    registry.subscribe(watched.roomId, watched.seatToken, () => {});
+
+    now += 59_000;
+    expect(registry.evictIdleRooms(60_000)).toEqual([]);
+
+    now += 2_000;
+    expect(registry.evictIdleRooms(60_000)).toEqual([abandoned.roomId]);
+    expect(registry.roomCount).toBe(1);
+
+    const gone = await app.inject({
+      method: "GET",
+      url: `/api/rooms/${abandoned.roomId}?seatToken=${encodeURIComponent(abandoned.seatToken)}`,
+    });
+    expect(gone.statusCode).toBe(404);
+
+    const alive = await app.inject({
+      method: "GET",
+      url: `/api/rooms/${watched.roomId}?seatToken=${encodeURIComponent(watched.seatToken)}`,
+    });
+    expect(alive.statusCode).toBe(200);
+  });
+
+  it("runs the eviction sweep on its own interval", async () => {
+    let now = 1_000_000;
+    const registry = new RoomRegistry({ now: () => now });
+    const app = await buildApp(registry, { idleRoomTtlMs: 50, roomSweepIntervalMs: 10 });
+    apps.push(app);
+
+    await app.inject({ method: "POST", url: "/api/rooms", payload: { playerName: "林" } });
+    expect(registry.roomCount).toBe(1);
+
+    now += 1_000;
+    await vi.waitFor(() => expect(registry.roomCount).toBe(0));
+  });
+
+  it("rate limits room creation and answers with the shared error shape", async () => {
+    const app = await buildApp(new RoomRegistry(), { roomCreationsPerMinute: 2 });
+    apps.push(app);
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const accepted = await app.inject({
+        method: "POST",
+        url: "/api/rooms",
+        payload: { playerName: "林" },
+      });
+      expect(accepted.statusCode).toBe(201);
+    }
+
+    const rejected = await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "林" },
+    });
+    expect(rejected.statusCode).toBe(429);
+    expect(rejected.json()).toEqual({
+      error: { code: "TOO_MANY_REQUESTS", message: "Too many rooms created; wait a moment" },
+    });
+  });
+
+  it("keeps a separate room-creation budget per client behind the proxy", async () => {
+    const app = await buildApp(new RoomRegistry(), {
+      roomCreationsPerMinute: 1,
+      trustProxy: "127.0.0.1",
+    });
+    apps.push(app);
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      headers: { "x-forwarded-for": "203.0.113.1" },
+      payload: { playerName: "林" },
+    });
+    const otherClient = await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      headers: { "x-forwarded-for": "203.0.113.2" },
+      payload: { playerName: "周" },
+    });
+    const sameClientAgain = await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      headers: { "x-forwarded-for": "203.0.113.1" },
+      payload: { playerName: "陈" },
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(otherClient.statusCode).toBe(201);
+    expect(sameClientAgain.statusCode).toBe(429);
   });
 
   it("prevents a room from starting with fewer than three players", async () => {

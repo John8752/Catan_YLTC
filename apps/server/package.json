@@ -13,6 +13,7 @@
   "dependencies": {
     "@catan/game-core": "workspace:*",
     "@catan/protocol": "workspace:*",
+    "@fastify/rate-limit": "^11.2.0",
     "@fastify/websocket": "^11.3.0",
     "fastify": "^5.12.1",
     "zod": "^4.4.3"

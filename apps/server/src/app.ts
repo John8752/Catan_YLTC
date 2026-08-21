@@ -1,7 +1,27 @@
+import rateLimit from "@fastify/rate-limit";
 import websocket from "@fastify/websocket";
-import Fastify, { type FastifyReply } from "fastify";
+import Fastify, {
+  LogController,
+  type FastifyError,
+  type FastifyReply,
+  type FastifyServerOptions,
+} from "fastify";
 import { z } from "zod";
 import { RoomError, RoomRegistry } from "./rooms.js";
+
+/** A room with no connected socket is collected once it goes untouched this long. */
+export const DEFAULT_IDLE_ROOM_TTL_MS = 60 * 60 * 1000;
+export const DEFAULT_ROOM_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+/** Room creation is the only unbounded allocation a stranger can trigger. */
+export const DEFAULT_ROOM_CREATIONS_PER_MINUTE = 10;
+
+export interface AppOptions {
+  readonly logger?: FastifyServerOptions["logger"];
+  readonly trustProxy?: FastifyServerOptions["trustProxy"];
+  readonly idleRoomTtlMs?: number;
+  readonly roomSweepIntervalMs?: number;
+  readonly roomCreationsPerMinute?: number;
+}
 
 const playerNameSchema = z.object({
   playerName: z.string(),
@@ -90,13 +110,69 @@ const gameCommandSchema = z.object({
   ]),
 });
 
-export async function buildApp(registry = new RoomRegistry()) {
-  const app = Fastify({ logger: false });
+export async function buildApp(registry = new RoomRegistry(), options: AppOptions = {}) {
+  const idleRoomTtlMs = options.idleRoomTtlMs ?? DEFAULT_IDLE_ROOM_TTL_MS;
+  const roomSweepIntervalMs = options.roomSweepIntervalMs ?? DEFAULT_ROOM_SWEEP_INTERVAL_MS;
+  const app = Fastify({
+    logger: options.logger ?? false,
+    // Behind a reverse proxy every request arrives from the proxy's address, so
+    // without this the per-IP rate limit below becomes one bucket for the whole
+    // site and a single busy player locks everyone else out.
+    trustProxy: options.trustProxy ?? false,
+    // Successful traffic stays out of the journal; the hook below records failures.
+    logController: new LogController({ disableRequestLogging: true }),
+  });
+
+  // Routes answer their own errors, so Fastify never sees them. Log the route
+  // pattern rather than request.url: seat tokens travel in the query string.
+  app.addHook("onResponse", async (request, reply) => {
+    if (reply.statusCode < 400) return;
+    const line = {
+      method: request.method,
+      route: request.routeOptions.url ?? request.url,
+      status: reply.statusCode,
+    };
+    if (reply.statusCode >= 500) request.log.error(line, "request failed");
+    else request.log.warn(line, "request rejected");
+  });
+
   await app.register(websocket);
+  await app.register(rateLimit, {
+    global: false,
+    errorResponseBuilder: () =>
+      Object.assign(new Error("Too many rooms created; wait a moment"), { statusCode: 429 }),
+  });
 
-  app.get("/health", async () => ({ ok: true, service: "catan-server" }));
+  // Anything thrown outside a route handler (rate limiter, malformed body, bugs)
+  // still has to reach the client in the shape apps/web parses.
+  app.setErrorHandler((error: FastifyError, _request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+    if (statusCode >= 500) {
+      return reply.code(500).send({ error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } });
+    }
+    const code = statusCode === 429 ? "TOO_MANY_REQUESTS" : "INVALID_REQUEST";
+    return reply.code(statusCode).send({ error: { code, message: error.message } });
+  });
 
-  app.post("/api/rooms", async (request, reply) => {
+  const sweep = setInterval(() => {
+    const evicted = registry.evictIdleRooms(idleRoomTtlMs);
+    if (evicted.length > 0) {
+      app.log.info({ evicted: evicted.length, rooms: registry.roomCount }, "evicted idle rooms");
+    }
+  }, roomSweepIntervalMs);
+  sweep.unref();
+  app.addHook("onClose", async () => clearInterval(sweep));
+
+  app.get("/health", async () => ({ ok: true, service: "catan-server", rooms: registry.roomCount }));
+
+  app.post("/api/rooms", {
+    config: {
+      rateLimit: {
+        max: options.roomCreationsPerMinute ?? DEFAULT_ROOM_CREATIONS_PER_MINUTE,
+        timeWindow: "1 minute",
+      },
+    },
+  }, async (request, reply) => {
     try {
       const body = playerNameSchema.parse(request.body);
       return reply.code(201).send(registry.createRoom(body.playerName));

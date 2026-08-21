@@ -43,6 +43,7 @@ interface RoomRecord {
   game: GameState | null;
   readonly commandResults: Map<string, GameCommandResponse>;
   readonly history: GameEventRecord[];
+  lastActiveAt: number;
 }
 
 type RoomListener = (room: RoomView) => void;
@@ -83,9 +84,13 @@ export class RoomRegistry {
   private readonly rooms = new Map<string, RoomRecord>();
   private readonly subscriptions = new Map<string, Set<Subscription>>();
   private readonly nextSeed: () => number;
+  private readonly now: () => number;
 
-  constructor(options: { readonly nextSeed?: () => number } = {}) {
+  constructor(
+    options: { readonly nextSeed?: () => number; readonly now?: () => number } = {},
+  ) {
     this.nextSeed = options.nextSeed ?? (() => randomInt(1, 2_147_483_647));
+    this.now = options.now ?? (() => Date.now());
   }
 
   createRoom(playerName: string): PlayerSessionResponse {
@@ -103,6 +108,7 @@ export class RoomRegistry {
       game: null,
       commandResults: new Map(),
       history: [],
+      lastActiveAt: this.now(),
     };
 
     this.rooms.set(roomId, room);
@@ -260,6 +266,31 @@ export class RoomRegistry {
     return this.projectRoom(room, playerId);
   }
 
+  /**
+   * Drops rooms that have no live subscriber and have not been touched within
+   * `idleMs`. A room with an open socket is never evicted, however long a player
+   * takes to act; abandoned rooms are what leak. Returns the evicted room ids.
+   */
+  evictIdleRooms(idleMs: number): string[] {
+    const cutoff = this.now() - idleMs;
+    const evicted: string[] = [];
+
+    for (const room of this.rooms.values()) {
+      if ((this.subscriptions.get(room.id)?.size ?? 0) > 0) continue;
+      if (room.lastActiveAt > cutoff) continue;
+
+      this.rooms.delete(room.id);
+      this.subscriptions.delete(room.id);
+      evicted.push(room.id);
+    }
+
+    return evicted;
+  }
+
+  get roomCount(): number {
+    return this.rooms.size;
+  }
+
   getRoom(roomId: string, seatToken: string): RoomView {
     const room = this.requireRoom(roomId);
     const member = this.requireCredential(room, seatToken);
@@ -346,6 +377,7 @@ export class RoomRegistry {
       throw new RoomError("ROOM_NOT_FOUND", "Room not found");
     }
 
+    room.lastActiveAt = this.now();
     return room;
   }
 

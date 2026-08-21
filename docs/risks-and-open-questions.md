@@ -21,6 +21,50 @@
 
 Resolved after M0: the 5–6 player profile follows the revised paired-player turn, with the player third to the primary player's left acting second and trading only with the bank.
 
+### O3 agreed direction (decided 2026-08-21, not implemented)
+
+A disconnected player currently stops the room permanently: the seat cannot be
+released after the game starts (`CANNOT_LEAVE_STARTED_GAME`) and nothing times out,
+so one closed tab ends the match for everyone. The agreed shape of the fix, deferred
+rather than dropped:
+
+- **Clock starts only when a seat is both awaited and disconnected.** A connected
+  player may think for as long as they like; this targets the closed tab, not slow play.
+- **Grace period 120 seconds**, configurable (`TURN_TIMEOUT_SECONDS`).
+- **On expiry the server plays one minimal legal move**, and the seat returns to its
+  player the moment their socket reconnects — no manual hand-back.
+
+Per-phase move, if built as described:
+
+| Blocked on | Automatic move |
+|---|---|
+| `setup/settlement`, `setup/road` | first vertex/edge from the engine's legal list |
+| `turn/roll` | `RollDice` |
+| `turn/discard` | shed the owed count off the deepest stacks |
+| `turn/robber` | move to a hex that steals from nobody where one exists |
+| `turn/free-road` | first legal edge |
+| `turn/action`, `turn/paired-action` | `EndTurn` |
+
+Findings from the deferred spike, so the next attempt need not redo them:
+
+- `game-core` already exports legal-move enumeration for every blocking phase
+  (`legalInitialSettlementVertices`, `legalInitialRoadEdges`, `legalRobberTargets`,
+  `legalFreeRoadEdges`), so choosing a move needs no new rules code.
+- Placement order aside, `turn/discard` can block on **several** players at once, so
+  "who are we waiting for" returns a list, not one id.
+- `free-road` cannot dead-end: `playRoadBuilding` refuses to enter the step without a
+  legal edge and `buildFreeRoad` leaves it once none remain.
+- `EndTurn` already clears `openTrade`, so an absent player's dangling offer needs no
+  separate cancel.
+- The clock must live in `apps/server`; `game-core` may not read one. Choosing the move
+  is a pure function of state and belongs in the engine.
+- Open sub-question: whether consecutive steps in one turn share a single grace period.
+  Letting each awaited player pay it once per turn reads better than once per step —
+  a whole turn otherwise costs several multiples of the timeout.
+- Not covered by the above: players cannot see that a move was automatic. The dock already
+  renders a textual log (`公开记录`, from `GameView.history`), so surfacing it is a matter of
+  marking the record rather than building somewhere to show it.
+
 ## Risks
 
 | ID | Risk | Mitigation |

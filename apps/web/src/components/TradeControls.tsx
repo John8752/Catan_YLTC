@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button.js";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
+import { randomId } from "@/lib/random-id.js";
 import { cn } from "@/lib/utils.js";
 import { OpenTradeDialog, responseTerms, TradeResponseCount } from "./OpenTradeDialog.js";
 import {
@@ -98,7 +99,7 @@ export function TradeControls({ game, busy, onCommand, allowPlayerTrades = true 
             <form className="mt-5 grid gap-5" onSubmit={(event) => {
               event.preventDefault();
               setComposerOpen(false);
-              onCommand({ type: "OpenTradeOffer", offerId: crypto.randomUUID(), give: playerGive, receive: playerReceive });
+              onCommand({ type: "OpenTradeOffer", offerId: randomId(), give: playerGive, receive: playerReceive });
               setPlayerGive(emptyTradeBasket());
               setPlayerReceive(emptyTradeBasket());
             }}>

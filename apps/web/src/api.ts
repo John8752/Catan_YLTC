@@ -8,6 +8,7 @@ import type {
   RoomSettingsView,
   RoomView,
 } from "@catan/protocol";
+import { randomId } from "./lib/random-id.js";
 
 export interface PlayerSession {
   readonly roomId: string;
@@ -85,7 +86,7 @@ export async function submitGameCommand(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       seatToken: session.seatToken,
-      commandId: crypto.randomUUID(),
+      commandId: randomId(),
       expectedRevision,
       command,
     }),

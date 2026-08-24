@@ -9,7 +9,24 @@ export interface TradeOfferState {
   readonly responses: readonly TradeOfferResponse[];
 }
 
-export interface TradeOfferResponse {
+export type TradeOfferResponse =
+  | AcceptedTradeOfferResponse
+  | DeclinedTradeOfferResponse
+  | CounteredTradeOfferResponse;
+
+export interface AcceptedTradeOfferResponse {
   readonly playerId: PlayerId;
-  readonly response: "accepted" | "declined";
+  readonly response: "accepted";
+}
+
+export interface DeclinedTradeOfferResponse {
+  readonly playerId: PlayerId;
+  readonly response: "declined";
+}
+
+export interface CounteredTradeOfferResponse {
+  readonly playerId: PlayerId;
+  readonly response: "countered";
+  readonly proposerGives: ResourceHand;
+  readonly proposerReceives: ResourceHand;
 }

@@ -88,6 +88,103 @@ describe("atomic trading", () => {
     })).toMatchObject({ accepted: false, error: { code: "INVALID_TRADE" } });
   });
 
+  it("records one replaceable counteroffer per player and completes its terms", () => {
+    let game = withHands(actionState(), {
+      player_1: resourceAmounts({ brick: 2, lumber: 1 }),
+      player_2: resourceAmounts({ grain: 2, ore: 1 }),
+      player_3: resourceAmounts({ wool: 1 }),
+    });
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_counter",
+      give: resourceAmounts({ brick: 2 }),
+      receive: resourceAmounts({ ore: 1 }),
+    }));
+    game = accept(executeGameCommand(game, "player_2", {
+      type: "CounterTradeOffer",
+      offerId: "offer_counter",
+      proposerGives: resourceAmounts({ lumber: 1 }),
+      proposerReceives: resourceAmounts({ grain: 2 }),
+    }));
+    expect(game.openTrade?.responses).toEqual([{
+      playerId: "player_2",
+      response: "countered",
+      proposerGives: resourceAmounts({ lumber: 1 }),
+      proposerReceives: resourceAmounts({ grain: 2 }),
+    }]);
+
+    game = accept(executeGameCommand(game, "player_3", {
+      type: "DeclineTradeOffer",
+      offerId: "offer_counter",
+    }));
+    game = accept(executeGameCommand(game, "player_2", {
+      type: "CounterTradeOffer",
+      offerId: "offer_counter",
+      proposerGives: resourceAmounts({ brick: 1 }),
+      proposerReceives: resourceAmounts({ ore: 1 }),
+    }));
+    expect(game.openTrade?.responses).toHaveLength(2);
+    expect(game.openTrade?.responses.find((response) => response.playerId === "player_2")).toMatchObject({
+      response: "countered",
+      proposerGives: resourceAmounts({ brick: 1 }),
+      proposerReceives: resourceAmounts({ ore: 1 }),
+    });
+
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "CompleteTradeOffer",
+      offerId: "offer_counter",
+      partnerId: "player_2",
+    }));
+    expect(game.players.find((player) => player.id === "player_1")?.resources)
+      .toEqual(resourceAmounts({ brick: 1, lumber: 1, ore: 1 }));
+    expect(game.players.find((player) => player.id === "player_2")?.resources)
+      .toEqual(resourceAmounts({ brick: 1, grain: 2 }));
+  });
+
+  it("validates only the countering player's promise until completion", () => {
+    let game = withHands(actionState(), {
+      player_1: resourceAmounts({ brick: 1 }),
+      player_2: resourceAmounts({ ore: 1 }),
+    });
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_private_hand",
+      give: resourceAmounts({ brick: 1 }),
+      receive: resourceAmounts({ ore: 1 }),
+    }));
+
+    game = accept(executeGameCommand(game, "player_2", {
+      type: "CounterTradeOffer",
+      offerId: "offer_private_hand",
+      proposerGives: resourceAmounts({ lumber: 3 }),
+      proposerReceives: resourceAmounts({ ore: 1 }),
+    }));
+    expect(executeGameCommand(game, "player_1", {
+      type: "CompleteTradeOffer",
+      offerId: "offer_private_hand",
+      partnerId: "player_2",
+    })).toMatchObject({ accepted: false, error: { code: "INSUFFICIENT_RESOURCES" } });
+
+    expect(executeGameCommand(game, "player_2", {
+      type: "CounterTradeOffer",
+      offerId: "offer_private_hand",
+      proposerGives: resourceAmounts({ brick: 1 }),
+      proposerReceives: resourceAmounts({ grain: 1 }),
+    })).toMatchObject({ accepted: false, error: { code: "INSUFFICIENT_RESOURCES" } });
+    expect(executeGameCommand(game, "player_1", {
+      type: "CounterTradeOffer",
+      offerId: "offer_private_hand",
+      proposerGives: resourceAmounts({}),
+      proposerReceives: resourceAmounts({ ore: 1 }),
+    })).toMatchObject({ accepted: false, error: { code: "INVALID_TRADE" } });
+    expect(executeGameCommand(game, "player_2", {
+      type: "CounterTradeOffer",
+      offerId: "offer_private_hand",
+      proposerGives: resourceAmounts({}),
+      proposerReceives: resourceAmounts({}),
+    })).toMatchObject({ accepted: false, error: { code: "INVALID_TRADE" } });
+  });
+
   it("exchanges multiple resource types in one atomic player trade", () => {
     let game = withHands(actionState(), {
       player_1: resourceAmounts({ brick: 1, lumber: 2 }),

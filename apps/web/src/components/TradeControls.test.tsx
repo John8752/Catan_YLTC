@@ -66,12 +66,12 @@ describe("TradeControls", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
     render(<TradeControls game={tradeView("player_1")} busy={false} onCommand={onCommand} />);
 
-    expect(screen.getByRole("dialog", { name: "等待玩家回应" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "等待桌上回应" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /岚.*同意交易/ })).toBeTruthy();
     expect((screen.getByRole("button", { name: /舟.*拒绝交易/ }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: /岚.*同意交易/ }));
-    fireEvent.click(screen.getByRole("button", { name: "与所选玩家成交" }));
+    fireEvent.click(screen.getByRole("button", { name: "按原报价与所选玩家成交" }));
 
     expect(onCommand).toHaveBeenCalledWith({
       type: "CompleteTradeOffer",
@@ -85,10 +85,41 @@ describe("TradeControls", () => {
     render(<TradeControls game={tradeView("player_3")} busy={false} onCommand={onCommand} />);
 
     expect(screen.getByText("你已拒绝，可以改为同意")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "同意" }));
+    fireEvent.click(screen.getByRole("button", { name: "同意原报价" }));
 
     expect(onCommand).toHaveBeenCalledWith({ type: "AcceptTradeOffer", offerId: "offer_1" });
     expect(onCommand).not.toHaveBeenCalledWith(expect.objectContaining({ type: "CompleteTradeOffer" }));
+  });
+
+  it("lets a responder compose and replace their response with a counteroffer", () => {
+    const onCommand = vi.fn<(command: GameCommand) => void>();
+    render(<TradeControls game={tradeView("player_2")} busy={false} onCommand={onCommand} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "提出反报价" }));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "反报价中你希望获得：砖数量" }), { target: { value: "0" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "反报价中你希望获得：木数量" }), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "提交反报价" }));
+
+    expect(onCommand).toHaveBeenCalledWith({
+      type: "CounterTradeOffer",
+      offerId: "offer_1",
+      proposerGives: resourceAmounts({ lumber: 1 }),
+      proposerReceives: resourceAmounts({ ore: 1 }),
+    });
+  });
+
+  it("shows counteroffer terms and lets the proposer accept them", () => {
+    const onCommand = vi.fn<(command: GameCommand) => void>();
+    render(<TradeControls game={counterTradeView("player_1")} busy={false} onCommand={onCommand} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /岚.*提出反报价/ }));
+    fireEvent.click(screen.getByRole("button", { name: "接受所选反报价并成交" }));
+
+    expect(onCommand).toHaveBeenCalledWith({
+      type: "CompleteTradeOffer",
+      offerId: "offer_1",
+      partnerId: "player_2",
+    });
   });
 });
 
@@ -126,4 +157,24 @@ function tradeView(viewerId: string) {
     },
   };
   return projectGameForPlayer(state, viewerId);
+}
+
+function counterTradeView(viewerId: string) {
+  const view = tradeView(viewerId);
+  if (view.openTrade === null) throw new Error("Missing open trade");
+  return {
+    ...view,
+    openTrade: {
+      ...view.openTrade,
+      responses: [
+        {
+          playerId: "player_2",
+          response: "countered" as const,
+          proposerGives: resourceAmounts({ brick: 1 }),
+          proposerReceives: resourceAmounts({ ore: 1 }),
+        },
+        { playerId: "player_3", response: "declined" as const },
+      ],
+    },
+  };
 }

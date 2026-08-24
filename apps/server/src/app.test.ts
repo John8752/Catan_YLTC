@@ -224,6 +224,24 @@ describe("room API", () => {
     if (vertexId === undefined || expectedRevision === undefined) {
       throw new Error("Host has no initial placement target");
     }
+    const counterSchemaResponse = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/commands`,
+      payload: {
+        seatToken: host.seatToken,
+        commandId: "command_counter_schema",
+        expectedRevision,
+        command: {
+          type: "CounterTradeOffer",
+          offerId: "offer_schema",
+          proposerGives: { brick: 1, lumber: 0, wool: 0, grain: 0, ore: 0 },
+          proposerReceives: { brick: 0, lumber: 0, wool: 0, grain: 0, ore: 1 },
+        },
+      },
+    });
+    expect(counterSchemaResponse.statusCode).toBe(400);
+    expect(counterSchemaResponse.json()).toMatchObject({ error: { code: "WRONG_PHASE" } });
+
     const commandPayload = {
       seatToken: host.seatToken,
       commandId: "command_setup_1",

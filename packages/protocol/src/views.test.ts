@@ -198,8 +198,9 @@ describe("player-safe game projections", () => {
     });
     const records = [
       { revision: 5, event: { type: "trade_response_recorded", offerId: "offer_1", playerId: "player_2", response: "accepted" } },
+      { revision: 6, event: { type: "trade_response_recorded", offerId: "offer_1", playerId: "player_3", response: "countered" } },
       {
-        revision: 6,
+        revision: 7,
         event: {
           type: "player_trade_completed",
           offerId: "offer_1",
@@ -213,6 +214,7 @@ describe("player-safe game projections", () => {
 
     expect(projectGameForPlayer(game, "player_3", records).history.map((entry) => entry.message)).toEqual([
       "周 同意了交易报价",
+      "陈 提出了反报价",
       "林 给 周 2 砖，获得 1 麦",
     ]);
   });

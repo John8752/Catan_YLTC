@@ -317,7 +317,13 @@ function projectHistoryRecord(
     case "turn_ended": message = `${playerName(event.playerId)} 结束回合`; break;
     case "piece_built": message = `${playerName(event.playerId)} 建造了 ${pieceLabel(event.piece)}`; break;
     case "trade_offered": message = `${playerName(event.playerId)} 发布交易报价`; break;
-    case "trade_response_recorded": message = `${playerName(event.playerId)} ${event.response === "accepted" ? "同意" : "拒绝"}了交易报价`; break;
+    case "trade_response_recorded":
+      message = event.response === "accepted"
+        ? `${playerName(event.playerId)} 同意了交易报价`
+        : event.response === "countered"
+          ? `${playerName(event.playerId)} 提出了反报价`
+          : `${playerName(event.playerId)} 拒绝了交易报价`;
+      break;
     case "trade_cancelled": message = `${playerName(event.playerId)} 取消交易报价`; break;
     case "player_trade_completed": message = `${playerName(event.proposerId)} 给 ${playerName(event.accepterId)} ${formatResources(event.give)}，获得 ${formatResources(event.receive)}`; break;
     case "maritime_trade_completed": message = `${playerName(event.playerId)} 用 ${event.ratio} ${resourceLabel(event.give)}换得 1 ${resourceLabel(event.receive)}`; break;

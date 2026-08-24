@@ -64,6 +64,7 @@ function dispatchGameCommand(
     case "OpenTradeOffer":
     case "AcceptTradeOffer":
     case "DeclineTradeOffer":
+    case "CounterTradeOffer":
     case "CompleteTradeOffer":
     case "CancelTradeOffer":
     case "MaritimeTrade":

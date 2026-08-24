@@ -99,12 +99,14 @@ Every build validates phase, active player, cost, bank transfer, piece supply, o
 ### Player trade
 
 - Only the active player can open an offer during the action stage.
-- The offer states non-empty resources given by the active player and non-empty resources requested from one opponent; it is broadcast to every other seated player.
+- The offer states resources given by the active player and resources requested from one opponent; either side may be empty, but not both. It is broadcast to every other seated player.
 - The active player cannot offer the same resource on both sides or offer cards they do not hold.
 - Every opponent may independently accept or decline. A player may change their response while the offer remains open.
+- Instead of accepting or declining, an opponent may keep one counteroffer that replaces their previous response. Counteroffers use the same resource-content rules as the original offer and are public to every seated player.
+- Counteroffer terms are always recorded from the proposer's perspective: resources the proposer gives and resources the proposer receives. A counteroffer cannot itself be countered; the proposer may cancel and open a new offer when another negotiation round is needed.
 - Acceptance records intent only and transfers no resources. The proposer sees all pending, accepted and declined responses, then chooses exactly one accepted player.
-- Completion revalidates both hands and performs one atomic two-way transfer. A stale or unaffordable completion is rejected without partial transfer.
-- The active player may cancel the offer. A counteroffer is represented by cancelling/rejecting and opening a new offer, keeping the first implementation deterministic and auditable.
+- Completion uses either the original terms accepted by the selected player or that player's current counteroffer. It revalidates both hands and performs one atomic transfer. A stale or unaffordable completion is rejected without partial transfer.
+- The active player may cancel the offer. Responses do not reserve resources, and ending the turn closes any unresolved offer.
 - Other players' hand composition remains hidden; the public offer, responses, selected participants and exact completed exchange are visible.
 
 ### Maritime trade

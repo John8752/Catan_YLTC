@@ -13,17 +13,20 @@ export interface TradeResourceBasketProps {
 
 export function TradeResourceBasket({ label, value, maximums, onChange }: TradeResourceBasketProps) {
   return (
-    <div className="grid gap-2" role="group" aria-label={label} data-trade-resource-basket={label}>
-      <div className="grid grid-cols-5 gap-1.5">
+    <div className="grid gap-2.5" role="group" aria-label={label} data-trade-resource-basket={label}>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {TRADE_RESOURCES.map((resource) => {
           const maximum = maximums?.[resource];
           return (
-            <label className="grid min-w-0 gap-1 rounded-lg border border-[#6d5434]/12 bg-[#fffaf0]/65 p-1.5" key={resource}>
-              <span className="truncate text-[11px] font-bold text-[#5f665f]" title={resourceLabel(resource)}>
-                <span aria-hidden="true">{resourceMark(resource)}</span> {resourceLabel(resource)}
+            <label className="grid min-w-0 gap-2 rounded-xl border border-[#6d5434]/12 bg-[#fffaf0]/75 p-2 shadow-[inset_0_1px_rgba(255,255,255,.7)]" key={resource}>
+              <span className="flex items-center gap-1.5 text-xs font-black text-[#4f5d58]" title={resourceLabel(resource)}>
+                <span className={`grid size-6 place-items-center rounded-full text-xs text-white ${resourceTokenClass(resource)}`} aria-hidden="true">
+                  {resourceMark(resource)}
+                </span>
+                {resourceLabel(resource)}
               </span>
               <input
-                className="w-full min-w-0 rounded-md border border-input bg-white/80 px-1 py-1.5 text-center font-black outline-none focus:ring-2 focus:ring-ring"
+                className="h-9 w-full min-w-0 rounded-lg border border-input bg-white/85 px-1 text-center text-base font-black text-[#263d39] outline-none focus:border-[#2f6f7a] focus:ring-2 focus:ring-[#2f6f7a]/20"
                 type="number"
                 min="0"
                 max={maximum}
@@ -39,7 +42,7 @@ export function TradeResourceBasket({ label, value, maximums, onChange }: TradeR
           );
         })}
       </div>
-      <small className="text-center text-[#7a7062]">合计 {tradeBasketTotal(value)} 张</small>
+      <small className="text-center font-bold text-[#7a7062]">合计 {tradeBasketTotal(value)} 张</small>
     </div>
   );
 }
@@ -59,7 +62,7 @@ export function TradeResourceSummary({ resources }: { readonly resources: TradeB
   return (
     <div className="flex min-h-12 flex-wrap items-center justify-center gap-2">
       {selectedResources.map((resource) => (
-        <Badge className="gap-1 bg-[#254f4b] px-3 py-1.5 text-sm text-[#fff8df]" key={resource}>
+        <Badge className={`gap-1 border-0 px-3 py-1.5 text-sm text-white shadow-sm ${resourceTokenClass(resource)}`} key={resource}>
           <span aria-hidden="true">{resourceMark(resource)}</span>{resources[resource]} {resourceLabel(resource)}
         </Badge>
       ))}
@@ -89,6 +92,16 @@ export function resourceLabel(resource: TradeResource): string {
 
 export function resourceMark(resource: TradeResource): string {
   return { brick: "▧", lumber: "♠", wool: "⌁", grain: "≋", ore: "◆" }[resource];
+}
+
+function resourceTokenClass(resource: TradeResource): string {
+  return {
+    brick: "bg-[#a9523f]",
+    lumber: "bg-[#34704a]",
+    wool: "bg-[#78945f]",
+    grain: "bg-[#c3942d]",
+    ore: "bg-[#617278]",
+  }[resource];
 }
 
 function clampAmount(rawValue: string, maximum: number): number {

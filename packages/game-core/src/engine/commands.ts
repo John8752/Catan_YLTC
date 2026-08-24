@@ -19,6 +19,12 @@ export type GameCommand =
     }
   | { readonly type: "AcceptTradeOffer"; readonly offerId: string }
   | { readonly type: "DeclineTradeOffer"; readonly offerId: string }
+  | {
+      readonly type: "CounterTradeOffer";
+      readonly offerId: string;
+      readonly proposerGives: ResourceHand;
+      readonly proposerReceives: ResourceHand;
+    }
   | { readonly type: "CompleteTradeOffer"; readonly offerId: string; readonly partnerId: PlayerId }
   | { readonly type: "CancelTradeOffer"; readonly offerId: string }
   | { readonly type: "MaritimeTrade"; readonly give: ResourceType; readonly receive: ResourceType }
@@ -115,7 +121,7 @@ export type GameEvent =
       readonly type: "trade_response_recorded";
       readonly offerId: string;
       readonly playerId: PlayerId;
-      readonly response: "accepted" | "declined";
+      readonly response: "accepted" | "declined" | "countered";
     }
   | { readonly type: "trade_cancelled"; readonly offerId: string; readonly playerId: PlayerId }
   | {

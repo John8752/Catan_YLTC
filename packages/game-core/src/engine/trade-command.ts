@@ -21,6 +21,7 @@ type TradeCommand = Extract<
       | "OpenTradeOffer"
       | "AcceptTradeOffer"
       | "DeclineTradeOffer"
+      | "CounterTradeOffer"
       | "CompleteTradeOffer"
       | "CancelTradeOffer"
       | "MaritimeTrade";
@@ -49,6 +50,14 @@ export function executeTradeCommand(
       return respondToOffer(state, actorId, command.offerId, "accepted");
     case "DeclineTradeOffer":
       return respondToOffer(state, actorId, command.offerId, "declined");
+    case "CounterTradeOffer":
+      return counterOffer(
+        state,
+        actorId,
+        command.offerId,
+        command.proposerGives,
+        command.proposerReceives,
+      );
     case "CompleteTradeOffer":
       return completeOffer(state, actorId, command.offerId, command.partnerId);
     case "CancelTradeOffer":
@@ -73,17 +82,7 @@ function openOffer(
     return reject(state, "NOT_YOUR_TURN", "Only the active player can offer a trade");
   }
   if (state.openTrade !== null) return reject(state, "INVALID_TRADE", "A trade offer is already open");
-  if (
-    offerId.trim().length === 0 ||
-    (totalResources(give) === 0 && totalResources(receive) === 0) ||
-    RESOURCE_TYPES.some((resource) => give[resource] > 0 && receive[resource] > 0) ||
-    RESOURCE_TYPES.some((resource) =>
-      !Number.isInteger(give[resource]) ||
-      !Number.isInteger(receive[resource]) ||
-      give[resource] < 0 ||
-      receive[resource] < 0
-    )
-  ) {
+  if (offerId.trim().length === 0 || !validTradeTerms(give, receive)) {
     return reject(state, "INVALID_TRADE", "The trade offer is invalid");
   }
   const proposer = requirePlayer(state, actorId);
@@ -96,6 +95,35 @@ function openOffer(
       openTrade: { offerId, proposerId: actorId, give, receive, responses: [] },
     },
     { type: "trade_offered", offerId, playerId: actorId },
+  );
+}
+
+function counterOffer(
+  state: GameState,
+  actorId: PlayerId,
+  offerId: string,
+  proposerGives: ResourceHand,
+  proposerReceives: ResourceHand,
+): GameCommandResult {
+  const offer = state.openTrade;
+  if (offer === null || offer.offerId !== offerId) return reject(state, "TRADE_NOT_FOUND", "Trade offer not found");
+  if (offer.proposerId === actorId) return reject(state, "INVALID_TRADE", "The proposer cannot counter their own offer");
+  if (state.phase.kind !== "turn" || state.phase.activePlayerId !== offer.proposerId) {
+    return reject(state, "INVALID_TRADE", "The offer is no longer active");
+  }
+  if (!validTradeTerms(proposerGives, proposerReceives)) {
+    return reject(state, "INVALID_TRADE", "The counteroffer is invalid");
+  }
+  const responder = requirePlayer(state, actorId);
+  if (!hasResources(responder.resources, proposerReceives)) return insufficient(state);
+
+  const responses = [
+    ...offer.responses.filter((candidate) => candidate.playerId !== actorId),
+    { playerId: actorId, response: "countered" as const, proposerGives, proposerReceives },
+  ];
+  return accepted(
+    { ...state, revision: state.revision + 1, openTrade: { ...offer, responses } },
+    { type: "trade_response_recorded", offerId, playerId: actorId, response: "countered" },
   );
 }
 
@@ -137,12 +165,15 @@ function completeOffer(
   if (state.phase.kind !== "turn" || state.phase.activePlayerId !== actorId) {
     return reject(state, "INVALID_TRADE", "The offer is no longer active");
   }
-  if (!offer.responses.some((candidate) => candidate.playerId === partnerId && candidate.response === "accepted")) {
-    return reject(state, "INVALID_TRADE", "The selected player has not accepted this offer");
+  const selectedResponse = offer.responses.find((candidate) => candidate.playerId === partnerId);
+  if (selectedResponse === undefined || selectedResponse.response === "declined") {
+    return reject(state, "INVALID_TRADE", "The selected player has not accepted or countered this offer");
   }
+  const give = selectedResponse.response === "countered" ? selectedResponse.proposerGives : offer.give;
+  const receive = selectedResponse.response === "countered" ? selectedResponse.proposerReceives : offer.receive;
   const proposer = requirePlayer(state, offer.proposerId);
   const accepter = requirePlayer(state, partnerId);
-  if (!hasResources(proposer.resources, offer.give) || !hasResources(accepter.resources, offer.receive)) {
+  if (!hasResources(proposer.resources, give) || !hasResources(accepter.resources, receive)) {
     return insufficient(state);
   }
 
@@ -150,13 +181,13 @@ function completeOffer(
     if (player.id === proposer.id) {
       return {
         ...player,
-        resources: addResourceHands(subtractResourceHands(player.resources, offer.give), offer.receive),
+        resources: addResourceHands(subtractResourceHands(player.resources, give), receive),
       };
     }
     if (player.id === accepter.id) {
       return {
         ...player,
-        resources: addResourceHands(subtractResourceHands(player.resources, offer.receive), offer.give),
+        resources: addResourceHands(subtractResourceHands(player.resources, receive), give),
       };
     }
     return player;
@@ -168,9 +199,22 @@ function completeOffer(
       offerId,
       proposerId: proposer.id,
       accepterId: accepter.id,
-      give: offer.give,
-      receive: offer.receive,
+      give,
+      receive,
     },
+  );
+}
+
+function validTradeTerms(give: ResourceHand, receive: ResourceHand): boolean {
+  return !(
+    (totalResources(give) === 0 && totalResources(receive) === 0) ||
+    RESOURCE_TYPES.some((resource) => give[resource] > 0 && receive[resource] > 0) ||
+    RESOURCE_TYPES.some((resource) =>
+      !Number.isInteger(give[resource]) ||
+      !Number.isInteger(receive[resource]) ||
+      give[resource] < 0 ||
+      receive[resource] < 0
+    )
   );
 }
 

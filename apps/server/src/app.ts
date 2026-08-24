@@ -83,6 +83,12 @@ const gameCommandSchema = z.object({
     z.object({ type: z.literal("AcceptTradeOffer"), offerId: z.string().min(1) }),
     z.object({ type: z.literal("DeclineTradeOffer"), offerId: z.string().min(1) }),
     z.object({
+      type: z.literal("CounterTradeOffer"),
+      offerId: z.string().min(1),
+      proposerGives: z.object({ brick: z.number().int().nonnegative(), lumber: z.number().int().nonnegative(), wool: z.number().int().nonnegative(), grain: z.number().int().nonnegative(), ore: z.number().int().nonnegative() }),
+      proposerReceives: z.object({ brick: z.number().int().nonnegative(), lumber: z.number().int().nonnegative(), wool: z.number().int().nonnegative(), grain: z.number().int().nonnegative(), ore: z.number().int().nonnegative() }),
+    }),
+    z.object({
       type: z.literal("CompleteTradeOffer"),
       offerId: z.string().min(1),
       partnerId: z.string().min(1),

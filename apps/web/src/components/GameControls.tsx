@@ -47,7 +47,7 @@ export function GameControls({
 
   if (game.interaction.kind === "turn-roll") {
     return (
-      <div className="action-stack xl:grid-cols-2">
+      <div className="action-stack grid-cols-2">
         <DevelopmentControls game={game} busy={busy} onCommand={onCommand} />
         <Button type="button" disabled={busy} onClick={() => onCommand({ type: "RollDice" })}>
           {busy ? "掷骰中…" : "掷骰子"}
@@ -58,7 +58,7 @@ export function GameControls({
 
   if (game.interaction.kind === "turn-action") {
     return (
-      <div className="action-stack xl:grid-cols-3 xl:items-start">
+      <div className="action-stack grid-cols-3 items-start">
         <DevelopmentControls game={game} busy={busy} onCommand={onCommand} />
         <TradeControls
           game={game}
@@ -74,7 +74,7 @@ export function GameControls({
         <Button type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
           {busy ? "提交中…" : "结束回合"}
         </Button>
-        <div className="build-buttons xl:col-span-3" aria-label="建造选项">
+        <div className="build-buttons col-span-3" aria-label="建造选项">
           {([
             ["road", "道路", game.interaction.roadEdgeIds.length],
             ["settlement", "定居点", game.interaction.settlementVertexIds.length],
@@ -96,7 +96,7 @@ export function GameControls({
             </Button>
           ))}
         </div>
-        <small className="xl:col-span-3">道路：砖+木　定居点：砖+木+羊+麦　城市：2麦+3矿</small>
+        <small className="col-span-3 max-lg:hidden">道路：砖+木　定居点：砖+木+羊+麦　城市：2麦+3矿</small>
       </div>
     );
   }
@@ -164,7 +164,7 @@ export function GameControls({
   }
 
   if (game.interaction.kind === "trade-response") {
-    return <p>请在右侧交易桌回应这份报价。</p>;
+    return <p>请在交易桌回应这份报价。</p>;
   }
 
   if (game.interaction.kind === "free-road") {

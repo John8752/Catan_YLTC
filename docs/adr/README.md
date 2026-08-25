@@ -9,5 +9,6 @@
 | [ADR-0005](./adr-0005-frontend-stack.md) | React, Tailwind CSS v4, shadcn/ui and Radix UI | Accepted |
 | [ADR-0006](./adr-0006-event-driven-game-effects.md) | Server-event-driven, reconnect-safe game effects | Accepted |
 | [ADR-0007](./adr-0007-in-memory-single-instance-runtime.md) | In-memory, single-instance runtime with idle room eviction | Accepted |
+| [ADR-0008](./adr-0008-adaptive-game-surface.md) | One shared game surface with adaptive mobile and desktop containers | Accepted |
 
 Add a new ADR when reversing an accepted decision. Do not silently rewrite the historical reason.

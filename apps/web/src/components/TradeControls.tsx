@@ -2,6 +2,7 @@ import type { GameCommand, GameView } from "@catan/protocol";
 import { ArrowRightLeft, ChevronUp, Handshake, Landmark, Send, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button.js";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
 import { randomId } from "@/lib/random-id.js";
 import { cn } from "@/lib/utils.js";
@@ -74,38 +75,38 @@ export function TradeControls({
   const sameResource = give === receive;
 
   return (
-    <div className="grid gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        aria-expanded={composerOpen}
-        aria-controls="trade-composer-panel"
-        className={cn(
-          "w-full border-[#a65c43]/25 bg-[#fffaf0]/80 shadow-sm",
-          composerOpen && "border-[#37685d]/45 bg-[#37685d] text-white hover:bg-[#315d53] hover:text-white",
-        )}
-        onClick={() => setComposerOpen(!composerOpen)}
-      >
-        {composerOpen ? <ChevronUp className="size-4" /> : <ArrowRightLeft className="size-4" />}
-        {composerOpen ? "收起交易" : "发起交易"}
-      </Button>
-
-      {composerOpen ? (
-        <section
-          id="trade-composer-panel"
-          className="trade-composer-panel grid gap-3 rounded-2xl border border-[#f7e6bf]/45 bg-[#f3e4c5]/98 p-3 text-[#263d39] shadow-2xl lg:absolute lg:right-0 lg:bottom-[calc(100%+0.75rem)] lg:z-30 lg:max-h-[min(50svh,34rem)] lg:w-[min(44rem,calc(100vw-380px))] lg:overflow-y-auto"
-          aria-label="交易编辑器"
+    <Dialog open={composerOpen} onOpenChange={setComposerOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-expanded={composerOpen}
+          className={cn(
+            "w-full border-[#a65c43]/25 bg-[#fffaf0]/80 shadow-sm",
+            composerOpen && "border-[#37685d]/45 bg-[#37685d] text-white hover:bg-[#315d53] hover:text-white",
+          )}
         >
-          <header className="flex items-center justify-between gap-3 border-b border-[#6d5434]/15 pb-2">
+          {composerOpen ? <ChevronUp className="size-4" /> : <ArrowRightLeft className="size-4" />}
+          {composerOpen ? "收起交易" : "发起交易"}
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent
+        id="trade-composer-panel"
+        className="trade-composer-sheet max-h-[70dvh] max-w-none gap-0 overflow-y-auto border-[#f7e6bf]/45 bg-[#f3e4c5]/98 p-3 text-[#263d39] shadow-2xl lg:max-h-[min(80dvh,44rem)] lg:max-w-3xl lg:rounded-2xl"
+        showCloseButton={false}
+      >
+        <section className="grid gap-3" aria-label="交易编辑器">
+          <DialogHeader className="flex-row items-center justify-between gap-3 border-b border-[#6d5434]/15 pb-2 text-left">
             <div className="flex items-center gap-2">
               <span className="grid size-9 place-items-center rounded-full bg-[#214d48] text-[#fff8df]"><Handshake className="size-4" /></span>
               <div>
-                <strong className="block font-serif text-lg">交易桌</strong>
-                <small className="text-[#6b716a]">组合资源后发布，棋盘仍可查看</small>
+                <DialogTitle className="font-serif text-lg">交易桌</DialogTitle>
+                <DialogDescription className="text-xs text-[#6b716a]">组合资源后发布，棋盘仍可查看</DialogDescription>
               </div>
             </div>
             <Button type="button" variant="ghost" size="icon-sm" aria-label="收起交易编辑器" onClick={() => setComposerOpen(false)}><X /></Button>
-          </header>
+          </DialogHeader>
 
           <Tabs defaultValue={allowPlayerTrades ? "players" : "bank"}>
             <TabsList className={cn("grid h-10 w-full rounded-xl bg-[#dfcba4]/75 p-1", allowPlayerTrades ? "grid-cols-2" : "grid-cols-1")}>
@@ -122,11 +123,11 @@ export function TradeControls({
                   setPlayerGive(emptyTradeBasket());
                   setPlayerReceive(emptyTradeBasket());
                 }}>
-                  {handPickerExternal ? <p className="m-0 rounded-lg bg-[#214d48]/8 px-3 py-2 text-center text-xs font-bold text-[#45625c]">点击左侧“我的资源”加入我提供的卡片</p> : null}
+                  {handPickerExternal ? <p className="m-0 hidden rounded-lg bg-[#214d48]/8 px-3 py-2 text-center text-xs font-bold text-[#45625c] lg:block">点击下方“我的资源”加入我提供的卡片</p> : null}
                   <TradeExchange
                     giveLabel="我提供"
                     receiveLabel="我希望获得"
-                    give={<TradeResourceBasket label="我提供" value={playerGive} maximums={game.you.resources} showPalette={!handPickerExternal} onChange={setPlayerGive} />}
+                    give={<TradeResourceBasket label="我提供" value={playerGive} maximums={game.you.resources} showPalette onChange={setPlayerGive} />}
                     receive={<TradeResourceBasket label="我希望获得" value={playerReceive} onChange={setPlayerReceive} />}
                   />
                   <TradeValidationNote problem={playerOfferProblem} fallback="可组合多种资源；点击已选卡片会撤回 1 张。" />
@@ -160,8 +161,8 @@ export function TradeControls({
             </TabsContent>
           </Tabs>
         </section>
-      ) : null}
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

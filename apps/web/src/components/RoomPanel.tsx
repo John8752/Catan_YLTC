@@ -32,7 +32,8 @@ export interface RoomPanelProps {
   readonly onLeave: () => void | Promise<void>;
   readonly onAbandonSeat: () => void;
   readonly onOpenExtraSeat: (() => void) | null;
-  readonly gamePanel?: ReactNode;
+  readonly embedded?: boolean;
+  readonly showPlayers?: boolean;
 }
 
 const PLAYER_COLORS = {
@@ -54,7 +55,8 @@ export function RoomPanel({
   onLeave,
   onAbandonSeat,
   onOpenExtraSeat,
-  gamePanel,
+  embedded = false,
+  showPlayers = true,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
   const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 3;
@@ -62,8 +64,8 @@ export function RoomPanel({
   const playerLimits = room.settings.ruleProfile === "extended-5-6" ? ([5, 6] as const) : ([3, 4] as const);
 
   return (
-    <aside className="min-h-0 lg:col-start-2 lg:row-span-3 lg:row-start-1" aria-label="房间状态">
-      <Card className="min-h-0 gap-0 overflow-hidden border-white/20 bg-[#f3e6c8]/96 py-0 shadow-2xl backdrop-blur-sm lg:h-full">
+    <aside className={cn("min-h-0", !embedded && "lg:col-start-2 lg:row-span-3 lg:row-start-1")} aria-label="房间状态">
+      <Card className={cn("min-h-0 gap-0 overflow-hidden border-white/20 bg-[#f3e6c8]/96 py-0 shadow-2xl backdrop-blur-sm", !embedded && "lg:h-full")}>
         <CardHeader className="border-b border-[#5f4b31]/15 px-5 py-4" data-resource-source="bank">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -79,8 +81,6 @@ export function RoomPanel({
             </Badge>
           </div>
         </CardHeader>
-
-        {gamePanel}
 
         <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-3">
           {room.game === null ? null : (
@@ -194,7 +194,7 @@ export function RoomPanel({
             </section>
           ) : null}
 
-          <section aria-label="落座玩家">
+          {showPlayers ? <section aria-label="落座玩家">
             <div className="mb-2 flex items-center justify-between text-xs font-black tracking-[.12em] text-[#5d665f] uppercase">
               <span className="flex items-center gap-2"><Users className="size-4 text-[#b45c42]" />落座玩家</span>
               <span>{room.members.length}/{room.settings.playerLimit}</span>
@@ -229,7 +229,7 @@ export function RoomPanel({
                 );
               })}
             </div>
-          </section>
+          </section> : null}
 
           {room.game === null ? (
             <div className="mt-auto rounded-xl border border-[#695237]/15 bg-white/35 p-3 text-center text-sm text-[#6e746d]">

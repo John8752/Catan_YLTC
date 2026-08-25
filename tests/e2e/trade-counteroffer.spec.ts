@@ -75,12 +75,21 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await proposerPage.getByRole("button", { name: "发起交易" }).click();
     await expect(proposerPage.getByRole("region", { name: "交易编辑器" })).toBeVisible();
     await expect(proposerPage.locator('[data-board-root="true"]')).toBeVisible();
-    expect(await proposerPage.getByRole("dialog").count()).toBe(0);
+    await expect(proposerPage.getByRole("dialog", { name: "交易桌" })).toBeVisible();
     const artifactDir = path.join(process.cwd(), "output", "playwright");
     await mkdir(artifactDir, { recursive: true });
     await proposerPage.screenshot({ path: path.join(artifactDir, "trade-composer-desktop.png"), fullPage: true });
+    await proposerPage.keyboard.press("Escape");
+    await expect(proposerPage.getByRole("dialog", { name: "交易桌" })).toBeHidden();
+    await proposerPage.setViewportSize({ width: 390, height: 844 });
+    await proposerPage.getByRole("button", { name: "发起交易" }).click();
+    await expect(proposerPage.getByRole("dialog", { name: "交易桌" })).toBeVisible();
+    await expect.poll(() => proposerPage.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
+    await proposerPage.waitForTimeout(250);
+    await proposerPage.screenshot({ path: path.join(artifactDir, "trade-composer-mobile.png"), fullPage: true });
     await proposerPage.getByRole("button", { name: new RegExp(`在我希望获得中加入 1 张${RESOURCE_LABELS[responderResource]}`) }).click();
     await proposerPage.getByRole("button", { name: "向所有玩家发布报价" }).click();
+    await proposerPage.setViewportSize({ width: 1280, height: 720 });
 
     await responderPage.setViewportSize({ width: 390, height: 844 });
     await expect(responderPage.getByRole("region", { name: "查看报价并回应" })).toBeVisible();

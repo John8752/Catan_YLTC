@@ -1,5 +1,8 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import type { KeyboardEvent } from "react";
+import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { Button } from "@/components/ui/button.js";
+import { useBoardViewport } from "@/hooks/use-board-viewport.js";
 import {
   axialToPixel,
   BOARD_HEX_SIZE,
@@ -28,6 +31,7 @@ export function Board({
   onRobberHexSelect,
 }: BoardProps) {
   const robberHex = game.map.hexes.find((hex) => hex.id === game.map.robberHexId);
+  const viewport = useBoardViewport();
 
   return (
     <section className="board-shell" data-board-root="true" aria-labelledby="board-title">
@@ -39,15 +43,16 @@ export function Board({
         <span className="phase-chip">{phaseLabel(game)}</span>
       </div>
 
-      <div className="board-stage">
-        <svg
-          className="board-svg"
-          viewBox={boardViewBox(game.map)}
-          role="img"
-          aria-label={game.map.hexes.length === 19
-            ? "由十九块六边形地形组成的游戏棋盘"
-            : "由三十块六边形地形组成的游戏棋盘"}
-        >
+      <div className="board-stage" {...viewport.viewportProps}>
+        <div className="board-transform" style={viewport.transformStyle}>
+          <svg
+            className="board-svg"
+            viewBox={boardViewBox(game.map)}
+            role="img"
+            aria-label={game.map.hexes.length === 19
+              ? "由十九块六边形地形组成的游戏棋盘"
+              : "由三十块六边形地形组成的游戏棋盘"}
+          >
           <defs>
             <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">
               <feDropShadow dx="0" dy="5" stdDeviation="4" floodOpacity="0.22" />
@@ -206,8 +211,14 @@ export function Board({
             coordinateScale={BOARD_HEX_SIZE}
             onCommand={onCommand}
           />
-          <BoardPorts map={game.map} />
-        </svg>
+            <BoardPorts map={game.map} />
+          </svg>
+        </div>
+        <div className="board-zoom-controls" aria-label="地图缩放">
+          <Button type="button" size="icon-sm" variant="secondary" aria-label="缩小地图" disabled={viewport.scale <= 1} onClick={viewport.zoomOut}><ZoomOut /></Button>
+          <Button type="button" size="icon-sm" variant="secondary" aria-label="恢复地图大小" disabled={viewport.scale === 1} onClick={viewport.reset}><RotateCcw /></Button>
+          <Button type="button" size="icon-sm" variant="secondary" aria-label="放大地图" disabled={viewport.scale >= 2.6} onClick={viewport.zoomIn}><ZoomIn /></Button>
+        </div>
       </div>
       <p className="board-instruction" aria-live="polite">{boardInstruction(game, buildMode)}</p>
     </section>

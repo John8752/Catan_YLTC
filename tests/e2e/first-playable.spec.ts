@@ -132,6 +132,32 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
 
     await host.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => host.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await expect.poll(() => host.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
+    const opponentStrip = host.getByRole("region", { name: "其他玩家" });
+    await expect(opponentStrip).toBeVisible();
+    await expect.poll(() => opponentStrip.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    const playerDock = host.locator(".player-dock");
+    await expect(playerDock).toBeVisible();
+    await expect.poll(async () => {
+      const box = await playerDock.boundingBox();
+      return box !== null && box.y + box.height <= 845 && box.y + box.height >= 810;
+    }).toBe(true);
+    const boardTransform = host.locator(".board-transform");
+    const fittedTransform = await boardTransform.evaluate((element) => getComputedStyle(element).transform);
+    await host.getByRole("button", { name: "放大地图" }).click();
+    await expect.poll(() => boardTransform.evaluate((element) => getComputedStyle(element).transform)).not.toBe(fittedTransform);
+    await host.getByRole("button", { name: "恢复地图大小" }).click();
+    const gameInfoTrigger = host.getByRole("button", { name: /打开公开记录与房间信息/ });
+    await expect(gameInfoTrigger).toBeVisible();
+    await gameInfoTrigger.click();
+    const gameInfoDialog = host.getByRole("dialog", { name: "公开记录与房间信息" });
+    await expect(gameInfoDialog).toBeVisible();
+    await expect(host.getByRole("region", { name: "公开记录" })).toBeVisible();
+    await host.waitForTimeout(250);
+    await host.screenshot({ path: path.join(artifactDir, "mobile-history-sheet.png"), fullPage: true });
+    await host.keyboard.press("Escape");
+    await expect(gameInfoDialog).toBeHidden();
+    await expect(gameInfoTrigger).toBeVisible();
     await host.screenshot({ path: path.join(artifactDir, "e2e-mobile.png"), fullPage: true });
   } finally {
     await Promise.allSettled(contexts.map((context) => context.close()));

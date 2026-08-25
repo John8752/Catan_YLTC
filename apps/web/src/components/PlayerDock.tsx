@@ -26,46 +26,36 @@ export function PlayerDock({
   onBuildModeChange,
 }: PlayerDockProps) {
   const [discardSelection, setDiscardSelection] = useState<ResourceHand>(emptyResourceSelection);
-  const [tradeGive, setTradeGive] = useState<ResourceHand>(emptyResourceSelection);
-  const [tradeComposerOpen, setTradeComposerOpen] = useState(false);
 
   useEffect(() => {
     if (game.interaction.kind !== "discard") setDiscardSelection(emptyResourceSelection());
   }, [game.interaction.kind]);
 
-  useEffect(() => {
-    if (game.openTrade !== null || game.interaction.kind !== "turn-action") {
-      setTradeComposerOpen(false);
-      setTradeGive(emptyResourceSelection());
-    }
-  }, [game.interaction.kind, game.openTrade]);
-
-  const activeSelection = game.interaction.kind === "discard"
-    ? discardSelection
-    : tradeComposerOpen
-      ? tradeGive
-      : null;
-  const activeSelectionLabel = game.interaction.kind === "discard" ? "准备弃掉" : "我提供";
+  const activeSelection = game.interaction.kind === "discard" ? discardSelection : null;
+  const activeSelectionLabel = "准备弃掉";
 
   const addFromHand = (resource: ResourceType) => {
     if (activeSelection === null) return;
     const next = incrementResource(activeSelection, resource, game.you.resources[resource]);
-    if (game.interaction.kind === "discard") setDiscardSelection(next);
-    else setTradeGive(next);
+    setDiscardSelection(next);
   };
 
   return (
-    <Card className="player-dock relative gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-3 shadow-2xl backdrop-blur-sm lg:col-start-1 lg:row-start-3">
-      <div className="grid items-stretch gap-3 xl:grid-cols-[auto_minmax(270px,.75fr)_minmax(430px,1.25fr)]">
-        <div className="flex min-w-28 items-center gap-2 rounded-xl border border-[#6d5434]/15 bg-white/35 px-3 py-2">
-          <span className="grid size-10 place-items-center rounded-full bg-[#1f5651] text-[#fff8df]"><UserRound className="size-5" /></span>
+    <Card className="player-dock relative gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-2 shadow-2xl backdrop-blur-sm lg:col-start-1 lg:row-start-4 lg:p-3">
+      <div className="grid grid-cols-[minmax(72px,.26fr)_minmax(0,1fr)] items-stretch gap-2 lg:gap-3 xl:grid-cols-[auto_minmax(270px,.75fr)_minmax(430px,1.25fr)]">
+        <div
+          className="self-seat flex min-w-0 items-center gap-2 rounded-xl border border-[#6d5434]/15 bg-white/35 px-2 py-1.5 lg:min-w-28 lg:px-3 lg:py-2"
+          data-player-id={game.you.id}
+          data-current-player="true"
+        >
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#1f5651] text-[#fff8df] lg:size-10"><UserRound className="size-4 lg:size-5" /></span>
           <div>
             <span className="block text-[10px] font-black tracking-[.12em] text-[#9d513d] uppercase">你的席位</span>
             <strong className="text-sm text-[#243d39]">{game.you.name}</strong>
           </div>
         </div>
 
-        <section className="grid grid-cols-5 gap-2" aria-label="你的资源">
+        <section className="grid grid-cols-5 gap-1 lg:gap-2" aria-label="你的资源">
           {RESOURCE_TYPES.map((resource) => {
             const count = game.you.resources[resource];
             const selected = activeSelection?.[resource] ?? 0;
@@ -77,6 +67,7 @@ export function PlayerDock({
                 count={count}
                 selectedCount={selected}
                 targetId={`${game.you.id}:${resource}`}
+                className="max-lg:min-h-12 max-lg:px-1.5 max-lg:py-1"
                 disabled={interactive && selected >= count}
                 ariaLabel={interactive
                   ? `在${activeSelectionLabel}中加入 1 张${resourceLabel(resource)}，持有 ${count} 张，已选 ${selected} 张`
@@ -87,8 +78,8 @@ export function PlayerDock({
           })}
         </section>
 
-        <section className="rounded-xl border border-[#6d5434]/15 bg-white/40 px-3 py-2" aria-label="本回合操作">
-          <div className="mb-1.5 flex items-center justify-between gap-2">
+        <section className="col-span-2 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1.5 lg:px-3 lg:py-2 xl:col-span-1" aria-label="本回合操作">
+          <div className="mb-1 flex items-center justify-between gap-2 lg:mb-1.5">
             <span className="flex items-center gap-1.5 text-[10px] font-black tracking-[.12em] text-[#5d665f] uppercase"><Hammer className="size-3.5" />本回合操作</span>
             {game.lastRoll === null ? null : (
               <Badge
@@ -109,10 +100,6 @@ export function PlayerDock({
             onBuildModeChange={onBuildModeChange}
             discardSelection={discardSelection}
             onDiscardSelectionChange={setDiscardSelection}
-            tradeGive={tradeGive}
-            onTradeGiveChange={setTradeGive}
-            tradeComposerOpen={tradeComposerOpen}
-            onTradeComposerOpenChange={setTradeComposerOpen}
           />
         </section>
       </div>

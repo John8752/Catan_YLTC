@@ -14,7 +14,9 @@ import {
 } from "./api.js";
 import { Board } from "./components/Board.js";
 import { LobbySetup } from "./components/LobbySetup.js";
+import { OpponentStrip } from "./components/OpponentStrip.js";
 import { PlayerDock } from "./components/PlayerDock.js";
+import { ResponsiveRoomPanel } from "./components/ResponsiveRoomPanel.js";
 import { RoomPanel } from "./components/RoomPanel.js";
 import { ActiveTradePanel } from "./components/ActiveTradePanel.js";
 import { Welcome } from "./components/Welcome.js";
@@ -242,13 +244,18 @@ export function App() {
     );
   }
 
+  const liveGame = room.game;
+
   return (
-    <main className="game-layout grid min-h-svh grid-cols-1 gap-3 p-3 lg:h-svh lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:overflow-hidden">
+    <main className={liveGame === null
+      ? "game-layout grid min-h-svh grid-cols-1 gap-3 p-3 lg:h-svh lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:overflow-hidden"
+      : "game-layout live-game-layout"}>
       <div className="game-brand lg:col-start-1 lg:row-start-1" aria-label="Catan YLTC">
         <span aria-hidden="true">⬡</span>
         <strong>Catan YLTC</strong>
       </div>
-      <div className="playfield min-h-[420px] lg:col-start-1 lg:row-start-2 lg:min-h-0">
+      {liveGame === null ? null : <OpponentStrip game={liveGame} />}
+      <div className={liveGame === null ? "playfield min-h-[420px] lg:col-start-1 lg:row-start-2 lg:min-h-0" : "playfield live-playfield"}>
         {room.game === null ? (
           <LobbySetup
             room={room}
@@ -286,7 +293,7 @@ export function App() {
           onBuildModeChange={setBuildMode}
         />
       )}
-      <RoomPanel
+      {liveGame === null ? <RoomPanel
         room={room}
         playerId={session.playerId}
         connectionState={connectionState}
@@ -296,10 +303,22 @@ export function App() {
         onLeave={handleLeave}
         onAbandonSeat={handleAbandonSeat}
         onOpenExtraSeat={isLocalHost ? handleOpenExtraSeat : null}
-        gamePanel={room.game?.openTrade === null || room.game === null ? null : (
-          <ActiveTradePanel game={room.game} busy={busy} onCommand={handleGameCommand} />
-        )}
-      />
+      /> : <ResponsiveRoomPanel
+        room={room}
+        playerId={session.playerId}
+        connectionState={connectionState}
+        busy={busy}
+        onStart={handleStart}
+        onSettingsChange={handleRoomSettingsChange}
+        onLeave={handleLeave}
+        onAbandonSeat={handleAbandonSeat}
+        onOpenExtraSeat={isLocalHost ? handleOpenExtraSeat : null}
+      />}
+      {liveGame?.openTrade === null || liveGame === null ? null : (
+        <div className="active-trade-surface">
+          <ActiveTradePanel game={liveGame} busy={busy} onCommand={handleGameCommand} />
+        </div>
+      )}
       <ResourceEffectLayer effect={activeEffect} onComplete={completeActiveEffect} />
       {error === null ? null : <p className="toast-error" role="alert">{error}</p>}
     </main>

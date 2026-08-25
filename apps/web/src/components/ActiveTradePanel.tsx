@@ -59,7 +59,7 @@ export function ActiveTradePanel({ game, busy, onCommand }: {
     <Collapsible open={expanded} onOpenChange={setExpanded} asChild>
       <section
         id="active-trade-panel"
-        className="mx-3 mt-3 overflow-hidden rounded-2xl border border-[#8d5b3f]/20 bg-[#fff8e8]/82 shadow-[0_8px_20px_rgba(65,45,28,.14)]"
+        className="overflow-hidden rounded-2xl border border-[#8d5b3f]/20 bg-[#fff8e8]/96 shadow-[0_8px_20px_rgba(65,45,28,.24)] backdrop-blur-sm"
         aria-label={ownOffer ? "等待桌上回应" : "查看报价并回应"}
       >
         <CollapsibleTrigger asChild>

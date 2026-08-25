@@ -513,4 +513,48 @@ describe("room API", () => {
       error: { code: "NOT_ENOUGH_PLAYERS" },
     });
   });
+
+  it("names the room and the reason on a rejected request", async () => {
+    const lines: Record<string, unknown>[] = [];
+    const app = await buildApp(new RoomRegistry(), {
+      logger: {
+        level: "warn",
+        stream: { write: (line: string) => void lines.push(JSON.parse(line) as Record<string, unknown>) },
+      },
+    });
+    apps.push(app);
+    const host = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "林" },
+    })).json<PlayerSessionResponse>();
+
+    const rejected = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/start`,
+      payload: { seatToken: host.seatToken },
+    });
+    expect(rejected.statusCode).toBe(400);
+
+    // Without these two fields a burst of 400s in the journal cannot be told
+    // apart from any other, which is what made a laggy room undiagnosable.
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        msg: "request rejected",
+        route: "/api/rooms/:roomId/start",
+        roomId: host.roomId,
+        code: "NOT_ENOUGH_PLAYERS",
+      }),
+    );
+  });
+
+  it("compresses room pushes on the game socket", async () => {
+    const app = await buildApp();
+    apps.push(app);
+
+    // Caddy's gzip covers HTTP only, so a late-game room push -- ~75 KB of map,
+    // history and effects -- leaves this process uncompressed unless the socket
+    // negotiates deflate itself.
+    expect(app.websocketServer.options.perMessageDeflate).toMatchObject({ threshold: 1024 });
+  });
 });

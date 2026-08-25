@@ -132,18 +132,44 @@ export async function buildApp(registry = new RoomRegistry(), options: AppOption
 
   // Routes answer their own errors, so Fastify never sees them. Log the route
   // pattern rather than request.url: seat tokens travel in the query string.
+  //
+  // The room id and the error code ride along because without them a rejection is
+  // undiagnosable: a burst of 400s on this route reads the same whether players
+  // are racing each other into STALE_REVISION or clicking moves the rules refuse,
+  // and those want opposite fixes. Both values are safe to keep -- the room id is
+  // the code printed on screen for players to share, and the error code is one of
+  // a fixed set of constants.
   app.addHook("onResponse", async (request, reply) => {
     if (reply.statusCode < 400) return;
+    const params = request.params as { readonly roomId?: string } | undefined;
     const line = {
       method: request.method,
       route: request.routeOptions.url ?? request.url,
       status: reply.statusCode,
+      roomId: params?.roomId,
+      code: rejectionCodes.get(reply),
     };
     if (reply.statusCode >= 500) request.log.error(line, "request failed");
     else request.log.warn(line, "request rejected");
   });
 
-  await app.register(websocket);
+  // Every accepted command pushes the whole room to every seat, and by the late
+  // game that projection is ~75 KB: the immutable map, plus the trailing event
+  // records rendered twice (`history` and `effects`). Caddy's `encode gzip` only
+  // covers HTTP responses -- WebSocket frames pass through it untouched -- so
+  // without this the push went out uncompressed to phones on a 300 ms link.
+  // The same payload deflates to ~6.6 KB, so the compression is worth the per
+  // connection zlib context (a table of players is a handful of sockets).
+  await app.register(websocket, {
+    options: {
+      perMessageDeflate: {
+        // Below a kilobyte the frames are lobby chatter that deflate cannot
+        // meaningfully shrink; paying for a zlib pass there is pure overhead.
+        threshold: 1024,
+        zlibDeflateOptions: { level: 6 },
+      },
+    },
+  });
   await app.register(rateLimit, {
     global: false,
     errorResponseBuilder: () =>
@@ -155,9 +181,11 @@ export async function buildApp(registry = new RoomRegistry(), options: AppOption
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     const statusCode = error.statusCode ?? 500;
     if (statusCode >= 500) {
+      rejectionCodes.set(reply, "INTERNAL_ERROR");
       return reply.code(500).send({ error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } });
     }
     const code = statusCode === 429 ? "TOO_MANY_REQUESTS" : "INVALID_REQUEST";
+    rejectionCodes.set(reply, code);
     return reply.code(statusCode).send({ error: { code, message: error.message } });
   });
 
@@ -296,6 +324,14 @@ export async function buildApp(registry = new RoomRegistry(), options: AppOption
   return app;
 }
 
+/**
+ * Why each failed reply was refused, for the response log to pick up.
+ *
+ * A WeakMap rather than a field on the reply: the entry disappears with the
+ * request it belongs to, so a long-running process cannot accumulate them.
+ */
+const rejectionCodes = new WeakMap<FastifyReply, string>();
+
 function sendError(reply: FastifyReply, error: unknown) {
   const normalized = normalizeError(error);
   const statusCode =
@@ -305,6 +341,7 @@ function sendError(reply: FastifyReply, error: unknown) {
         ? 500
         : 400;
 
+  rejectionCodes.set(reply, normalized.code);
   return reply.code(statusCode).send({ error: normalized });
 }
 

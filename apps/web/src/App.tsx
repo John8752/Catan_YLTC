@@ -1,6 +1,7 @@
 import type { GameCommand, RoomView } from "@catan/protocol";
 import { useEffect, useState } from "react";
 import {
+  ApiError,
   connectToRoom,
   createRoom,
   getRoom,
@@ -136,7 +137,7 @@ export function App() {
       try {
         setRoom(await updateRoomSettings(session, room.revision, settings));
       } catch (caught) {
-        setRoom(await getRoom(session));
+        if (isStaleStateError(caught)) setRoom(await getRoom(session));
         throw caught;
       }
     });
@@ -148,7 +149,7 @@ export function App() {
       try {
         setRoom(await rerollRoomMap(session, room.revision));
       } catch (caught) {
-        setRoom(await getRoom(session));
+        if (isStaleStateError(caught)) setRoom(await getRoom(session));
         throw caught;
       }
     });
@@ -161,7 +162,7 @@ export function App() {
         const response = await submitGameCommand(session, room.game?.revision ?? 0, command);
         setRoom(response.room);
       } catch (caught) {
-        setRoom(await getRoom(session));
+        if (isStaleStateError(caught)) setRoom(await getRoom(session));
         throw caught;
       }
     });
@@ -330,6 +331,19 @@ function readSession(): PlayerSession | null {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "发生了未知错误";
+}
+
+/**
+ * Whether a rejection means this client's copy of the room fell behind.
+ *
+ * Only then is a refetch worth it. The server compares revisions before it
+ * consults the rules, so any other rejection -- not your turn, cannot afford it,
+ * that vertex is taken -- proves the local copy already matched the server, and
+ * refetching it would only make the player wait a second round trip to be told
+ * something the first response already said.
+ */
+function isStaleStateError(error: unknown): boolean {
+  return error instanceof ApiError && ["STALE_REVISION", "STALE_ROOM_REVISION"].includes(error.code);
 }
 
 function closeSocket(socket: WebSocket): void {

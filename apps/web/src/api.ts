@@ -109,12 +109,28 @@ export function connectToRoom(
   return socket;
 }
 
+/**
+ * A rejection the server explained. The code travels with the message because
+ * the caller's recovery depends on it: a stale revision means this client's copy
+ * of the room is behind and has to be refetched, while a rule rejection means the
+ * copy was right and the move simply was not allowed.
+ */
+export class ApiError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
 
   if (!response.ok) {
     const payload = (await response.json()) as ApiErrorResponse;
-    throw new Error(payload.error.message);
+    throw new ApiError(payload.error.code, payload.error.message);
   }
 
   return (await response.json()) as T;

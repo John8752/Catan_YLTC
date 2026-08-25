@@ -1,6 +1,7 @@
 import type { GameView } from "@catan/protocol";
 import { Route, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils.js";
+import { TurnTimerBadge } from "./TurnTimerBadge.js";
 
 const PLAYER_COLORS = {
   terracotta: "bg-[#c85d42]",
@@ -23,10 +24,11 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
     <section className="opponent-strip grid min-w-0 grid-flow-col auto-cols-fr gap-1 lg:gap-2" aria-label="其他玩家">
       {opponents.map((player) => {
         const active = player.id === activePlayerId;
+        const timer = game.turnTimer?.playerId === player.id ? game.turnTimer : null;
         return (
           <article
             className={cn(
-              "relative min-w-0 overflow-hidden rounded-lg border border-white/15 bg-[#173f42]/72 px-1.5 py-1 text-[#fff8df] shadow-sm backdrop-blur-sm lg:rounded-xl lg:px-2.5 lg:py-1.5",
+              "relative min-w-0 overflow-visible rounded-lg border border-white/15 bg-[#173f42]/72 px-1.5 py-1 text-[#fff8df] shadow-sm backdrop-blur-sm lg:rounded-xl lg:px-2.5 lg:py-1.5",
               active && "border-[#f0c56b]/80 bg-[#285d59]/94 ring-1 ring-[#f0c56b]/55",
             )}
             key={player.id}
@@ -47,7 +49,12 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
                 {game.awards.largestArmy.holderId === player.id ? <ShieldCheck aria-label="最大骑士力" /> : null}
               </span>
             </div>
-            {active ? <span className="absolute right-1 bottom-0.5 text-[8px] font-black tracking-wide text-[#ffd980] lg:static lg:mt-0.5 lg:block lg:text-[9px]">行动中</span> : null}
+            {timer === null ? null : (
+              <span className="absolute top-[calc(100%+.25rem)] left-0 z-30" data-turn-timer-slot="opponent">
+                <TurnTimerBadge timer={timer} className="px-2 py-1 text-xs" />
+              </span>
+            )}
+            {active && timer === null ? <span className="absolute right-1 bottom-0.5 text-[8px] font-black tracking-wide text-[#ffd980] lg:static lg:mt-0.5 lg:block lg:text-[9px]">行动中</span> : null}
           </article>
         );
       })}

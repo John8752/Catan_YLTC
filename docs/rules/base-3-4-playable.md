@@ -26,7 +26,7 @@ A complete match includes:
 - persistence after the server process exits;
 - expansions, scenarios or house rules;
 - final artwork, audio or animation polish;
-- timers, forced turns or automatic replacement of disconnected players.
+- automatic replacement of disconnected players or timeouts for mandatory discard/robber resolutions.
 
 ## Board and supply
 
@@ -65,7 +65,11 @@ Map topology is independent from map content. Vertices, edges, adjacency and coa
 
 ## Turn and production
 
-- A normal turn starts in `awaiting-roll` and ends only after the active player submits `EndTurn` from the action stage.
+- A normal turn starts in `awaiting-roll` and ends when the active player submits `EndTurn` from the action stage or when the server submits it at that stage's deadline.
+- Initial settlement/road placement has no countdown. Once setup completes, the active primary player has 5 seconds to roll; expiry makes the server submit `RollDice` for that player.
+- The normal action stage has one 120-second deadline. Commands that remain within the same action stage do not refresh it; expiry makes the server submit `EndTurn`, which also closes any unresolved trade.
+- Mandatory discard, robber movement and free-road placement are untimed. Entering one of those stages removes the visible phase countdown; returning to roll or action starts that stage's deadline.
+- Deadlines are server-owned. Clients receive the active player, deadline and server timestamp only to render the countdown and never submit an automatic timeout command themselves.
 - Normal rolls draw from a 72-roll bag containing two copies of every ordered two-die outcome. This preserves the exact two-die distribution over each bag while reducing extreme single-match droughts. The server records both dice and their total; the client never generates a roll.
 - The bag shuffle avoids three equal totals in a row and strongly penalizes long gaps for 6, 7 and 8. It never reacts to player position, resources, buildings or score.
 - A result other than 7 produces resources for every settlement or city adjacent to an unblocked matching token: settlements produce one and cities produce two.
@@ -138,11 +142,13 @@ Random deck order and stolen resources are injected outcomes and appear in the p
 - A current award holder keeps the award on a tie. A challenger takes it only by becoming strictly greater. If an interrupted route leaves tied eligible challengers and no qualifying holder, the award is unowned.
 - Public points include settlements, cities and held awards. Hidden victory-point cards are excluded from opponents' totals.
 - During the active player's own turn, after every accepted command, the engine checks their actual total. At the room's configured target or more points, it immediately emits the win and rejects further gameplay commands.
+- Normal-play score gains are presented from accepted score-bearing events. Initial setup placements are excluded from this celebratory feedback; paid settlements, city upgrades and acquired awards receive an explicit public score cue, while a hidden victory-point purchase is shown only to its owner.
+- A finished match exposes a player-safe aggregate report: visible scoring sources, dice-total frequencies, resource cards gained/spent/traded/discarded, per-resource production and public activity counts. The winner text is selected deterministically from those scoring sources and does not generate or reveal hidden card identities.
 
 ## Disconnection and history
 
 - Refreshing or reconnecting restores the same seat and the latest player-safe snapshot while the server process remains alive.
-- A disconnected player is not removed and their turn is not skipped. The game waits for them.
+- A disconnected player is not removed. Roll and action deadlines still apply; setup and mandatory resolutions continue to wait for the required seat.
 - Closing a tab is a disconnection, not an explicit leave. After the game starts, seats cannot be explicitly released because the deterministic match state still references every seated player.
 - Every accepted command has a unique command ID, expected revision and actor credential.
 - Repeating an accepted command ID returns the original result rather than applying it twice.

@@ -100,6 +100,7 @@ export type GameEvent =
   | {
       readonly type: "robber_moved";
       readonly playerId: PlayerId;
+      readonly fromHexId: HexId;
       readonly hexId: HexId;
       readonly victimId: PlayerId | null;
       readonly stolenResource: ResourceType | null;

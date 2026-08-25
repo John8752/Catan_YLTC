@@ -81,8 +81,14 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
         const flights = settlementPage.locator("[data-resource-flight]");
         if (await flights.count() > 0) {
           await expect(flights.first()).toBeVisible();
-          const flightDuration = await flights.first().evaluate((element) => Number(element.getAnimations()[0]?.effect?.getTiming().duration ?? 0));
-          expect(flightDuration).toBeGreaterThanOrEqual(1_100);
+          const flightTiming = await flights.first().evaluate((element) => {
+            const animation = element.getAnimations()[0];
+            return {
+              duration: Number(animation?.effect?.getTiming().duration ?? 0),
+              currentTime: Number(animation?.currentTime ?? 0),
+            };
+          });
+          expect(flightTiming.duration).toBeGreaterThanOrEqual(1_900);
           const targetKey = await flights.first().getAttribute("data-resource-flight");
           await settlementPage.waitForTimeout(260);
           await settlementPage.screenshot({ path: path.join(artifactDir, "resource-production-fx.png"), fullPage: true });
@@ -94,21 +100,62 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
             ? privateTarget
             : settlementPage.locator(`[data-player-target="${targetPlayerId}"]`);
           await expect(target).toBeVisible();
-          await expect.poll(() => target.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
-          await settlementPage.waitForTimeout(170);
+          await settlementPage.waitForTimeout(Math.max(0, 1_940 - flightTiming.currentTime));
           await settlementPage.screenshot({ path: path.join(artifactDir, "resource-arrival-fx.png"), fullPage: true });
           capturedResourceEffect = true;
         }
       }
       const roadPage = await pageWithAction(pages, "在这里放置道路");
       expect(roadPage).toBe(settlementPage);
-      await clickFirstActionable(roadPage, "在这里放置道路");
+      if (placement === 0) {
+        await roadPage.setViewportSize({ width: 390, height: 844 });
+        await clickFirstActionable(roadPage, "在这里放置道路");
+        const confirmRoadDialog = roadPage.getByRole("dialog", { name: "确认道路位置" });
+        await expect(confirmRoadDialog).toBeVisible();
+        await roadPage.waitForTimeout(250);
+        await roadPage.screenshot({ path: path.join(artifactDir, "mobile-road-confirm.png"), fullPage: true });
+        await roadPage.getByRole("button", { name: "确认放置" }).click();
+        await expect(confirmRoadDialog).toBeHidden();
+        await roadPage.setViewportSize({ width: 1280, height: 720 });
+      } else {
+        await clickFirstActionable(roadPage, "在这里放置道路");
+      }
     }
     expect(capturedResourceEffect).toBe(true);
 
     await expect(host.getByRole("button", { name: "掷骰子" })).toBeVisible();
-    await host.getByRole("button", { name: "掷骰子" }).click();
-    await expect(host.getByLabel(/骰子：\d \+ \d/)).toBeVisible();
+    const hostPlayerId = await host.locator('[data-current-player="true"]').getAttribute("data-player-id");
+    if (hostPlayerId === null) throw new Error("Host player id is missing from the local seat");
+    const ownRollTimer = host.locator('[data-turn-timer-slot="self"] [role="timer"]');
+    const observedRollTimer = second.locator(`[data-player-id="${hostPlayerId}"] [role="timer"]`);
+    await expect(ownRollTimer).toHaveAttribute("aria-label", /掷骰倒计时/);
+    await expect(observedRollTimer).toHaveAttribute("aria-label", /掷骰倒计时/);
+    await Promise.all([
+      host.setViewportSize({ width: 390, height: 844 }),
+      second.setViewportSize({ width: 390, height: 844 }),
+    ]);
+    const [ownTimerBox, ownDockBox, observedTimerBox, observedCardBox] = await Promise.all([
+      ownRollTimer.boundingBox(),
+      host.locator(".player-dock").boundingBox(),
+      observedRollTimer.boundingBox(),
+      second.locator(`[data-player-id="${hostPlayerId}"]`).boundingBox(),
+    ]);
+    if (ownTimerBox === null || ownDockBox === null || observedTimerBox === null || observedCardBox === null) {
+      throw new Error("Missing timer layout bounds");
+    }
+    expect(ownTimerBox.y + ownTimerBox.height).toBeLessThanOrEqual(ownDockBox.y);
+    expect(observedTimerBox.y).toBeGreaterThanOrEqual(observedCardBox.y + observedCardBox.height);
+    await host.screenshot({ path: path.join(artifactDir, "mobile-roll-timer.png"), fullPage: true });
+    await second.screenshot({ path: path.join(artifactDir, "mobile-opponent-roll-timer.png"), fullPage: true });
+    await Promise.all([
+      host.setViewportSize({ width: 1280, height: 720 }),
+      second.setViewportSize({ width: 1280, height: 720 }),
+    ]);
+    await expect(host.getByLabel(/骰子：\d \+ \d/)).toBeVisible({ timeout: 8_000 });
+    const postRollTimer = host.locator('[data-turn-timer-slot="self"] [role="timer"]');
+    if (await postRollTimer.count() > 0) {
+      await expect(postRollTimer).toHaveAttribute("aria-label", /操作倒计时/);
+    }
     await expect(host.getByRole("img", { name: "由十九块六边形地形组成的游戏棋盘" })).toBeVisible();
     await host.screenshot({ path: path.join(artifactDir, "e2e-desktop.png"), fullPage: true });
 

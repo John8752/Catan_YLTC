@@ -32,6 +32,8 @@ The profile uses the revised paired-player turn instead of the retired special b
 3. The paired player does not roll. They may trade only with the bank or their ports, build, play at most one development card, and then end their action.
 4. The next primary player is the player immediately to the left of the previous primary player. A new turn number begins and dice must be rolled.
 
+The primary roll uses the same 5-second server deadline as `base-3-4`. Both the primary action and paired-player action receive their own 120-second server deadline; expiry ends only the currently active half-turn. Setup and mandatory resolution stages remain untimed.
+
 Only primary-player rolls consume the shared 72-roll balanced dice bag. Paired-player actions never advance it.
 
 If the primary player reaches the victory target, the game ends before the paired player acts. This preserves primary-player priority from the official paired-player rule.

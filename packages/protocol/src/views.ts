@@ -2,7 +2,6 @@ import {
   BUILD_COSTS,
   hasResources,
   resourceCardCount,
-  resourceAmounts,
   legalInitialRoadEdges,
   legalInitialSettlementVertices,
   legalCityVertices,
@@ -20,7 +19,6 @@ import {
   type GameMap,
   type PlayerColor,
   type ResourceHand,
-  type ResourceGrantSource,
   type RoadState,
   RESOURCE_TYPES,
   type ResourceType,
@@ -28,6 +26,9 @@ import {
   type RuleProfile,
   type PlayableRuleProfile,
 } from "@catan/game-core";
+import { projectPlayerSafeEffect, type PublicGameEffectView } from "./game-effects.js";
+import { projectGameSummary, type GameSummaryView } from "./game-summary.js";
+import type { TurnTimerView } from "./turn-timer.js";
 
 export interface PublicPlayerView {
   readonly id: string;
@@ -70,35 +71,8 @@ export interface GameView {
   readonly awards: AwardsState;
   readonly history: readonly GameHistoryEntryView[];
   readonly effects: readonly PublicGameEffectView[];
-}
-
-export type PublicGameEffectView = PublicResourceGrantEffectView | PrivateResourceTransferEffectView;
-
-export interface PublicResourceGrantEffectView {
-  readonly id: string;
-  readonly revision: number;
-  readonly kind: "resource-grant";
-  readonly reason: "production" | "starting-resources" | "player-trade" | "maritime-trade";
-  readonly grants: readonly {
-    readonly playerId: string;
-    readonly resources: ResourceHand;
-    readonly origin?: { readonly kind: "player"; readonly playerId: string } | { readonly kind: "bank" };
-  }[];
-  readonly sources: readonly ResourceGrantSource[];
-  readonly triggeredHexIds: readonly string[];
-}
-
-export interface PrivateResourceTransferEffectView {
-  readonly id: string;
-  readonly revision: number;
-  readonly kind: "resource-transfer";
-  readonly reason: "robber";
-  readonly transfers: readonly {
-    readonly playerId: string;
-    readonly sourcePlayerId: string;
-    readonly amount: number;
-    readonly resource: ResourceType | null;
-  }[];
+  readonly summary: GameSummaryView | null;
+  readonly turnTimer: TurnTimerView | null;
 }
 
 export interface GameHistoryEntryView {
@@ -213,6 +187,7 @@ export function projectGameForPlayer(
   state: GameState,
   viewerId: string,
   eventRecords: readonly GameEventRecord[] = [],
+  turnTimer: TurnTimerView | null = null,
 ): GameView {
   const viewer = state.players.find((player) => player.id === viewerId);
 
@@ -269,79 +244,9 @@ export function projectGameForPlayer(
     awards: state.awards,
     history: recentRecords.flatMap((record) => projectHistoryRecord(state, viewerId, record)),
     effects: recentRecords.flatMap((record) => projectPlayerSafeEffect(record, viewerId)),
+    summary: projectGameSummary(state, eventRecords),
+    turnTimer,
   };
-}
-
-function projectPlayerSafeEffect(record: GameEventRecord, viewerId: string): readonly PublicGameEffectView[] {
-  const event = record.event;
-  if (event.type === "resources_produced") {
-    if (event.triggeredHexIds.length === 0) return [];
-    return [{
-      id: `${record.revision}:resources-produced`,
-      revision: record.revision,
-      kind: "resource-grant",
-      reason: "production",
-      grants: event.grants,
-      sources: event.sources,
-      triggeredHexIds: event.triggeredHexIds,
-    }];
-  }
-  if (event.type === "starting_resources_granted" && event.total > 0) {
-    return [{
-      id: `${record.revision}:starting-resources:${event.playerId}`,
-      revision: record.revision,
-      kind: "resource-grant",
-      reason: "starting-resources",
-      grants: [{ playerId: event.playerId, resources: event.resources }],
-      sources: event.sources,
-      triggeredHexIds: [...new Set(event.sources.map((source) => source.hexId))],
-    }];
-  }
-  if (event.type === "player_trade_completed") {
-    return [{
-      id: `${record.revision}:player-trade:${event.offerId}`,
-      revision: record.revision,
-      kind: "resource-grant",
-      reason: "player-trade",
-      grants: [
-        { playerId: event.proposerId, resources: event.receive, origin: { kind: "player", playerId: event.accepterId } },
-        { playerId: event.accepterId, resources: event.give, origin: { kind: "player", playerId: event.proposerId } },
-      ],
-      sources: [],
-      triggeredHexIds: [],
-    }];
-  }
-  if (event.type === "maritime_trade_completed") {
-    return [{
-      id: `${record.revision}:maritime-trade:${event.playerId}`,
-      revision: record.revision,
-      kind: "resource-grant",
-      reason: "maritime-trade",
-      grants: [{
-        playerId: event.playerId,
-        resources: resourceAmounts({ [event.receive]: 1 }),
-        origin: { kind: "bank" },
-      }],
-      sources: [],
-      triggeredHexIds: [],
-    }];
-  }
-  if (event.type === "robber_moved" && event.victimId !== null && event.stolenResource !== null) {
-    const canSeeResource = event.playerId === viewerId || event.victimId === viewerId;
-    return [{
-      id: `${record.revision}:robber-transfer:${event.playerId}`,
-      revision: record.revision,
-      kind: "resource-transfer",
-      reason: "robber",
-      transfers: [{
-        playerId: event.playerId,
-        sourcePlayerId: event.victimId,
-        amount: 1,
-        resource: canSeeResource ? event.stolenResource : null,
-      }],
-    }];
-  }
-  return [];
 }
 
 function projectHistoryRecord(

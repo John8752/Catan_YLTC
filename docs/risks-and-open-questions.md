@@ -21,15 +21,14 @@
 
 Resolved after M0: the 5–6 player profile follows the revised paired-player turn, with the player third to the primary player's left acting second and trading only with the bank.
 
-### O3 agreed direction (decided 2026-08-21, not implemented)
+### O3 disconnected mandatory-resolution direction (partially superseded 2026-08-25)
 
-A disconnected player currently stops the room permanently: the seat cannot be
-released after the game starts (`CANNOT_LEAVE_STARTED_GAME`) and nothing times out,
-so one closed tab ends the match for everyone. The agreed shape of the fix, deferred
-rather than dropped:
+A regular phase clock is now defined independently of connection state: primary rolls
+expire after 5 seconds and normal/paired action stages after 120 seconds. That handles
+disconnection while the game is waiting for those two command families. A disconnected
+player can still stop the room during setup or a mandatory discard/robber/free-road
+resolution, so the remaining O3 direction is deferred rather than dropped:
 
-- **Clock starts only when a seat is both awaited and disconnected.** A connected
-  player may think for as long as they like; this targets the closed tab, not slow play.
 - **Grace period 120 seconds**, configurable (`TURN_TIMEOUT_SECONDS`).
 - **On expiry the server plays one minimal legal move**, and the seat returns to its
   player the moment their socket reconnects — no manual hand-back.
@@ -39,11 +38,9 @@ Per-phase move, if built as described:
 | Blocked on | Automatic move |
 |---|---|
 | `setup/settlement`, `setup/road` | first vertex/edge from the engine's legal list |
-| `turn/roll` | `RollDice` |
 | `turn/discard` | shed the owed count off the deepest stacks |
 | `turn/robber` | move to a hex that steals from nobody where one exists |
 | `turn/free-road` | first legal edge |
-| `turn/action`, `turn/paired-action` | `EndTurn` |
 
 Findings from the deferred spike, so the next attempt need not redo them:
 
@@ -56,7 +53,7 @@ Findings from the deferred spike, so the next attempt need not redo them:
   legal edge and `buildFreeRoad` leaves it once none remain.
 - `EndTurn` already clears `openTrade`, so an absent player's dangling offer needs no
   separate cancel.
-- The clock must live in `apps/server`; `game-core` may not read one. Choosing the move
+- Any additional clock must live in `apps/server`; `game-core` may not read one. Choosing the move
   is a pure function of state and belongs in the engine.
 - Open sub-question: whether consecutive steps in one turn share a single grace period.
   Letting each awaited player pay it once per turn reads better than once per step —

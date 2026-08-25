@@ -58,11 +58,20 @@ describe("seven and robber resolution", () => {
     );
     if (target === undefined) throw new Error("No robber target adjacent to player 2");
     const beforeWool = game.players.find((player) => player.id === "player_1")?.resources.wool ?? 0;
-    game = accept(executeGameCommand(game, "player_1", {
+    const robberMove = executeGameCommand(game, "player_1", {
       type: "MoveRobber",
       hexId: target.hexId,
       victimId: "player_2",
-    }, sequenceRandom([0])));
+    }, sequenceRandom([0]));
+    expect(robberMove).toMatchObject({
+      accepted: true,
+      events: [expect.objectContaining({
+        type: "robber_moved",
+        fromHexId: game.map.robberHexId,
+        hexId: target.hexId,
+      })],
+    });
+    game = accept(robberMove);
 
     expect(game.map.robberHexId).toBe(target.hexId);
     expect(game.phase).toMatchObject({ kind: "turn", step: "action" });

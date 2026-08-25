@@ -23,7 +23,7 @@ export function DevelopmentControls({ game, busy, onCommand }: DevelopmentContro
   if (game.interaction.kind !== "turn-action" && game.interaction.kind !== "turn-roll") return null;
 
   return (
-    <details className="development-details">
+    <details className="development-details" data-resource-sink="development">
       <summary>发展卡（{game.you.developmentCards.length}）</summary>
       <div className="development-stack">
         {game.you.developmentCards.length === 0 ? <p>尚无发展卡</p> : null}

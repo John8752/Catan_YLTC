@@ -13,6 +13,22 @@
 - Resource-effect tuning commit: `6415f32` (all triggered hexes shake; 1200ms resource travel)
 - Validation date: 2026-08-20
 
+## Effect and post-game validation (2026-08-25)
+
+- `pnpm validate:full` passed: TypeScript checks, 117 package tests, production builds, canonical replay, architecture boundaries and 4 Chromium multiplayer/responsive scenarios.
+- Protocol coverage verifies that paid build/development costs, post-setup score gains and robber source/destination coordinates are projected through player-safe effects. A rival cannot see a hidden victory-point purchase or a stolen resource identity.
+- Web coverage verifies two-second resource travel, two-second robber movement, spend direction/targets, the prominent score overlay, reduced-motion fallback and mobile road confirmation before command submission.
+- A real 390×844 Chromium setup flow confirms that the first road tap opens a high-contrast confirmation card and only the explicit second confirmation submits the placement.
+- Finished-game projection tests cover dice frequencies, resource-card flows, per-resource production, activity counts and deterministic winner copy without development-card identities.
+
+## Server turn-timer validation (2026-08-25)
+
+- `pnpm validate:full` passed: TypeScript checks, 125 package tests, production builds, canonical replay, architecture boundaries and 4 Chromium multiplayer/responsive scenarios.
+- Fake-clock server coverage verifies setup remains untimed, roll expires exactly at 5 seconds, ordinary action commands do not refresh the 120-second deadline and expiry executes the normal authoritative `EndTurn` path.
+- Protocol and component coverage verifies the player-safe deadline projection, local countdown formatting, urgent-state styling and the dedicated timer slots above the local dock and below an active opponent card.
+- A real three-client Chromium setup flow verifies both observers receive the same roll timer, the server automatically rolls without a browser command and the resulting action timer is projected back to the active player.
+- The 390×844 captures confirm the alarm badge remains legible above the local avatar card or below the active opponent card without covering names or private resource cards.
+
 ## Evidence
 
 - Pure engine: a legal command stream starts from an empty seeded game, completes snake setup, produces resources, builds roads/settlements/cities and ends immediately at 10 points. Replaying the stream twice produces byte-identical state and events.
@@ -38,6 +54,9 @@ Browser artifacts are intentionally local-only under `output/playwright/`:
 - `e2e-setup-targets.png`
 - `resource-production-fx.png`
 - `resource-arrival-fx.png`
+- `mobile-road-confirm.png`
+- `mobile-roll-timer.png`
+- `mobile-opponent-roll-timer.png`
 
 ## Quality gates
 

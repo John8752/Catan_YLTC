@@ -1,5 +1,5 @@
 import type { GameView, PublicGameEffectView } from "@catan/protocol";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 export function useGameEffectQueue(game: GameView | null): {
   readonly activeEffect: PublicGameEffectView | null;
@@ -9,7 +9,7 @@ export function useGameEffectQueue(game: GameView | null): {
   const seenRevisionRef = useRef(0);
   const [queue, setQueue] = useState<readonly PublicGameEffectView[]>([]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (game === null) {
       gameIdRef.current = null;
       seenRevisionRef.current = 0;

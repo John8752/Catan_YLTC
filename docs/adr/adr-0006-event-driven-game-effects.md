@@ -22,12 +22,21 @@ Strong whole-board motion is reserved for disruptive events such as rolling seve
 
 Resource gains from player trades and maritime trades reuse the same projected effect queue. Player trades record the public source player, while maritime gains use a semantic bank anchor. A robber transfer projects the resource identity only to the thief and victim; every uninvolved player receives an explicit unknown-card transfer so the visible motion does not reveal private information.
 
+The same queue now projects three additional effect families:
+
+- paid builds and development-card purchases carry their public cost from the player's semantic resource anchors into the resulting piece or development-card control;
+- score gains after setup carry only the public reason and delta, except that a newly bought hidden victory-point card is projected only to its owner;
+- robber movement records both the authoritative source and destination hex so the pawn can travel for two seconds without the browser reconstructing the prior snapshot.
+
+Resource travel also uses a two-second path. The canonical state still updates immediately; the effect is presentation feedback and never a lock on subsequent rule processing. Setup settlements intentionally do not emit score feedback, avoiding six repetitive score overlays before normal play begins.
+
 ## Boundaries
 
 - Effects never decide or delay canonical state. The server snapshot is immediately authoritative.
 - A reconnect or initial room load does not replay historical effects.
 - Duplicate delivery of one revision does not enqueue an effect twice.
 - Public effects must not reveal stolen resource identity, opponent hand composition or private development cards.
+- End-game summaries are computed from the server's complete event record and project aggregate counts only. They do not expose opponent hand composition, stolen resource types or development-card identities.
 - `prefers-reduced-motion` removes decorative travel while preserving a short source/target state cue.
 - Animations use transforms, opacity and filters without changing document layout or intercepting input.
 

@@ -8,7 +8,6 @@ import {
   getRuleProfileDefinition,
   PLAYER_COLORS,
   type GameCommand,
-  type GameCommandErrorCode,
   type GameState,
   type GameEventRecord,
   type PlayerColor,
@@ -21,6 +20,8 @@ import {
   type PlayerSessionResponse,
   type RoomView,
 } from "@catan/protocol";
+import { normalizePlayerName, RoomError } from "./room-errors.js";
+import { TurnTimerManager, type TurnTimerExpiry } from "./turn-timer.js";
 
 interface RoomMember {
   readonly id: string;
@@ -54,44 +55,19 @@ interface Subscription {
   readonly listener: RoomListener;
 }
 
-export type RoomErrorCode =
-  | "ROOM_NOT_FOUND"
-  | "PLAYER_NOT_FOUND"
-  | "ROOM_ALREADY_STARTED"
-  | "ROOM_FULL"
-  | "INVALID_PLAYER_NAME"
-  | "ONLY_HOST_CAN_START"
-  | "ONLY_HOST_CAN_CONFIGURE"
-  | "NOT_ENOUGH_PLAYERS"
-  | "INVALID_ROOM_SETTINGS"
-  | "ROOM_CAPACITY_TOO_SMALL"
-  | "STALE_ROOM_REVISION"
-  | "CANNOT_LEAVE_STARTED_GAME"
-  | "GAME_NOT_STARTED"
-  | "STALE_REVISION"
-  | GameCommandErrorCode;
-
-export class RoomError extends Error {
-  constructor(
-    readonly code: RoomErrorCode,
-    message: string,
-  ) {
-    super(message);
-    this.name = "RoomError";
-  }
-}
-
 export class RoomRegistry {
   private readonly rooms = new Map<string, RoomRecord>();
   private readonly subscriptions = new Map<string, Set<Subscription>>();
   private readonly nextSeed: () => number;
   private readonly now: () => number;
+  private readonly turnTimers: TurnTimerManager;
 
   constructor(
     options: { readonly nextSeed?: () => number; readonly now?: () => number } = {},
   ) {
     this.nextSeed = options.nextSeed ?? (() => randomInt(1, 2_147_483_647));
     this.now = options.now ?? (() => Date.now());
+    this.turnTimers = new TurnTimerManager(this.now);
   }
 
   createRoom(playerName: string): PlayerSessionResponse {
@@ -221,6 +197,7 @@ export class RoomRegistry {
     this.removeSubscriptions(room.id, member.id);
 
     if (room.members.length === 0) {
+      this.turnTimers.clear(room.id);
       this.rooms.delete(room.id);
       this.subscriptions.delete(room.id);
       return { roomDeleted: true, newHostPlayerId: null };
@@ -262,6 +239,7 @@ export class RoomRegistry {
       ruleProfile: room.settings.ruleProfile,
     });
     room.revision += 1;
+    this.syncTurnTimer(room);
     this.notify(room);
 
     return this.projectRoom(room, playerId);
@@ -282,6 +260,7 @@ export class RoomRegistry {
 
       this.rooms.delete(room.id);
       this.subscriptions.delete(room.id);
+      this.turnTimers.clear(room.id);
       evicted.push(room.id);
     }
 
@@ -327,6 +306,7 @@ export class RoomRegistry {
     room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
     room.revision += 1;
     room.appliedCommands.add(cacheKey);
+    this.syncTurnTimer(room);
     const response: GameCommandResponse = {
       commandId,
       room: this.projectRoom(room, playerId),
@@ -353,6 +333,10 @@ export class RoomRegistry {
         this.subscriptions.delete(room.id);
       }
     };
+  }
+
+  dispose(): void {
+    this.turnTimers.dispose();
   }
 
   private createRoomId(): string {
@@ -441,8 +425,34 @@ export class RoomRegistry {
       previewMap: room.game === null
         ? getRuleProfileDefinition(room.settings.ruleProfile).createMap(room.seed)
         : null,
-      game: room.game === null ? null : projectGameForPlayer(room.game, viewerId, room.history),
+      game: room.game === null
+        ? null
+        : projectGameForPlayer(room.game, viewerId, room.history, this.turnTimers.view(room.id)),
     };
+  }
+
+  private syncTurnTimer(room: RoomRecord): void {
+    if (room.game === null) {
+      this.turnTimers.clear(room.id);
+      return;
+    }
+    this.turnTimers.sync(room.id, room.game, (expiry) => this.applyTurnTimeout(room.id, expiry));
+  }
+
+  private applyTurnTimeout(roomId: string, expiry: TurnTimerExpiry): void {
+    const room = this.rooms.get(roomId);
+    if (room?.game === null || room?.game === undefined) return;
+    const result = executeGameCommand(room.game, expiry.playerId, expiry.command);
+    if (!result.accepted) {
+      this.syncTurnTimer(room);
+      return;
+    }
+
+    room.game = result.state;
+    room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
+    room.revision += 1;
+    this.syncTurnTimer(room);
+    this.notify(room);
   }
 
   private notify(room: RoomRecord): void {
@@ -466,14 +476,4 @@ export class RoomRegistry {
     }
     if (roomSubscriptions.size === 0) this.subscriptions.delete(roomId);
   }
-}
-
-function normalizePlayerName(playerName: string): string {
-  const name = playerName.trim();
-
-  if (name.length < 1 || name.length > 24) {
-    throw new RoomError("INVALID_PLAYER_NAME", "Player name must contain 1–24 characters");
-  }
-
-  return name;
 }

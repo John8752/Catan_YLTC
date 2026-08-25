@@ -3,6 +3,28 @@ import { describe, expect, it } from "vitest";
 import { MAX_PROJECTED_EVENT_RECORDS, projectGameForPlayer } from "./views.js";
 
 describe("player-safe game projections", () => {
+  it("carries the server phase deadline without making the client authoritative", () => {
+    const game = createBaseGame({
+      id: "game_timer_projection",
+      seed: 41,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const timer = {
+      playerId: "player_1",
+      kind: "roll" as const,
+      durationMs: 5_000,
+      deadlineAt: 105_000,
+      serverNow: 100_000,
+    };
+
+    expect(projectGameForPlayer(game, "player_1", [], timer).turnTimer).toEqual(timer);
+    expect(projectGameForPlayer(game, "player_1").turnTimer).toBeNull();
+  });
+
   it("carries only the most recent event records, keeping the newest", () => {
     const game = createBaseGame({
       id: "game_capped",
@@ -238,16 +260,58 @@ describe("player-safe game projections", () => {
     });
     const records = [
       { revision: 10, event: { type: "maritime_trade_completed", playerId: "player_1", give: "brick", receive: "ore", ratio: 4 } },
-      { revision: 11, event: { type: "robber_moved", playerId: "player_1", hexId: "hex_1", victimId: "player_2", stolenResource: "grain" } },
+      { revision: 11, event: { type: "robber_moved", playerId: "player_1", fromHexId: "hex_0", hexId: "hex_1", victimId: "player_2", stolenResource: "grain" } },
     ] satisfies GameEventRecord[];
 
     expect(projectGameForPlayer(game, "player_1", records).effects).toEqual(expect.arrayContaining([
       expect.objectContaining({ reason: "maritime-trade", grants: [expect.objectContaining({ resources: resourceAmounts({ ore: 1 }), origin: { kind: "bank" } })] }),
+      expect.objectContaining({ kind: "robber-move", fromHexId: "hex_0", toHexId: "hex_1" }),
       expect.objectContaining({ kind: "resource-transfer", transfers: [expect.objectContaining({ resource: "grain" })] }),
     ]));
     expect(projectGameForPlayer(game, "player_3", records).effects).toContainEqual(expect.objectContaining({
       kind: "resource-transfer",
       transfers: [expect.objectContaining({ resource: null, sourcePlayerId: "player_2", playerId: "player_1" })],
+    }));
+  });
+
+  it("projects public spend and post-setup score effects without revealing a rival victory card", () => {
+    const game = createBaseGame({
+      id: "game_spend_effects",
+      seed: 16,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [
+      { revision: 19, event: { type: "initial_settlement_placed", playerId: "player_1", vertexId: "vertex_setup" } },
+      { revision: 20, event: { type: "piece_built", playerId: "player_1", piece: "settlement", locationId: "vertex_8" } },
+      { revision: 21, event: { type: "development_card_bought", playerId: "player_2", cardId: "secret_vp", cardType: "victory-point" } },
+      { revision: 22, event: { type: "award_changed", award: "longest-road", holderId: "player_1" } },
+    ] satisfies GameEventRecord[];
+
+    const rivalView = projectGameForPlayer(game, "player_1", records);
+    const ownerView = projectGameForPlayer(game, "player_2", records);
+
+    expect(rivalView.effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: "resource-spend",
+        playerId: "player_1",
+        resources: resourceAmounts({ brick: 1, lumber: 1, wool: 1, grain: 1 }),
+        destination: { kind: "build", piece: "settlement", locationId: "vertex_8" },
+      }),
+      expect.objectContaining({ kind: "score-change", playerId: "player_1", delta: 1, reason: "settlement" }),
+      expect.objectContaining({ kind: "resource-spend", playerId: "player_2", destination: { kind: "development" } }),
+      expect.objectContaining({ kind: "score-change", playerId: "player_1", delta: 2, reason: "longest-road" }),
+    ]));
+    expect(rivalView.effects).not.toContainEqual(expect.objectContaining({ reason: "victory-point" }));
+    expect(rivalView.effects.find((effect) => effect.revision === 19)).toBeUndefined();
+    expect(JSON.stringify(rivalView.effects)).not.toContain("secret_vp");
+    expect(ownerView.effects).toContainEqual(expect.objectContaining({
+      kind: "score-change",
+      playerId: "player_2",
+      reason: "victory-point",
     }));
   });
 

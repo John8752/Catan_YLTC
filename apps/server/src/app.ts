@@ -7,7 +7,8 @@ import Fastify, {
   type FastifyServerOptions,
 } from "fastify";
 import { z } from "zod";
-import { RoomError, RoomRegistry } from "./rooms.js";
+import { RoomError } from "./room-errors.js";
+import { RoomRegistry } from "./rooms.js";
 
 /** A room with no connected socket is collected once it goes untouched this long. */
 export const DEFAULT_IDLE_ROOM_TTL_MS = 60 * 60 * 1000;
@@ -167,7 +168,10 @@ export async function buildApp(registry = new RoomRegistry(), options: AppOption
     }
   }, roomSweepIntervalMs);
   sweep.unref();
-  app.addHook("onClose", async () => clearInterval(sweep));
+  app.addHook("onClose", async () => {
+    clearInterval(sweep);
+    registry.dispose();
+  });
 
   app.get("/health", async () => ({ ok: true, service: "catan-server", rooms: registry.roomCount }));
 

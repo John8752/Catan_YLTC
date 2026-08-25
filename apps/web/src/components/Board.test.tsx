@@ -37,7 +37,7 @@ describe("Board", () => {
     expect(markup).toContain('data-port-resource="wool"');
     expect(markup.match(/data-robber-piece=/g)).toHaveLength(1);
     expect(markup).toContain("强盗位于荒漠");
-    expect(markup).toContain("群岛初现");
+    expect(markup).not.toContain("群岛初现");
   });
 
   it("renders roads, villages and cities as distinct player-colored silhouettes", () => {

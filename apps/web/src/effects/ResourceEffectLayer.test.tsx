@@ -4,7 +4,7 @@ import { resourceAmounts } from "@catan/game-core";
 import type { PublicGameEffectView } from "@catan/protocol";
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { measureFlights, ResourceEffectLayer } from "./ResourceEffectLayer.js";
+import { measureFlights, measureRobberMove, ResourceEffectLayer } from "./ResourceEffectLayer.js";
 
 describe("resource flight measurement", () => {
   beforeEach(() => {
@@ -73,6 +73,45 @@ describe("resource flight measurement", () => {
     expect(flights).toEqual([
       expect.objectContaining({ resource: "unknown", startX: 960, startY: 330, endX: 660, endY: 530 }),
     ]);
+  });
+
+  it("moves spent cards from the player's resource row into the new board piece", () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    addRect(root, "resource-target", "player_1:brick", 100, 500, 80, 50);
+    addRect(root, "resource-target", "player_1:lumber", 200, 500, 80, 50);
+    addRect(root, "piece-location", "edge_4", 500, 250, 100, 20);
+
+    const flights = measureFlights({
+      id: "14:resource-spend:player_1:road",
+      revision: 14,
+      kind: "resource-spend",
+      playerId: "player_1",
+      resources: resourceAmounts({ brick: 1, lumber: 1 }),
+      destination: { kind: "build", piece: "road", locationId: "edge_4" },
+    }, root);
+
+    expect(flights).toHaveLength(2);
+    expect(flights).toEqual(expect.arrayContaining([
+      expect.objectContaining({ resource: "brick", direction: "spend", startX: 140, endX: 550, endY: 260 }),
+      expect.objectContaining({ resource: "lumber", direction: "spend", startX: 240, endX: 550, endY: 260 }),
+    ]));
+  });
+
+  it("measures a robber arc between the authoritative source and destination hexes", () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    addRect(root, "hex-id", "hex_old", 100, 200, 60, 60);
+    addRect(root, "hex-id", "hex_new", 400, 500, 60, 60);
+
+    expect(measureRobberMove({
+      id: "15:robber-move:player_1",
+      revision: 15,
+      kind: "robber-move",
+      playerId: "player_1",
+      fromHexId: "hex_old",
+      toHexId: "hex_new",
+    }, root)).toEqual({ startX: 130, startY: 230, midX: 280, midY: 334, endX: 430, endY: 530 });
   });
 
   it("renders the shared resource card inside a visible flight", () => {
@@ -163,6 +202,64 @@ describe("resource flight measurement", () => {
     expect(animate.mock.calls[0]?.[0]).toEqual(expect.arrayContaining([
       expect.objectContaining({ transform: expect.stringContaining("translateX") }),
     ]));
+  });
+
+  it("keeps the robber in flight for two seconds before completing the effect", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn(() => ({ matches: false })),
+    });
+    addRect(document.body, "hex-id", "hex_old", 100, 200, 60, 60);
+    addRect(document.body, "hex-id", "hex_new", 400, 500, 60, 60);
+    const robber = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    robber.setAttribute("data-robber-piece", "true");
+    document.body.append(robber);
+    const onComplete = vi.fn();
+
+    const { container } = render(<ResourceEffectLayer effect={{
+      id: "16:robber-move:player_1",
+      revision: 16,
+      kind: "robber-move",
+      playerId: "player_1",
+      fromHexId: "hex_old",
+      toHexId: "hex_new",
+    }} onComplete={onComplete} />);
+
+    expect(container.querySelector(".robber-flight")).not.toBeNull();
+    expect(robber.style.opacity).toBe("0");
+    act(() => vi.advanceTimersByTime(1_899));
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(robber.style.opacity).toBe("0");
+    act(() => vi.advanceTimersByTime(1));
+    expect(robber.style.opacity).toBe("");
+    act(() => vi.advanceTimersByTime(280));
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it("shows a prominent named score gain through its full feedback window", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn(() => ({ matches: false })),
+    });
+    const onComplete = vi.fn();
+    const { container } = render(<ResourceEffectLayer effect={{
+      id: "17:score:player_1:city",
+      revision: 17,
+      kind: "score-change",
+      playerId: "player_1",
+      delta: 1,
+      reason: "city",
+    }} playerName={() => "林"} onComplete={onComplete} />);
+
+    expect(container.querySelector(".score-effect")?.textContent).toContain("林");
+    expect(container.querySelector(".score-effect")?.textContent).toContain("+1 分");
+    expect(container.querySelector(".score-effect")?.textContent).toContain("村庄升级为城市");
+    act(() => vi.advanceTimersByTime(1_849));
+    expect(onComplete).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    expect(onComplete).toHaveBeenCalledOnce();
   });
 });
 

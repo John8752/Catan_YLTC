@@ -16,35 +16,74 @@ interface ResourceFlight {
   readonly endX: number;
   readonly endY: number;
   readonly delay: number;
+  readonly direction: "gain" | "spend";
+}
+
+interface RobberMotion {
+  readonly startX: number;
+  readonly startY: number;
+  readonly midX: number;
+  readonly midY: number;
+  readonly endX: number;
+  readonly endY: number;
 }
 
 export function ResourceEffectLayer({
   effect,
   onComplete,
+  playerName,
 }: {
   readonly effect: PublicGameEffectView | null;
   readonly onComplete: () => void;
+  readonly playerName?: (playerId: string) => string;
 }) {
   const [flights, setFlights] = useState<readonly ResourceFlight[]>([]);
+  const [robberMotion, setRobberMotion] = useState<RobberMotion | null>(null);
   const reducedMotion = useReducedMotion();
 
   useLayoutEffect(() => {
     if (effect === null) {
       setFlights([]);
+      setRobberMotion(null);
       return;
     }
 
     const nextFlights = reducedMotion ? [] : measureFlights(effect);
+    const nextRobberMotion = !reducedMotion && effect.kind === "robber-move" ? measureRobberMove(effect) : null;
     setFlights(nextFlights);
+    setRobberMotion(nextRobberMotion);
     animateSources(effect, reducedMotion);
+
+    if (effect.kind === "robber-move") {
+      const settledRobber = findDataElement(document, "robber-piece", "true") as SVGElement | null;
+      if (settledRobber !== null && nextRobberMotion !== null) settledRobber.style.opacity = "0";
+      const revealTimer = window.setTimeout(() => {
+        if (settledRobber !== null) settledRobber.style.opacity = "";
+        animateTargets(effect, reducedMotion);
+      }, reducedMotion ? 40 : 1_900);
+      const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : 2_180);
+      return () => {
+        window.clearTimeout(revealTimer);
+        window.clearTimeout(completionTimer);
+        if (settledRobber !== null) settledRobber.style.opacity = "";
+      };
+    }
+
+    if (effect.kind === "score-change") {
+      animateTargets(effect, reducedMotion);
+      const completionTimer = window.setTimeout(onComplete, reducedMotion ? 360 : 1_850);
+      return () => window.clearTimeout(completionTimer);
+    }
 
     const arrivalTimers = reducedMotion
       ? [window.setTimeout(() => animateTargets(effect, true), 40)]
+      : effect.kind === "resource-spend"
+        ? [window.setTimeout(() => animateTargets(effect, false), 1_900 + longestFlightDelay(nextFlights))]
       : nextFlights.length === 0
-        ? [window.setTimeout(() => animateTargets(effect, false), 1_150)]
-        : nextFlights.map((flight) => window.setTimeout(() => animateFlightTarget(flight), 1_150 + flight.delay));
-    const longestDelay = nextFlights.reduce((maximum, flight) => Math.max(maximum, flight.delay), 0);
-    const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : 1_650 + longestDelay);
+        ? [window.setTimeout(() => animateTargets(effect, false), 1_900)]
+        : nextFlights.map((flight) => window.setTimeout(() => animateFlightTarget(flight), 1_900 + flight.delay));
+    const longestDelay = longestFlightDelay(nextFlights);
+    const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : 2_450 + longestDelay);
     return () => {
       for (const timer of arrivalTimers) window.clearTimeout(timer);
       window.clearTimeout(completionTimer);
@@ -54,24 +93,42 @@ export function ResourceEffectLayer({
   if (effect === null) return null;
 
   return (
-    <div className="resource-effect-layer" data-effect-id={effect.id} aria-hidden="true">
+    <div className="resource-effect-layer" data-effect-id={effect.id}>
       {flights.map((flight) => (
         <span
-          className="resource-flight"
+          className={`resource-flight is-${flight.direction}`}
           data-resource-flight={`${flight.playerId}:${flight.resource}`}
           key={flight.id}
           style={flightStyle(flight)}
+          aria-hidden="true"
         >
           <ResourceCard resource={flight.resource} count={flight.amount} variant="flight" />
         </span>
       ))}
       {flights.map((flight) => (
-        <span className="resource-arrival-pop" key={`${flight.id}:arrival`} style={flightStyle(flight)}>
-          +{flight.amount}
+        <span className={`resource-arrival-pop is-${flight.direction}`} key={`${flight.id}:arrival`} style={flightStyle(flight)} aria-hidden="true">
+          {flight.direction === "gain" ? "+" : "−"}{flight.amount}
         </span>
       ))}
+      {effect.kind !== "score-change" ? null : (
+        <div className="score-effect" role="status" data-score-effect={effect.reason}>
+          <span>{playerName?.(effect.playerId) ?? "玩家"}</span>
+          <strong>+{effect.delta} 分</strong>
+          <small>{scoreReasonLabel(effect.reason)}</small>
+        </div>
+      )}
+      {robberMotion === null ? null : (
+        <span className="robber-flight" style={robberStyle(robberMotion)} aria-hidden="true">
+          <span className="robber-flight-head" />
+          <span className="robber-flight-body" />
+        </span>
+      )}
     </div>
   );
+}
+
+function longestFlightDelay(flights: readonly ResourceFlight[]): number {
+  return flights.reduce((maximum, flight) => Math.max(maximum, flight.delay), 0);
 }
 
 export function measureFlights(effect: PublicGameEffectView, root: ParentNode = document): readonly ResourceFlight[] {
@@ -96,11 +153,41 @@ export function measureFlights(effect: PublicGameEffectView, root: ParentNode = 
         source,
         target,
         delay: index * 70,
+        direction: "gain",
       }));
       index += 1;
     }
     return flights;
   }
+
+  if (effect.kind === "resource-spend") {
+    const destination = effect.destination.kind === "build"
+      ? findDataElement(root, "piece-location", effect.destination.locationId)
+      : findDataElement(root, "resource-sink", "development");
+    const target = centerOf(destination) ?? centerOf(findDataElement(root, "board-root", "true"));
+    if (target === null) return [];
+    for (const resource of RESOURCE_TYPES) {
+      const amount = effect.resources[resource];
+      if (amount <= 0) continue;
+      const source = centerOf(findDataElement(root, "resource-target", `${effect.playerId}:${resource}`))
+        ?? centerOf(findDataElement(root, "player-target", effect.playerId));
+      if (source === null) continue;
+      flights.push(createFlight({
+        id: `${effect.id}:${effect.playerId}:${resource}`,
+        playerId: effect.playerId,
+        resource,
+        amount,
+        source,
+        target,
+        delay: index * 70,
+        direction: "spend",
+      }));
+      index += 1;
+    }
+    return flights;
+  }
+
+  if (effect.kind !== "resource-grant") return flights;
 
   for (const grant of effect.grants) {
     for (const resource of RESOURCE_TYPES) {
@@ -131,6 +218,7 @@ export function measureFlights(effect: PublicGameEffectView, root: ParentNode = 
         source,
         target,
         delay,
+        direction: "gain",
       }));
       index += 1;
     }
@@ -150,6 +238,19 @@ function animateSources(effect: PublicGameEffectView, reducedMotion: boolean): v
     }
     return;
   }
+  if (effect.kind === "resource-spend") {
+    for (const resource of RESOURCE_TYPES.filter((candidate) => effect.resources[candidate] > 0)) {
+      const source = findDataElement(document, "resource-target", `${effect.playerId}:${resource}`)
+        ?? findDataElement(document, "player-target", effect.playerId);
+      animateElement(source, [
+        { transform: "scale(1)", filter: "brightness(1)" },
+        { transform: "scale(.94)", filter: "brightness(.72) saturate(.72)" },
+        { transform: "scale(1)", filter: "brightness(1)" },
+      ], reducedMotion ? 220 : 620);
+    }
+    return;
+  }
+  if (effect.kind !== "resource-grant") return;
   const hexIds = new Set(effect.triggeredHexIds);
   const vertexIds = new Set(effect.sources.map((source) => source.vertexId));
   for (const hexId of hexIds) {
@@ -188,9 +289,17 @@ function animateTargets(effect: PublicGameEffectView, reducedMotion: boolean): v
     ? effect.grants.flatMap((grant) => RESOURCE_TYPES
       .filter((resource) => grant.resources[resource] > 0)
       .map((resource) => findDataElement(document, "resource-target", `${grant.playerId}:${resource}`) ?? findDataElement(document, "player-target", grant.playerId)))
-    : effect.transfers.map((transfer) => transfer.resource === null
-      ? findDataElement(document, "player-target", transfer.playerId)
-      : findDataElement(document, "resource-target", `${transfer.playerId}:${transfer.resource}`) ?? findDataElement(document, "player-target", transfer.playerId));
+    : effect.kind === "resource-transfer"
+      ? effect.transfers.map((transfer) => transfer.resource === null
+        ? findDataElement(document, "player-target", transfer.playerId)
+        : findDataElement(document, "resource-target", `${transfer.playerId}:${transfer.resource}`) ?? findDataElement(document, "player-target", transfer.playerId))
+      : effect.kind === "resource-spend"
+        ? [effect.destination.kind === "build"
+            ? findDataElement(document, "piece-location", effect.destination.locationId)
+            : findDataElement(document, "resource-sink", "development")]
+        : effect.kind === "score-change"
+          ? [findDataElement(document, "player-target", effect.playerId)]
+          : [findDataElement(document, "robber-piece", "true")];
   for (const target of targets.filter((element): element is Element => element !== null)) {
     animateElement(target, [
       { transform: "scale(1)", filter: "brightness(1)" },
@@ -200,7 +309,7 @@ function animateTargets(effect: PublicGameEffectView, reducedMotion: boolean): v
   }
 }
 
-function createFlight({ id, playerId, resource, amount, source, target, delay }: {
+function createFlight({ id, playerId, resource, amount, source, target, delay, direction }: {
   readonly id: string;
   readonly playerId: string;
   readonly resource: ResourceCardKind;
@@ -208,6 +317,7 @@ function createFlight({ id, playerId, resource, amount, source, target, delay }:
   readonly source: { readonly x: number; readonly y: number };
   readonly target: { readonly x: number; readonly y: number };
   readonly delay: number;
+  readonly direction: "gain" | "spend";
 }): ResourceFlight {
   const arc = Math.min(150, Math.max(58, Math.abs(target.x - source.x) * 0.16));
   return {
@@ -222,6 +332,7 @@ function createFlight({ id, playerId, resource, amount, source, target, delay }:
     endX: target.x,
     endY: target.y,
     delay,
+    direction,
   };
 }
 
@@ -270,8 +381,46 @@ function flightStyle(flight: ResourceFlight): CSSProperties {
     "--flight-end-x": `${flight.endX}px`,
     "--flight-end-y": `${flight.endY}px`,
     "--flight-delay": `${flight.delay}ms`,
-    "--arrival-delay": `${1_100 + flight.delay}ms`,
+    "--arrival-delay": `${1_900 + flight.delay}ms`,
   } as CSSProperties;
+}
+
+export function measureRobberMove(
+  effect: Extract<PublicGameEffectView, { readonly kind: "robber-move" }>,
+  root: ParentNode = document,
+): RobberMotion | null {
+  const start = centerOf(findDataElement(root, "hex-id", effect.fromHexId));
+  const end = centerOf(findDataElement(root, "hex-id", effect.toHexId));
+  if (start === null || end === null) return null;
+  return {
+    startX: start.x,
+    startY: start.y,
+    midX: start.x + (end.x - start.x) * .5,
+    midY: start.y + (end.y - start.y) * .5 - 46,
+    endX: end.x,
+    endY: end.y,
+  };
+}
+
+function robberStyle(motion: RobberMotion): CSSProperties {
+  return {
+    "--robber-start-x": `${motion.startX}px`,
+    "--robber-start-y": `${motion.startY}px`,
+    "--robber-mid-x": `${motion.midX}px`,
+    "--robber-mid-y": `${motion.midY}px`,
+    "--robber-end-x": `${motion.endX}px`,
+    "--robber-end-y": `${motion.endY}px`,
+  } as CSSProperties;
+}
+
+function scoreReasonLabel(reason: Extract<PublicGameEffectView, { readonly kind: "score-change" }>["reason"]): string {
+  return {
+    settlement: "新村庄落成",
+    city: "村庄升级为城市",
+    "longest-road": "获得最长道路",
+    "largest-army": "获得最大骑士力",
+    "victory-point": "暗藏胜利点",
+  }[reason];
 }
 
 function useReducedMotion(): boolean {

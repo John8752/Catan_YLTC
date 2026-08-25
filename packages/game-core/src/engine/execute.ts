@@ -410,7 +410,7 @@ function moveRobber(
       phase: { ...state.phase, step: state.robberResumeStep ?? "action" },
       robberResumeStep: null,
     },
-    [{ type: "robber_moved", playerId: actorId, hexId, victimId, stolenResource }],
+    [{ type: "robber_moved", playerId: actorId, fromHexId: state.map.robberHexId, hexId, victimId, stolenResource }],
   );
 }
 

@@ -1,7 +1,16 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import type { KeyboardEvent } from "react";
+import { useEffect, useState } from "react";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.js";
 import { useBoardViewport } from "@/hooks/use-board-viewport.js";
 import {
   axialToPixel,
@@ -32,14 +41,22 @@ export function Board({
 }: BoardProps) {
   const robberHex = game.map.hexes.find((hex) => hex.id === game.map.robberHexId);
   const viewport = useBoardViewport();
+  const [pendingRoadCommand, setPendingRoadCommand] = useState<Extract<GameCommand, { type: "PlaceInitialRoad" | "BuildRoad" | "BuildFreeRoad" }> | null>(null);
+
+  useEffect(() => setPendingRoadCommand(null), [game.revision]);
+
+  const handleBoardCommand = (command: GameCommand) => {
+    if (isRoadCommand(command) && shouldConfirmRoadOnThisDevice()) {
+      setPendingRoadCommand(command);
+      return;
+    }
+    onCommand?.(command);
+  };
 
   return (
-    <section className="board-shell" data-board-root="true" aria-labelledby="board-title">
+    <section className="board-shell" data-board-root="true" aria-label="游戏棋盘">
       <div className="board-heading">
-        <div>
-          <p className="eyebrow">种子 {game.seed}</p>
-          <h2 id="board-title">群岛初现</h2>
-        </div>
+        <p className="eyebrow">种子 {game.seed}</p>
         <span className="phase-chip">{phaseLabel(game)}</span>
       </div>
 
@@ -142,7 +159,7 @@ export function Board({
             buildMode={buildMode}
             layer="roads"
             coordinateScale={BOARD_HEX_SIZE}
-            onCommand={onCommand}
+            onCommand={handleBoardCommand}
           />
           <g className="placed-roads" aria-label="已建道路">
             {game.roads.map((road) => {
@@ -158,6 +175,7 @@ export function Board({
                   key={road.edgeId}
                   className={`piece-color-${player.color}`}
                   data-piece-kind="road"
+                  data-piece-location={road.edgeId}
                   role="img"
                   aria-label={`${player.name}的道路`}
                 >
@@ -179,6 +197,7 @@ export function Board({
                   className={`piece-color-${player.color}`}
                   data-piece-kind={building.kind}
                   data-vertex-id={building.vertexId}
+                  data-piece-location={building.vertexId}
                   transform={`translate(${vertex.x * BOARD_HEX_SIZE} ${vertex.y * BOARD_HEX_SIZE})`}
                   role="img"
                   aria-label={`${player.name}的${building.kind === "city" ? "城市" : "村庄"}`}
@@ -210,7 +229,7 @@ export function Board({
             buildMode={buildMode}
             layer="buildings"
             coordinateScale={BOARD_HEX_SIZE}
-            onCommand={onCommand}
+            onCommand={handleBoardCommand}
           />
           </svg>
         </div>
@@ -221,8 +240,39 @@ export function Board({
         </div>
       </div>
       <p className="board-instruction" aria-live="polite">{boardInstruction(game, buildMode)}</p>
+      <Dialog open={pendingRoadCommand !== null} onOpenChange={(open) => !open && setPendingRoadCommand(null)}>
+        <DialogContent className="border-2 border-[#d0a853] bg-[#fff0cd] text-[#263f3b] shadow-[0_20px_60px_rgba(4,24,25,.58)] sm:max-w-sm" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>确认道路位置</DialogTitle>
+            <DialogDescription className="font-medium leading-6 text-[#53645d]">手机点选道路容易误触，请再次确认高亮位置。确认后会立即提交这次放置。</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="grid grid-cols-2 sm:grid-cols-2">
+            <Button type="button" variant="outline" onClick={() => setPendingRoadCommand(null)}>返回重选</Button>
+            <Button
+              type="button"
+              disabled={busy || pendingRoadCommand === null}
+              onClick={() => {
+                if (pendingRoadCommand === null) return;
+                const command = pendingRoadCommand;
+                setPendingRoadCommand(null);
+                onCommand?.(command);
+              }}
+            >
+              确认放置
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
+}
+
+function isRoadCommand(command: GameCommand): command is Extract<GameCommand, { type: "PlaceInitialRoad" | "BuildRoad" | "BuildFreeRoad" }> {
+  return command.type === "PlaceInitialRoad" || command.type === "BuildRoad" || command.type === "BuildFreeRoad";
+}
+
+function shouldConfirmRoadOnThisDevice(): boolean {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 820px)").matches;
 }
 
 function activateOnKeyboard(event: KeyboardEvent<SVGElement>, action: () => void): void {

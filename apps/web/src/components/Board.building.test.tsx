@@ -3,7 +3,7 @@
 import { createBaseGame, type GameState } from "@catan/game-core";
 import { projectGameForPlayer, type GameView } from "@catan/protocol";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Board } from "./Board.js";
 
 const PLAYERS = [
@@ -13,6 +13,7 @@ const PLAYERS = [
 ];
 
 describe("Board construction targets", () => {
+  afterEach(() => vi.restoreAllMocks());
   it("shows each selected build mode as an actionable map overlay", () => {
     const game = constructionView();
     if (game.interaction.kind !== "turn-action") throw new Error("Expected turn action interaction");
@@ -72,6 +73,27 @@ describe("Board construction targets", () => {
       type: "PlaceInitialSettlement",
       vertexId: target.getAttribute("data-build-target-id"),
     });
+  });
+
+  it("requires a second confirmation before submitting a road on a phone viewport", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn((query: string) => ({ matches: query === "(max-width: 820px)" })),
+    });
+    const game = constructionView();
+    if (game.interaction.kind !== "turn-action") throw new Error("Expected turn action interaction");
+    const roadId = game.interaction.roadEdgeIds[0];
+    if (roadId === undefined) throw new Error("Missing road target");
+    const onCommand = vi.fn();
+    render(<Board game={game} buildMode="road" onCommand={onCommand} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "在这里建造道路" }));
+    expect(screen.getByRole("dialog", { name: "确认道路位置" })).not.toBeNull();
+    expect(onCommand).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "确认放置" }));
+    expect(onCommand).toHaveBeenCalledOnce();
+    expect(onCommand).toHaveBeenCalledWith({ type: "BuildRoad", edgeId: roadId });
   });
 });
 

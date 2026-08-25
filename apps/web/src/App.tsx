@@ -13,6 +13,7 @@ import {
   type PlayerSession,
 } from "./api.js";
 import { Board } from "./components/Board.js";
+import { GameResult } from "./components/GameResult.js";
 import { LobbySetup } from "./components/LobbySetup.js";
 import { OpponentStrip } from "./components/OpponentStrip.js";
 import { PlayerDock } from "./components/PlayerDock.js";
@@ -273,13 +274,7 @@ export function App() {
               onCommand={handleGameCommand}
               onRobberHexSelect={handleRobberHexSelect}
             />
-            {room.game.phase.kind === "finished" ? (
-              <section className="winner-banner" role="status">
-                <p className="eyebrow">对局结束</p>
-                <h2>{winnerName(room.game)} 获胜</h2>
-                <p>率先完成了岛屿建设目标。</p>
-              </section>
-            ) : null}
+            {room.game.phase.kind === "finished" && activeEffect === null ? <GameResult game={room.game} /> : null}
           </>
         )}
       </div>
@@ -319,7 +314,11 @@ export function App() {
           <ActiveTradePanel game={liveGame} busy={busy} onCommand={handleGameCommand} />
         </div>
       )}
-      <ResourceEffectLayer effect={activeEffect} onComplete={completeActiveEffect} />
+      <ResourceEffectLayer
+        effect={activeEffect}
+        onComplete={completeActiveEffect}
+        playerName={(playerId) => liveGame?.players.find((player) => player.id === playerId)?.name ?? "玩家"}
+      />
       {error === null ? null : <p className="toast-error" role="alert">{error}</p>}
     </main>
   );
@@ -340,10 +339,4 @@ function closeSocket(socket: WebSocket): void {
   }
 
   socket.close();
-}
-
-function winnerName(game: NonNullable<RoomView["game"]>): string {
-  if (game.phase.kind !== "finished") return "玩家";
-  const winnerId = game.phase.winnerId;
-  return game.players.find((player) => player.id === winnerId)?.name ?? "玩家";
 }

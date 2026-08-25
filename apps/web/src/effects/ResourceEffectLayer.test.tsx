@@ -56,6 +56,51 @@ describe("resource flight measurement", () => {
     expect(flights[1]).toMatchObject({ playerId: "player_2", resource: "ore", endX: 1010, endY: 455 });
   });
 
+  it("starts player transfers at the source player and uses a concealed card when required", () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    addRect(root, "player-target", "player_1", 600, 500, 120, 60);
+    addRect(root, "player-target", "player_2", 900, 300, 120, 60);
+
+    const flights = measureFlights({
+      id: "12:robber-transfer:player_1",
+      revision: 12,
+      kind: "resource-transfer",
+      reason: "robber",
+      transfers: [{ playerId: "player_1", sourcePlayerId: "player_2", amount: 1, resource: null }],
+    }, root);
+
+    expect(flights).toEqual([
+      expect.objectContaining({ resource: "unknown", startX: 960, startY: 330, endX: 660, endY: 530 }),
+    ]);
+  });
+
+  it("renders the shared resource card inside a visible flight", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn(() => ({ matches: false })),
+    });
+    addRect(document.body, "resource-source", "bank", 900, 100, 80, 50);
+    addRect(document.body, "resource-target", "player_1:grain", 300, 600, 80, 50);
+
+    const { container } = render(
+      <ResourceEffectLayer
+        effect={{
+          id: "13:maritime-trade:player_1",
+          revision: 13,
+          kind: "resource-grant",
+          reason: "maritime-trade",
+          grants: [{ playerId: "player_1", resources: resourceAmounts({ grain: 1 }), origin: { kind: "bank" } }],
+          sources: [],
+          triggeredHexIds: [],
+        }}
+        onComplete={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector('[data-resource-flight="player_1:grain"] [data-resource-card="grain"]')).not.toBeNull();
+  });
+
   it("removes flight motion while retaining a short reduced-motion feedback cycle", () => {
     vi.useFakeTimers();
     Object.defineProperty(window, "matchMedia", {

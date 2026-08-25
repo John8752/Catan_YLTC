@@ -217,6 +217,38 @@ describe("player-safe game projections", () => {
       "陈 提出了反报价",
       "林 给 周 2 砖，获得 1 麦",
     ]);
+    expect(projectGameForPlayer(game, "player_3", records).effects).toContainEqual(expect.objectContaining({
+      reason: "player-trade",
+      grants: [
+        expect.objectContaining({ playerId: "player_1", resources: resourceAmounts({ grain: 1 }), origin: { kind: "player", playerId: "player_2" } }),
+        expect.objectContaining({ playerId: "player_2", resources: resourceAmounts({ brick: 2 }), origin: { kind: "player", playerId: "player_1" } }),
+      ],
+    }));
+  });
+
+  it("projects bank gains and redacts a robbed resource from uninvolved players", () => {
+    const game = createBaseGame({
+      id: "game_transfer_effects",
+      seed: 15,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [
+      { revision: 10, event: { type: "maritime_trade_completed", playerId: "player_1", give: "brick", receive: "ore", ratio: 4 } },
+      { revision: 11, event: { type: "robber_moved", playerId: "player_1", hexId: "hex_1", victimId: "player_2", stolenResource: "grain" } },
+    ] satisfies GameEventRecord[];
+
+    expect(projectGameForPlayer(game, "player_1", records).effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ reason: "maritime-trade", grants: [expect.objectContaining({ resources: resourceAmounts({ ore: 1 }), origin: { kind: "bank" } })] }),
+      expect.objectContaining({ kind: "resource-transfer", transfers: [expect.objectContaining({ resource: "grain" })] }),
+    ]));
+    expect(projectGameForPlayer(game, "player_3", records).effects).toContainEqual(expect.objectContaining({
+      kind: "resource-transfer",
+      transfers: [expect.objectContaining({ resource: null, sourcePlayerId: "player_2", playerId: "player_1" })],
+    }));
   });
 
   it("projects a matching-hex effect when production grants nobody resources", () => {

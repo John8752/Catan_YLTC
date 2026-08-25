@@ -1,12 +1,5 @@
 import { ArrowDown, ShieldCheck, X } from "lucide-react";
-import { Button } from "@/components/ui/button.js";
 import { Card } from "@/components/ui/card.js";
-import {
-  DialogClose,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog.js";
 import { cn } from "@/lib/utils.js";
 import {
   hasTradeResources,
@@ -15,39 +8,6 @@ import {
   tradeBasketTotal,
   type TradeBasket,
 } from "./TradeResourceBasket.js";
-
-export function TradeDialogHeader({
-  icon,
-  eyebrow,
-  title,
-  description,
-  onClose,
-}: {
-  readonly icon: React.ReactNode;
-  readonly eyebrow: string;
-  readonly title: string;
-  readonly description: string;
-  readonly onClose?: () => void;
-}) {
-  return (
-    <DialogHeader className="sticky top-0 z-20 overflow-hidden border-b border-[#6d5434]/12 bg-[linear-gradient(120deg,rgba(31,73,68,.99),rgba(44,92,83,.98))] p-5 pr-16 text-left text-[#fff8df] shadow-md sm:p-6 sm:pr-16">
-      <div className="absolute -top-12 -right-8 size-40 rounded-full border border-white/10 bg-white/5" aria-hidden="true" />
-      <p className="relative mb-0 text-[11px] font-black tracking-[.18em] text-[#efc887] uppercase">{eyebrow}</p>
-      <DialogTitle className="relative flex items-center gap-3 font-serif text-2xl sm:text-3xl">
-        <span className="grid size-10 place-items-center rounded-xl border border-white/15 bg-white/10 text-[#efc887]">{icon}</span>
-        {title}
-      </DialogTitle>
-      <DialogDescription className="relative max-w-xl text-[#fff8df]/72">{description}</DialogDescription>
-      {onClose === undefined ? null : (
-        <DialogClose asChild>
-          <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-[#fff8df] hover:bg-white/10 hover:text-white" aria-label="暂时关闭交易弹窗" onClick={onClose}>
-            <X className="size-5" />
-          </Button>
-        </DialogClose>
-      )}
-    </DialogHeader>
-  );
-}
 
 export function TradeExchange({
   giveLabel,

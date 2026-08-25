@@ -4,7 +4,7 @@ import type { GameCommand, GameCommandResponse, PlayerSessionResponse, RoomView 
 import { expect, test, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
 
 const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
-type Resource = (typeof RESOURCES)[number];
+type Resource = Extract<GameCommand, { readonly type: "MaritimeTrade" }>["give"];
 type ResourceCounts = Record<Resource, number>;
 type Session = Pick<PlayerSessionResponse, "roomId" | "playerId" | "seatToken">;
 
@@ -73,12 +73,18 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await expect(proposerPage.getByRole("button", { name: "发起交易" })).toBeVisible();
 
     await proposerPage.getByRole("button", { name: "发起交易" }).click();
-    await proposerPage.getByRole("spinbutton", { name: `你希望获得：${RESOURCE_LABELS[responderResource]}数量` }).fill("1");
+    await expect(proposerPage.getByRole("region", { name: "交易编辑器" })).toBeVisible();
+    await expect(proposerPage.locator('[data-board-root="true"]')).toBeVisible();
+    expect(await proposerPage.getByRole("dialog").count()).toBe(0);
+    const artifactDir = path.join(process.cwd(), "output", "playwright");
+    await mkdir(artifactDir, { recursive: true });
+    await proposerPage.screenshot({ path: path.join(artifactDir, "trade-composer-desktop.png"), fullPage: true });
+    await proposerPage.getByRole("button", { name: new RegExp(`在我希望获得中加入 1 张${RESOURCE_LABELS[responderResource]}`) }).click();
     await proposerPage.getByRole("button", { name: "向所有玩家发布报价" }).click();
 
-    await expect(responderPage.getByRole("dialog", { name: "查看报价并回应" })).toBeVisible();
     await responderPage.setViewportSize({ width: 390, height: 844 });
-    await responderPage.getByRole("button", { name: "提出反报价" }).click();
+    await expect(responderPage.getByRole("region", { name: "查看报价并回应" })).toBeVisible();
+    await responderPage.getByRole("button", { name: "反报价" }).click();
 
     const proposerGives = emptyResources();
     const proposerReceives = emptyResources();
@@ -91,18 +97,44 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await fillCounterBasket(responderPage, "反报价中你希望获得", proposerGives);
     await fillCounterBasket(responderPage, "反报价中你愿意交出", proposerReceives);
     await expect.poll(() => responderPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    const artifactDir = path.join(process.cwd(), "output", "playwright");
-    await mkdir(artifactDir, { recursive: true });
     await responderPage.screenshot({ path: path.join(artifactDir, "trade-counter-mobile.png"), fullPage: true });
     await responderPage.getByRole("button", { name: "提交反报价" }).click();
 
-    await expect(proposerPage.getByRole("button", { name: new RegExp(`岚.*提出反报价`) })).toBeVisible();
+    await expect(proposerPage.getByRole("button", { name: "岚：提出反报价" })).toBeVisible();
     await proposerPage.screenshot({ path: path.join(artifactDir, "trade-counter-desktop.png"), fullPage: true });
-    await proposerPage.getByRole("button", { name: new RegExp(`岚.*提出反报价`) }).click();
-    await proposerPage.getByRole("button", { name: "接受所选反报价并成交" }).click();
+    await proposerPage.getByRole("button", { name: "岚：提出反报价" }).click();
+    await proposerPage.getByRole("button", { name: "接受所选反报价" }).click();
 
-    await expect(proposerPage.getByRole("dialog", { name: "等待桌上回应" })).toHaveCount(0);
+    await expect(proposerPage.getByRole("region", { name: "等待桌上回应" })).toHaveCount(0);
     await expect(proposerPage.getByText(/林 给 岚|岚 给 林/).first()).toBeVisible();
+
+    await expect.poll(async () => (await getRoom(request, proposer)).game?.openTrade, {
+      message: "trade completion should reach the server",
+    }).toBeNull();
+    const discard = await reachDiscardStage(request, sessions, await getRoom(request, proposer), () => ++commandNumber);
+    const discardContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    contexts.push(discardContext);
+    await seedSession(discardContext, discard.session);
+    const discardPage = await discardContext.newPage();
+    await discardPage.goto("/");
+
+    await expect(discardPage.getByRole("button", { name: "确认弃牌" })).toBeVisible();
+    await expect(discardPage.locator("[data-resource-flight]")).toHaveCount(0);
+    const discardSelection = selectResources(discard.room.game?.you.resources ?? emptyResources(), discard.requiredCount);
+    for (const resource of RESOURCES) {
+      for (let index = 0; index < discardSelection[resource]; index += 1) {
+        await discardPage.getByRole("button", { name: new RegExp(`在准备弃掉中加入 1 张${RESOURCE_LABELS[resource]}`) }).click();
+      }
+    }
+    const selectedResource = RESOURCES.find((resource) => discardSelection[resource] > 0);
+    if (selectedResource === undefined) throw new Error("Discard selection is empty");
+    await discardPage.getByRole("button", { name: new RegExp(`从准备弃掉移除 1 张${RESOURCE_LABELS[selectedResource]}`) }).click();
+    await expect(discardPage.getByRole("button", { name: "确认弃牌" })).toBeDisabled();
+    await discardPage.getByRole("button", { name: new RegExp(`在准备弃掉中加入 1 张${RESOURCE_LABELS[selectedResource]}`) }).click();
+    await expect(discardPage.getByRole("button", { name: "确认弃牌" })).toBeEnabled();
+    await discardPage.screenshot({ path: path.join(artifactDir, "discard-cards-mobile.png"), fullPage: true });
+    await discardPage.getByRole("button", { name: "确认弃牌" }).click();
+    await expect(discardPage.getByRole("button", { name: "确认弃牌" })).toHaveCount(0);
   } finally {
     await Promise.allSettled(contexts.map((context) => context.close()));
   }
@@ -154,6 +186,53 @@ async function reachActionStage(
     throw new Error(`Unexpected forced step ${room.game.phase.step}`);
   }
   throw new Error("Action stage guard exhausted");
+}
+
+async function reachDiscardStage(
+  request: APIRequestContext,
+  sessions: readonly Session[],
+  initialRoom: RoomView,
+  nextCommandNumber: () => number,
+): Promise<{ readonly session: Session; readonly room: RoomView; readonly requiredCount: number }> {
+  let room = initialRoom;
+  for (let guard = 0; guard < 180; guard += 1) {
+    if (room.game?.phase.kind !== "turn") throw new Error("Game left the turn phase before a discard occurred");
+    const active = requireSession(sessions, room.game.phase.activePlayerId);
+    if (room.game.phase.step === "action") {
+      const activeRoom = await getRoom(request, active);
+      room = await command(request, active, activeRoom, nextCommandNumber(), { type: "EndTurn" });
+      continue;
+    }
+    if (room.game.phase.step === "roll") {
+      const activeRoom = await getRoom(request, active);
+      room = await command(request, active, activeRoom, nextCommandNumber(), { type: "RollDice" });
+      continue;
+    }
+    if (room.game.phase.step === "discard") {
+      for (const session of sessions) {
+        const playerRoom = await getRoom(request, session);
+        if (playerRoom.game?.interaction.kind === "discard") {
+          return { session, room: playerRoom, requiredCount: playerRoom.game.interaction.requiredCount };
+        }
+      }
+      throw new Error("Discard phase has no projected discarder");
+    }
+    if (room.game.phase.step === "robber") {
+      const activeRoom = await getRoom(request, active);
+      if (activeRoom.game?.interaction.kind !== "robber") throw new Error("Active player has no robber targets");
+      const target = activeRoom.game.interaction.targets.find((candidate) => candidate.victimIds.length === 0)
+        ?? activeRoom.game.interaction.targets[0];
+      if (target === undefined) throw new Error("Missing robber target while seeking discard stage");
+      room = await command(request, active, activeRoom, nextCommandNumber(), {
+        type: "MoveRobber",
+        hexId: target.hexId,
+        victimId: target.victimIds[0] ?? null,
+      });
+      continue;
+    }
+    throw new Error(`Unexpected step while seeking discard: ${room.game.phase.step}`);
+  }
+  throw new Error("No discard occurred before the command guard was exhausted");
 }
 
 async function command(
@@ -222,10 +301,11 @@ async function seedSession(context: BrowserContext, session: Session): Promise<v
 }
 
 async function fillCounterBasket(page: Page, label: string, resources: ResourceCounts): Promise<void> {
-  // Update controlled React inputs in order. Concurrent fills can race because
-  // each basket change is derived from the latest rendered basket value.
   for (const resource of RESOURCES) {
-    await page.getByRole("spinbutton", { name: `${label}：${RESOURCE_LABELS[resource]}数量` }).fill(String(resources[resource]));
+    const remove = page.getByRole("button", { name: new RegExp(`从${label}移除 1 张${RESOURCE_LABELS[resource]}`) });
+    while (await remove.count() > 0) await remove.click();
+    const add = page.getByRole("button", { name: new RegExp(`在${label}中加入 1 张${RESOURCE_LABELS[resource]}`) });
+    for (let index = 0; index < resources[resource]; index += 1) await add.click();
   }
 }
 

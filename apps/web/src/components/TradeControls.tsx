@@ -1,22 +1,19 @@
 import type { GameCommand, GameView } from "@catan/protocol";
-import { ArrowRightLeft, Handshake, Landmark, Send } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRightLeft, ChevronUp, Handshake, Landmark, Send, X } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button.js";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
 import { randomId } from "@/lib/random-id.js";
 import { cn } from "@/lib/utils.js";
-import { OpenTradeDialog, responseTerms, TradeResponseCount } from "./OpenTradeDialog.js";
+import { ResourceCard, resourceLabel } from "./ResourceCard.js";
 import {
   emptyTradeBasket,
-  hasTradeResources,
-  resourceLabel,
-  resourceMark,
+  type TradeBasket,
   TRADE_RESOURCES,
   TradeResourceBasket,
   type TradeResource,
 } from "./TradeResourceBasket.js";
-import { TradeDialogHeader, TradeExchange, TradeValidationNote, tradeProblem } from "./TradePresentation.js";
+import { TradeExchange, TradeValidationNote, tradeProblem } from "./TradePresentation.js";
 
 type Resource = TradeResource;
 
@@ -25,48 +22,50 @@ export interface TradeControlsProps {
   readonly busy: boolean;
   readonly onCommand: (command: GameCommand) => void;
   readonly allowPlayerTrades?: boolean;
+  readonly playerGive?: TradeBasket | undefined;
+  readonly onPlayerGiveChange?: ((value: TradeBasket) => void) | undefined;
+  readonly composerOpen?: boolean | undefined;
+  readonly onComposerOpenChange?: ((open: boolean) => void) | undefined;
+  readonly handPickerExternal?: boolean;
 }
 
-export function TradeControls({ game, busy, onCommand, allowPlayerTrades = true }: TradeControlsProps) {
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [offerOpen, setOfferOpen] = useState(true);
-  const [selectedPartnerId, setSelectedPartnerId] = useState("");
-  const [playerGive, setPlayerGive] = useState(emptyTradeBasket);
+export function TradeControls({
+  game,
+  busy,
+  onCommand,
+  allowPlayerTrades = true,
+  playerGive: controlledPlayerGive,
+  onPlayerGiveChange,
+  composerOpen: controlledComposerOpen,
+  onComposerOpenChange,
+  handPickerExternal = false,
+}: TradeControlsProps) {
+  const [internalComposerOpen, setInternalComposerOpen] = useState(false);
+  const [internalPlayerGive, setInternalPlayerGive] = useState(emptyTradeBasket);
   const [playerReceive, setPlayerReceive] = useState(emptyTradeBasket);
   const [give, setGive] = useState<Resource>("brick");
   const [receive, setReceive] = useState<Resource>("ore");
-  const offerId = game.openTrade?.offerId ?? null;
-
-  useEffect(() => {
-    if (offerId !== null) setOfferOpen(true);
-  }, [offerId]);
-
-  useEffect(() => {
-    const offer = game.openTrade;
-    const actionableIds = offer?.responses
-      .filter((response) => response.response !== "declined")
-      .filter((response) => hasTradeResources(game.you.resources, responseTerms(offer, response).give))
-      .map((response) => response.playerId) ?? [];
-    if (!actionableIds.includes(selectedPartnerId)) setSelectedPartnerId(actionableIds[0] ?? "");
-  }, [game.openTrade, game.you.resources, selectedPartnerId]);
+  const composerOpen = controlledComposerOpen ?? internalComposerOpen;
+  const playerGive = controlledPlayerGive ?? internalPlayerGive;
+  const setComposerOpen = (open: boolean) => {
+    if (controlledComposerOpen === undefined) setInternalComposerOpen(open);
+    onComposerOpenChange?.(open);
+  };
+  const setPlayerGive = (value: TradeBasket) => {
+    if (controlledPlayerGive === undefined) setInternalPlayerGive(value);
+    onPlayerGiveChange?.(value);
+  };
 
   if (game.openTrade !== null) {
     return (
-      <>
-        <Button variant="outline" size="sm" className="w-full border-[#a65c43]/25 bg-[#fffaf0]/80 shadow-sm" onClick={() => setOfferOpen(true)}>
-          <Handshake className="size-4" />查看交易桌
-          <TradeResponseCount game={game} />
-        </Button>
-        <OpenTradeDialog
-          game={game}
-          busy={busy}
-          open={offerOpen}
-          selectedPartnerId={selectedPartnerId}
-          onOpenChange={setOfferOpen}
-          onSelectedPartnerId={setSelectedPartnerId}
-          onCommand={onCommand}
-        />
-      </>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full border-[#a65c43]/25 bg-[#fffaf0]/80 shadow-sm"
+        onClick={() => document.getElementById("active-trade-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+      >
+        <Handshake className="size-4" />查看交易桌
+      </Button>
     );
   }
 
@@ -75,87 +74,121 @@ export function TradeControls({ game, busy, onCommand, allowPlayerTrades = true 
   const sameResource = give === receive;
 
   return (
-    <Dialog open={composerOpen} onOpenChange={setComposerOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full border-[#a65c43]/25 bg-[#fffaf0]/80 shadow-sm">
-          <ArrowRightLeft className="size-4" />发起交易
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[92vh] gap-0 overflow-y-auto border-[#f7e6bf]/35 bg-[#f5e7c9] p-0 text-[#263d39] shadow-2xl sm:max-w-3xl">
-        <TradeDialogHeader
-          icon={<Handshake className="size-6" />}
-          eyebrow="行动阶段 · 交易"
-          title="交易桌"
-          description="向整桌玩家发布一个报价，或使用你当前最优惠的银行比例。"
-        />
+    <div className="grid gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        aria-expanded={composerOpen}
+        aria-controls="trade-composer-panel"
+        className={cn(
+          "w-full border-[#a65c43]/25 bg-[#fffaf0]/80 shadow-sm",
+          composerOpen && "border-[#37685d]/45 bg-[#37685d] text-white hover:bg-[#315d53] hover:text-white",
+        )}
+        onClick={() => setComposerOpen(!composerOpen)}
+      >
+        {composerOpen ? <ChevronUp className="size-4" /> : <ArrowRightLeft className="size-4" />}
+        {composerOpen ? "收起交易" : "发起交易"}
+      </Button>
 
-        <Tabs defaultValue={allowPlayerTrades ? "players" : "bank"} className="p-4 sm:p-6">
-          <TabsList className={cn("grid h-11 w-full rounded-xl bg-[#dfcba4]/75 p-1", allowPlayerTrades ? "grid-cols-2" : "grid-cols-1")}>
-            {allowPlayerTrades ? <TabsTrigger className="rounded-lg" value="players"><Handshake className="size-4" />玩家协商</TabsTrigger> : null}
-            <TabsTrigger className="rounded-lg" value="bank"><Landmark className="size-4" />银行与港口</TabsTrigger>
-          </TabsList>
+      {composerOpen ? (
+        <section
+          id="trade-composer-panel"
+          className="trade-composer-panel grid gap-3 rounded-2xl border border-[#f7e6bf]/45 bg-[#f3e4c5]/98 p-3 text-[#263d39] shadow-2xl lg:absolute lg:right-0 lg:bottom-[calc(100%+0.75rem)] lg:z-30 lg:max-h-[min(50svh,34rem)] lg:w-[min(44rem,calc(100vw-380px))] lg:overflow-y-auto"
+          aria-label="交易编辑器"
+        >
+          <header className="flex items-center justify-between gap-3 border-b border-[#6d5434]/15 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="grid size-9 place-items-center rounded-full bg-[#214d48] text-[#fff8df]"><Handshake className="size-4" /></span>
+              <div>
+                <strong className="block font-serif text-lg">交易桌</strong>
+                <small className="text-[#6b716a]">组合资源后发布，棋盘仍可查看</small>
+              </div>
+            </div>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label="收起交易编辑器" onClick={() => setComposerOpen(false)}><X /></Button>
+          </header>
 
-          {allowPlayerTrades ? <TabsContent value="players">
-            <form className="mt-5 grid gap-5" onSubmit={(event) => {
-              event.preventDefault();
-              setComposerOpen(false);
-              onCommand({ type: "OpenTradeOffer", offerId: randomId(), give: playerGive, receive: playerReceive });
-              setPlayerGive(emptyTradeBasket());
-              setPlayerReceive(emptyTradeBasket());
-            }}>
-              <TradeExchange
-                giveLabel="你放上桌面"
-                receiveLabel="你希望拿走"
-                give={<TradeResourceBasket label="你提供" value={playerGive} maximums={game.you.resources} onChange={setPlayerGive} />}
-                receive={<TradeResourceBasket label="你希望获得" value={playerReceive} onChange={setPlayerReceive} />}
-              />
-              <TradeValidationNote problem={playerOfferProblem} fallback="可以组合多种资源，也可以将一侧留空。" />
-              <Button className="h-11 w-full bg-[#214d48] text-[#fff8df] hover:bg-[#173d39]" type="submit" disabled={busy || playerOfferProblem !== null}>
-                <Send className="size-4" />向所有玩家发布报价
-              </Button>
-            </form>
-          </TabsContent> : null}
+          <Tabs defaultValue={allowPlayerTrades ? "players" : "bank"}>
+            <TabsList className={cn("grid h-10 w-full rounded-xl bg-[#dfcba4]/75 p-1", allowPlayerTrades ? "grid-cols-2" : "grid-cols-1")}>
+              {allowPlayerTrades ? <TabsTrigger className="rounded-lg" value="players"><Handshake className="size-4" />玩家协商</TabsTrigger> : null}
+              <TabsTrigger className="rounded-lg" value="bank"><Landmark className="size-4" />银行与港口</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="bank">
-            <form className="mt-5 grid gap-5" onSubmit={(event) => {
-              event.preventDefault();
-              setComposerOpen(false);
-              onCommand({ type: "MaritimeTrade", give, receive });
-            }}>
-              <div className="rounded-2xl border border-[#6d5434]/12 bg-[#fffaf0]/60 p-4 sm:p-5">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="mb-1 text-xs font-black tracking-[.14em] text-[#8f6749] uppercase">当前最优兑换率</p>
-                    <strong className="font-serif text-2xl text-[#244c48]">{game.you.maritimeRatios[give]} : 1</strong>
-                  </div>
-                  <span className="grid size-12 place-items-center rounded-full border border-[#b89358]/30 bg-[#e7d09f] text-xl shadow-inner" aria-hidden="true">⚓</span>
-                </div>
+            {allowPlayerTrades ? (
+              <TabsContent value="players">
+                <form className="mt-3 grid gap-3" onSubmit={(event) => {
+                  event.preventDefault();
+                  setComposerOpen(false);
+                  onCommand({ type: "OpenTradeOffer", offerId: randomId(), give: playerGive, receive: playerReceive });
+                  setPlayerGive(emptyTradeBasket());
+                  setPlayerReceive(emptyTradeBasket());
+                }}>
+                  {handPickerExternal ? <p className="m-0 rounded-lg bg-[#214d48]/8 px-3 py-2 text-center text-xs font-bold text-[#45625c]">点击左侧“我的资源”加入我提供的卡片</p> : null}
+                  <TradeExchange
+                    giveLabel="我提供"
+                    receiveLabel="我希望获得"
+                    give={<TradeResourceBasket label="我提供" value={playerGive} maximums={game.you.resources} showPalette={!handPickerExternal} onChange={setPlayerGive} />}
+                    receive={<TradeResourceBasket label="我希望获得" value={playerReceive} onChange={setPlayerReceive} />}
+                  />
+                  <TradeValidationNote problem={playerOfferProblem} fallback="可组合多种资源；点击已选卡片会撤回 1 张。" />
+                  <Button className="sticky bottom-0 z-10 h-10 w-full bg-[#214d48] text-[#fff8df] shadow-[0_-8px_18px_rgba(243,228,197,.9)] hover:bg-[#173d39]" type="submit" disabled={busy || playerOfferProblem !== null}>
+                    <Send className="size-4" />向所有玩家发布报价
+                  </Button>
+                </form>
+              </TabsContent>
+            ) : null}
+
+            <TabsContent value="bank">
+              <form className="mt-3 grid gap-3" onSubmit={(event) => {
+                event.preventDefault();
+                setComposerOpen(false);
+                onCommand({ type: "MaritimeTrade", give, receive });
+              }}>
                 <TradeExchange
                   giveLabel={`交给银行 · ${game.you.maritimeRatios[give]} 张`}
                   receiveLabel="从银行获得 · 1 张"
-                  give={<ResourcePicker resource={give} onResource={setGive} />}
-                  receive={<ResourcePicker resource={receive} onResource={setReceive} />}
+                  give={<SingleResourcePicker label="交给银行" value={give} counts={game.you.resources} onChange={setGive} />}
+                  receive={<SingleResourcePicker label="从银行获得" value={receive} onChange={setReceive} />}
                 />
-              </div>
-              <TradeValidationNote
-                problem={sameResource ? "交出与获得的资源不能相同" : game.you.resources[give] < game.you.maritimeRatios[give] ? `${resourceLabel(give)}数量不足` : null}
-                fallback="港口优惠已自动计入，成交时仍由服务器检查银行库存。"
-              />
-              <Button className="h-11 w-full bg-[#214d48] text-[#fff8df] hover:bg-[#173d39]" type="submit" disabled={busy || sameResource || game.you.resources[give] < game.you.maritimeRatios[give]}>
-                <Landmark className="size-4" />确认银行交易
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+                <TradeValidationNote
+                  problem={sameResource ? "交出与获得的资源不能相同" : game.you.resources[give] < game.you.maritimeRatios[give] ? `${resourceLabel(give)}数量不足` : null}
+                  fallback={`当前兑换率 ${game.you.maritimeRatios[give]}:1，成交时由服务器再次检查银行库存。`}
+                />
+                <Button className="sticky bottom-0 z-10 h-10 w-full bg-[#214d48] text-[#fff8df] shadow-[0_-8px_18px_rgba(243,228,197,.9)] hover:bg-[#173d39]" type="submit" disabled={busy || sameResource || game.you.resources[give] < game.you.maritimeRatios[give]}>
+                  <Landmark className="size-4" />确认银行交易
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </section>
+      ) : null}
+    </div>
   );
 }
 
-function ResourcePicker({ resource, onResource }: { readonly resource: Resource; readonly onResource: (resource: Resource) => void }) {
+function SingleResourcePicker({
+  label,
+  value,
+  counts,
+  onChange,
+}: {
+  readonly label: string;
+  readonly value: Resource;
+  readonly counts?: TradeBasket | undefined;
+  readonly onChange: (resource: Resource) => void;
+}) {
   return (
-    <select className="h-12 w-full rounded-xl border border-input bg-white/85 px-3 font-black text-[#304a46] outline-none focus:ring-2 focus:ring-ring" value={resource} onChange={(event) => onResource(event.target.value as Resource)}>
-      {TRADE_RESOURCES.map((candidate) => <option key={candidate} value={candidate}>{resourceMark(candidate)} {resourceLabel(candidate)}</option>)}
-    </select>
+    <div className="grid grid-cols-5 gap-1" role="radiogroup" aria-label={label}>
+      {TRADE_RESOURCES.map((resource) => (
+        <ResourceCard
+          key={resource}
+          resource={resource}
+          variant="compact"
+          count={counts?.[resource]}
+          pressed={value === resource}
+          ariaLabel={`${label}：${resourceLabel(resource)}`}
+          onClick={() => onChange(resource)}
+        />
+      ))}
+    </div>
   );
 }

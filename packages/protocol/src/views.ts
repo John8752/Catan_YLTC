@@ -2,6 +2,7 @@ import {
   BUILD_COSTS,
   hasResources,
   resourceCardCount,
+  resourceAmounts,
   legalInitialRoadEdges,
   legalInitialSettlementVertices,
   legalCityVertices,
@@ -71,14 +72,33 @@ export interface GameView {
   readonly effects: readonly PublicGameEffectView[];
 }
 
-export interface PublicGameEffectView {
+export type PublicGameEffectView = PublicResourceGrantEffectView | PrivateResourceTransferEffectView;
+
+export interface PublicResourceGrantEffectView {
   readonly id: string;
   readonly revision: number;
   readonly kind: "resource-grant";
-  readonly reason: "production" | "starting-resources";
-  readonly grants: readonly { readonly playerId: string; readonly resources: ResourceHand }[];
+  readonly reason: "production" | "starting-resources" | "player-trade" | "maritime-trade";
+  readonly grants: readonly {
+    readonly playerId: string;
+    readonly resources: ResourceHand;
+    readonly origin?: { readonly kind: "player"; readonly playerId: string } | { readonly kind: "bank" };
+  }[];
   readonly sources: readonly ResourceGrantSource[];
   readonly triggeredHexIds: readonly string[];
+}
+
+export interface PrivateResourceTransferEffectView {
+  readonly id: string;
+  readonly revision: number;
+  readonly kind: "resource-transfer";
+  readonly reason: "robber";
+  readonly transfers: readonly {
+    readonly playerId: string;
+    readonly sourcePlayerId: string;
+    readonly amount: number;
+    readonly resource: ResourceType | null;
+  }[];
 }
 
 export interface GameHistoryEntryView {
@@ -248,11 +268,11 @@ export function projectGameForPlayer(
     developmentCardPlayedThisTurn: state.developmentCardPlayedThisTurn,
     awards: state.awards,
     history: recentRecords.flatMap((record) => projectHistoryRecord(state, viewerId, record)),
-    effects: recentRecords.flatMap(projectPublicEffect),
+    effects: recentRecords.flatMap((record) => projectPlayerSafeEffect(record, viewerId)),
   };
 }
 
-function projectPublicEffect(record: GameEventRecord): readonly PublicGameEffectView[] {
+function projectPlayerSafeEffect(record: GameEventRecord, viewerId: string): readonly PublicGameEffectView[] {
   const event = record.event;
   if (event.type === "resources_produced") {
     if (event.triggeredHexIds.length === 0) return [];
@@ -275,6 +295,50 @@ function projectPublicEffect(record: GameEventRecord): readonly PublicGameEffect
       grants: [{ playerId: event.playerId, resources: event.resources }],
       sources: event.sources,
       triggeredHexIds: [...new Set(event.sources.map((source) => source.hexId))],
+    }];
+  }
+  if (event.type === "player_trade_completed") {
+    return [{
+      id: `${record.revision}:player-trade:${event.offerId}`,
+      revision: record.revision,
+      kind: "resource-grant",
+      reason: "player-trade",
+      grants: [
+        { playerId: event.proposerId, resources: event.receive, origin: { kind: "player", playerId: event.accepterId } },
+        { playerId: event.accepterId, resources: event.give, origin: { kind: "player", playerId: event.proposerId } },
+      ],
+      sources: [],
+      triggeredHexIds: [],
+    }];
+  }
+  if (event.type === "maritime_trade_completed") {
+    return [{
+      id: `${record.revision}:maritime-trade:${event.playerId}`,
+      revision: record.revision,
+      kind: "resource-grant",
+      reason: "maritime-trade",
+      grants: [{
+        playerId: event.playerId,
+        resources: resourceAmounts({ [event.receive]: 1 }),
+        origin: { kind: "bank" },
+      }],
+      sources: [],
+      triggeredHexIds: [],
+    }];
+  }
+  if (event.type === "robber_moved" && event.victimId !== null && event.stolenResource !== null) {
+    const canSeeResource = event.playerId === viewerId || event.victimId === viewerId;
+    return [{
+      id: `${record.revision}:robber-transfer:${event.playerId}`,
+      revision: record.revision,
+      kind: "resource-transfer",
+      reason: "robber",
+      transfers: [{
+        playerId: event.playerId,
+        sourcePlayerId: event.victimId,
+        amount: 1,
+        resource: canSeeResource ? event.stolenResource : null,
+      }],
     }];
   }
   return [];

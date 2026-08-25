@@ -20,6 +20,8 @@ The Web implementation lives under `apps/web/src/effects` and uses semantic DOM 
 
 Strong whole-board motion is reserved for disruptive events such as rolling seven or moving the robber.
 
+Resource gains from player trades and maritime trades reuse the same projected effect queue. Player trades record the public source player, while maritime gains use a semantic bank anchor. A robber transfer projects the resource identity only to the thief and victim; every uninvolved player receives an explicit unknown-card transfer so the visible motion does not reveal private information.
+
 ## Boundaries
 
 - Effects never decide or delay canonical state. The server snapshot is immediately authoritative.

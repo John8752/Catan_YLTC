@@ -16,6 +16,7 @@ import { Board } from "./components/Board.js";
 import { LobbySetup } from "./components/LobbySetup.js";
 import { PlayerDock } from "./components/PlayerDock.js";
 import { RoomPanel } from "./components/RoomPanel.js";
+import { ActiveTradePanel } from "./components/ActiveTradePanel.js";
 import { Welcome } from "./components/Welcome.js";
 import { ResourceEffectLayer } from "./effects/ResourceEffectLayer.js";
 import { useGameEffectQueue } from "./effects/use-game-effect-queue.js";
@@ -295,6 +296,9 @@ export function App() {
         onLeave={handleLeave}
         onAbandonSeat={handleAbandonSeat}
         onOpenExtraSeat={isLocalHost ? handleOpenExtraSeat : null}
+        gamePanel={room.game?.openTrade === null || room.game === null ? null : (
+          <ActiveTradePanel game={room.game} busy={busy} onCommand={handleGameCommand} />
+        )}
       />
       <ResourceEffectLayer effect={activeEffect} onComplete={completeActiveEffect} />
       {error === null ? null : <p className="toast-error" role="alert">{error}</p>}

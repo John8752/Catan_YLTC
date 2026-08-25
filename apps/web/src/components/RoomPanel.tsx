@@ -32,6 +32,7 @@ export interface RoomPanelProps {
   readonly onLeave: () => void | Promise<void>;
   readonly onAbandonSeat: () => void;
   readonly onOpenExtraSeat: (() => void) | null;
+  readonly gamePanel?: ReactNode;
 }
 
 const PLAYER_COLORS = {
@@ -53,6 +54,7 @@ export function RoomPanel({
   onLeave,
   onAbandonSeat,
   onOpenExtraSeat,
+  gamePanel,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
   const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 3;
@@ -62,7 +64,7 @@ export function RoomPanel({
   return (
     <aside className="min-h-0 lg:col-start-2 lg:row-span-3 lg:row-start-1" aria-label="房间状态">
       <Card className="min-h-0 gap-0 overflow-hidden border-white/20 bg-[#f3e6c8]/96 py-0 shadow-2xl backdrop-blur-sm lg:h-full">
-        <CardHeader className="border-b border-[#5f4b31]/15 px-5 py-4">
+        <CardHeader className="border-b border-[#5f4b31]/15 px-5 py-4" data-resource-source="bank">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="mb-1 text-[11px] font-black tracking-[.18em] text-[#aa543d] uppercase">房间码</p>
@@ -77,6 +79,8 @@ export function RoomPanel({
             </Badge>
           </div>
         </CardHeader>
+
+        {gamePanel}
 
         <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-3">
           {room.game === null ? null : (

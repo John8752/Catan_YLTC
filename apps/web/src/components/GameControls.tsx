@@ -1,12 +1,13 @@
+import { RESOURCE_TYPES, type ResourceHand, type ResourceType } from "@catan/game-core";
 import type { GameCommand, GameView } from "@catan/protocol";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button.js";
 import { cn } from "@/lib/utils.js";
 import { TradeControls } from "./TradeControls.js";
 import { DevelopmentControls } from "./DevelopmentControls.js";
+import { resourceLabel } from "./ResourceCard.js";
+import { SelectedResourceCards, emptyResourceSelection } from "./ResourceCardPicker.js";
 
-const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
-type Resource = (typeof RESOURCES)[number];
+type Resource = ResourceType;
 
 export interface GameControlsProps {
   readonly game: GameView;
@@ -15,6 +16,12 @@ export interface GameControlsProps {
   readonly buildMode: "road" | "settlement" | "city" | null;
   readonly selectedRobberHexId: string | null;
   readonly onBuildModeChange: (mode: "road" | "settlement" | "city" | null) => void;
+  readonly discardSelection?: ResourceHand;
+  readonly onDiscardSelectionChange?: (selection: ResourceHand) => void;
+  readonly tradeGive?: ResourceHand;
+  readonly onTradeGiveChange?: (selection: ResourceHand) => void;
+  readonly tradeComposerOpen?: boolean;
+  readonly onTradeComposerOpenChange?: (open: boolean) => void;
 }
 
 export function GameControls({
@@ -24,13 +31,13 @@ export function GameControls({
   buildMode,
   selectedRobberHexId,
   onBuildModeChange,
+  discardSelection = emptyResourceSelection(),
+  onDiscardSelectionChange = () => undefined,
+  tradeGive,
+  onTradeGiveChange,
+  tradeComposerOpen,
+  onTradeComposerOpenChange,
 }: GameControlsProps) {
-  const [discard, setDiscard] = useState<Record<Resource, number>>(emptySelection);
-
-  useEffect(() => {
-    setDiscard(emptySelection());
-  }, [game.revision]);
-
   const selectedTarget = game.interaction.kind === "robber"
     ? game.interaction.targets.find((target) => target.hexId === selectedRobberHexId)
     : undefined;
@@ -58,6 +65,11 @@ export function GameControls({
           busy={busy}
           onCommand={onCommand}
           allowPlayerTrades={!game.interaction.pairedPlayer}
+          playerGive={tradeGive}
+          onPlayerGiveChange={onTradeGiveChange}
+          composerOpen={tradeComposerOpen}
+          onComposerOpenChange={onTradeComposerOpenChange}
+          handPickerExternal={tradeGive !== undefined}
         />
         <Button type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
           {busy ? "提交中…" : "结束回合"}
@@ -90,33 +102,20 @@ export function GameControls({
   }
 
   if (game.interaction.kind === "discard") {
-    const selectedCount = RESOURCES.reduce((total, resource) => total + discard[resource], 0);
+    const selectedCount = RESOURCE_TYPES.reduce((total, resource) => total + discardSelection[resource], 0);
     return (
       <form
         className="resolution-form"
         onSubmit={(event) => {
           event.preventDefault();
-          onCommand({ type: "DiscardResources", resources: discard });
+          onCommand({ type: "DiscardResources", resources: discardSelection });
         }}
       >
-        <strong>弃牌 {selectedCount}/{game.interaction.requiredCount}</strong>
-        <div className="discard-grid">
-          {RESOURCES.map((resource) => (
-            <label key={resource}>
-              <span>{resourceLabel(resource)}</span>
-              <input
-                type="number"
-                min="0"
-                max={game.you.resources[resource]}
-                value={discard[resource]}
-                onChange={(event) => setDiscard({
-                  ...discard,
-                  [resource]: Math.max(0, Math.min(game.you.resources[resource], Number(event.target.value))),
-                })}
-              />
-            </label>
-          ))}
+        <div className="flex items-center justify-between gap-3">
+          <strong>弃牌 {selectedCount}/{game.interaction.requiredCount}</strong>
+          <small>手牌添加 · 下方卡片撤回</small>
         </div>
+        <SelectedResourceCards label="准备弃掉" value={discardSelection} onChange={onDiscardSelectionChange} emptyLabel="从左侧手牌选择要弃掉的资源" />
         <Button type="submit" disabled={busy || selectedCount !== game.interaction.requiredCount}>
           确认弃牌
         </Button>
@@ -165,7 +164,7 @@ export function GameControls({
   }
 
   if (game.interaction.kind === "trade-response") {
-    return <TradeControls game={game} busy={busy} onCommand={onCommand} />;
+    return <p>请在右侧交易桌回应这份报价。</p>;
   }
 
   if (game.interaction.kind === "free-road") {
@@ -173,14 +172,6 @@ export function GameControls({
   }
 
   return <p>{game.interaction.instruction}</p>;
-}
-
-function emptySelection(): Record<Resource, number> {
-  return { brick: 0, lumber: 0, wool: 0, grain: 0, ore: 0 };
-}
-
-function resourceLabel(resource: Resource): string {
-  return { brick: "砖", lumber: "木", wool: "羊", grain: "麦", ore: "矿" }[resource];
 }
 
 function hexLabel(terrain: string | undefined, numberToken: number | null | undefined): string {

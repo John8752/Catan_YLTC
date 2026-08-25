@@ -1,14 +1,13 @@
+import { RESOURCE_TYPES } from "@catan/game-core";
 import type { PublicGameEffectView } from "@catan/protocol";
 import type { CSSProperties } from "react";
 import { useLayoutEffect, useMemo, useState } from "react";
-
-const RESOURCE_TYPES = ["brick", "lumber", "wool", "grain", "ore"] as const;
-type Resource = (typeof RESOURCE_TYPES)[number];
+import { ResourceCard, type ResourceCardKind } from "@/components/ResourceCard.js";
 
 interface ResourceFlight {
   readonly id: string;
   readonly playerId: string;
-  readonly resource: Resource;
+  readonly resource: ResourceCardKind;
   readonly amount: number;
   readonly startX: number;
   readonly startY: number;
@@ -58,13 +57,12 @@ export function ResourceEffectLayer({
     <div className="resource-effect-layer" data-effect-id={effect.id} aria-hidden="true">
       {flights.map((flight) => (
         <span
-          className={`resource-flight resource-flight-${flight.resource}`}
+          className="resource-flight"
           data-resource-flight={`${flight.playerId}:${flight.resource}`}
           key={flight.id}
           style={flightStyle(flight)}
         >
-          <span className="resource-flight-mark">{resourceMark(flight.resource)}</span>
-          <strong>×{flight.amount}</strong>
+          <ResourceCard resource={flight.resource} count={flight.amount} variant="flight" />
         </span>
       ))}
       {flights.map((flight) => (
@@ -80,6 +78,30 @@ export function measureFlights(effect: PublicGameEffectView, root: ParentNode = 
   const flights: ResourceFlight[] = [];
   let index = 0;
 
+  if (effect.kind === "resource-transfer") {
+    for (const transfer of effect.transfers) {
+      const resource = transfer.resource ?? "unknown";
+      const source = centerOf(findDataElement(root, "player-target", transfer.sourcePlayerId))
+        ?? centerOf(findDataElement(root, "board-root", "true"));
+      const knownTarget = transfer.resource === null
+        ? null
+        : findDataElement(root, "resource-target", `${transfer.playerId}:${transfer.resource}`);
+      const target = centerOf(knownTarget ?? findDataElement(root, "player-target", transfer.playerId));
+      if (source === null || target === null) continue;
+      flights.push(createFlight({
+        id: `${effect.id}:${transfer.playerId}:${resource}`,
+        playerId: transfer.playerId,
+        resource,
+        amount: transfer.amount,
+        source,
+        target,
+        delay: index * 70,
+      }));
+      index += 1;
+    }
+    return flights;
+  }
+
   for (const grant of effect.grants) {
     for (const resource of RESOURCE_TYPES) {
       const amount = grant.resources[resource];
@@ -90,25 +112,26 @@ export function measureFlights(effect: PublicGameEffectView, root: ParentNode = 
       const sourceElements = matchingSources
         .map((source) => findDataElement(root, "hex-id", source.hexId))
         .filter((element): element is Element => element !== null);
-      const source = averageCenter(sourceElements) ?? centerOf(findDataElement(root, "board-root", "true"));
+      const source = averageCenter(sourceElements)
+        ?? centerOf(grant.origin?.kind === "player"
+          ? findDataElement(root, "player-target", grant.origin.playerId)
+          : grant.origin?.kind === "bank"
+            ? findDataElement(root, "resource-source", "bank")
+            : null)
+        ?? centerOf(findDataElement(root, "board-root", "true"));
       const ownTarget = findDataElement(root, "resource-target", `${grant.playerId}:${resource}`);
       const target = centerOf(ownTarget ?? findDataElement(root, "player-target", grant.playerId));
       if (source === null || target === null) continue;
-      const arc = Math.min(150, Math.max(58, Math.abs(target.x - source.x) * 0.16));
       const delay = index * 70;
-      flights.push({
+      flights.push(createFlight({
         id: `${effect.id}:${grant.playerId}:${resource}`,
         playerId: grant.playerId,
         resource,
         amount,
-        startX: source.x,
-        startY: source.y,
-        midX: source.x + (target.x - source.x) * 0.52,
-        midY: source.y + (target.y - source.y) * 0.52 - arc,
-        endX: target.x,
-        endY: target.y,
+        source,
+        target,
         delay,
-      });
+      }));
       index += 1;
     }
   }
@@ -117,6 +140,16 @@ export function measureFlights(effect: PublicGameEffectView, root: ParentNode = 
 }
 
 function animateSources(effect: PublicGameEffectView, reducedMotion: boolean): void {
+  if (effect.kind === "resource-transfer") {
+    for (const sourcePlayerId of new Set(effect.transfers.map((transfer) => transfer.sourcePlayerId))) {
+      animateElement(findDataElement(document, "player-target", sourcePlayerId), [
+        { transform: "scale(1)", filter: "brightness(1)" },
+        { transform: "scale(.96)", filter: "brightness(.78)" },
+        { transform: "scale(1)", filter: "brightness(1)" },
+      ], reducedMotion ? 220 : 520);
+    }
+    return;
+  }
   const hexIds = new Set(effect.triggeredHexIds);
   const vertexIds = new Set(effect.sources.map((source) => source.vertexId));
   for (const hexId of hexIds) {
@@ -151,27 +184,49 @@ function animateSources(effect: PublicGameEffectView, reducedMotion: boolean): v
 }
 
 function animateTargets(effect: PublicGameEffectView, reducedMotion: boolean): void {
-  for (const grant of effect.grants) {
-    const targets = RESOURCE_TYPES
+  const targets = effect.kind === "resource-grant"
+    ? effect.grants.flatMap((grant) => RESOURCE_TYPES
       .filter((resource) => grant.resources[resource] > 0)
-      .map((resource) => findDataElement(document, "resource-target", `${grant.playerId}:${resource}`))
-      .filter((element): element is Element => element !== null);
-    if (targets.length === 0) {
-      const playerTarget = findDataElement(document, "player-target", grant.playerId);
-      if (playerTarget !== null) targets.push(playerTarget);
-    }
-    for (const target of targets) {
-      animateElement(target, [
-        { transform: "scale(1)", filter: "brightness(1)" },
-        { transform: "scale(1.08)", filter: "brightness(1.35) drop-shadow(0 0 9px rgba(255,215,97,.85))" },
-        { transform: "scale(1)", filter: "brightness(1)" },
-      ], reducedMotion ? 240 : 460);
-    }
+      .map((resource) => findDataElement(document, "resource-target", `${grant.playerId}:${resource}`) ?? findDataElement(document, "player-target", grant.playerId)))
+    : effect.transfers.map((transfer) => transfer.resource === null
+      ? findDataElement(document, "player-target", transfer.playerId)
+      : findDataElement(document, "resource-target", `${transfer.playerId}:${transfer.resource}`) ?? findDataElement(document, "player-target", transfer.playerId));
+  for (const target of targets.filter((element): element is Element => element !== null)) {
+    animateElement(target, [
+      { transform: "scale(1)", filter: "brightness(1)" },
+      { transform: "scale(1.08)", filter: "brightness(1.35) drop-shadow(0 0 9px rgba(255,215,97,.85))" },
+      { transform: "scale(1)", filter: "brightness(1)" },
+    ], reducedMotion ? 240 : 460);
   }
 }
 
+function createFlight({ id, playerId, resource, amount, source, target, delay }: {
+  readonly id: string;
+  readonly playerId: string;
+  readonly resource: ResourceCardKind;
+  readonly amount: number;
+  readonly source: { readonly x: number; readonly y: number };
+  readonly target: { readonly x: number; readonly y: number };
+  readonly delay: number;
+}): ResourceFlight {
+  const arc = Math.min(150, Math.max(58, Math.abs(target.x - source.x) * 0.16));
+  return {
+    id,
+    playerId,
+    resource,
+    amount,
+    startX: source.x,
+    startY: source.y,
+    midX: source.x + (target.x - source.x) * 0.52,
+    midY: source.y + (target.y - source.y) * 0.52 - arc,
+    endX: target.x,
+    endY: target.y,
+    delay,
+  };
+}
+
 function animateFlightTarget(flight: ResourceFlight): void {
-  const target = findDataElement(document, "resource-target", `${flight.playerId}:${flight.resource}`)
+  const target = (flight.resource === "unknown" ? null : findDataElement(document, "resource-target", `${flight.playerId}:${flight.resource}`))
     ?? findDataElement(document, "player-target", flight.playerId);
   animateElement(target, [
     { transform: "scale(1)", filter: "brightness(1)" },
@@ -221,8 +276,4 @@ function flightStyle(flight: ResourceFlight): CSSProperties {
 
 function useReducedMotion(): boolean {
   return useMemo(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
-}
-
-function resourceMark(resource: Resource): string {
-  return { brick: "▧", lumber: "♠", wool: "⌁", grain: "≋", ore: "◆" }[resource];
 }

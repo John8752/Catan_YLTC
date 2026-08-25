@@ -1,9 +1,12 @@
+import { RESOURCE_TYPES, type ResourceHand, type ResourceType } from "@catan/game-core";
 import type { GameCommand, GameView } from "@catan/protocol";
 import { Dices, Hammer, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge.js";
 import { Card } from "@/components/ui/card.js";
-import { cn } from "@/lib/utils.js";
 import { GameControls } from "./GameControls.js";
+import { ResourceCard, resourceLabel } from "./ResourceCard.js";
+import { emptyResourceSelection, incrementResource } from "./ResourceCardPicker.js";
 
 export interface PlayerDockProps {
   readonly game: GameView;
@@ -14,14 +17,6 @@ export interface PlayerDockProps {
   readonly onBuildModeChange: (mode: "road" | "settlement" | "city" | null) => void;
 }
 
-const RESOURCE_PRESENTATION = {
-  brick: { label: "砖", mark: "▧", className: "from-[#b95842] to-[#914331]" },
-  lumber: { label: "木", mark: "♠", className: "from-[#47865b] to-[#2e6643]" },
-  wool: { label: "羊", mark: "⌁", className: "from-[#8dab70] to-[#6f9158]" },
-  grain: { label: "麦", mark: "≋", className: "from-[#d6aa42] to-[#b88627]" },
-  ore: { label: "矿", mark: "◆", className: "from-[#78878c] to-[#59686e]" },
-} as const;
-
 export function PlayerDock({
   game,
   busy,
@@ -30,8 +25,37 @@ export function PlayerDock({
   selectedRobberHexId,
   onBuildModeChange,
 }: PlayerDockProps) {
+  const [discardSelection, setDiscardSelection] = useState<ResourceHand>(emptyResourceSelection);
+  const [tradeGive, setTradeGive] = useState<ResourceHand>(emptyResourceSelection);
+  const [tradeComposerOpen, setTradeComposerOpen] = useState(false);
+
+  useEffect(() => {
+    if (game.interaction.kind !== "discard") setDiscardSelection(emptyResourceSelection());
+  }, [game.interaction.kind]);
+
+  useEffect(() => {
+    if (game.openTrade !== null || game.interaction.kind !== "turn-action") {
+      setTradeComposerOpen(false);
+      setTradeGive(emptyResourceSelection());
+    }
+  }, [game.interaction.kind, game.openTrade]);
+
+  const activeSelection = game.interaction.kind === "discard"
+    ? discardSelection
+    : tradeComposerOpen
+      ? tradeGive
+      : null;
+  const activeSelectionLabel = game.interaction.kind === "discard" ? "准备弃掉" : "我提供";
+
+  const addFromHand = (resource: ResourceType) => {
+    if (activeSelection === null) return;
+    const next = incrementResource(activeSelection, resource, game.you.resources[resource]);
+    if (game.interaction.kind === "discard") setDiscardSelection(next);
+    else setTradeGive(next);
+  };
+
   return (
-    <Card className="player-dock gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-3 shadow-2xl backdrop-blur-sm lg:col-start-1 lg:row-start-3">
+    <Card className="player-dock relative gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-3 shadow-2xl backdrop-blur-sm lg:col-start-1 lg:row-start-3">
       <div className="grid items-stretch gap-3 xl:grid-cols-[auto_minmax(270px,.75fr)_minmax(430px,1.25fr)]">
         <div className="flex min-w-28 items-center gap-2 rounded-xl border border-[#6d5434]/15 bg-white/35 px-3 py-2">
           <span className="grid size-10 place-items-center rounded-full bg-[#1f5651] text-[#fff8df]"><UserRound className="size-5" /></span>
@@ -42,18 +66,23 @@ export function PlayerDock({
         </div>
 
         <section className="grid grid-cols-5 gap-2" aria-label="你的资源">
-          {Object.entries(game.you.resources).map(([resource, count]) => {
-            const presentation = RESOURCE_PRESENTATION[resource as keyof typeof RESOURCE_PRESENTATION];
+          {RESOURCE_TYPES.map((resource) => {
+            const count = game.you.resources[resource];
+            const selected = activeSelection?.[resource] ?? 0;
+            const interactive = activeSelection !== null;
             return (
-              <div
-                className={cn("relative min-w-0 overflow-hidden rounded-xl bg-gradient-to-b px-2 py-2 text-white shadow-md", presentation.className)}
+              <ResourceCard
                 key={resource}
-                data-resource-target={`${game.you.id}:${resource}`}
-              >
-                <span className="block text-xl leading-none opacity-70" aria-hidden="true">{presentation.mark}</span>
-                <span className="mt-1 block text-[10px] font-bold opacity-85">{presentation.label}</span>
-                <strong className="absolute top-1.5 right-2 text-xl leading-none">{count}</strong>
-              </div>
+                resource={resource}
+                count={count}
+                selectedCount={selected}
+                targetId={`${game.you.id}:${resource}`}
+                disabled={interactive && selected >= count}
+                ariaLabel={interactive
+                  ? `在${activeSelectionLabel}中加入 1 张${resourceLabel(resource)}，持有 ${count} 张，已选 ${selected} 张`
+                  : `${resourceLabel(resource)} ${count} 张`}
+                onClick={interactive ? () => addFromHand(resource) : undefined}
+              />
             );
           })}
         </section>
@@ -78,6 +107,12 @@ export function PlayerDock({
             buildMode={buildMode}
             selectedRobberHexId={selectedRobberHexId}
             onBuildModeChange={onBuildModeChange}
+            discardSelection={discardSelection}
+            onDiscardSelectionChange={setDiscardSelection}
+            tradeGive={tradeGive}
+            onTradeGiveChange={setTradeGive}
+            tradeComposerOpen={tradeComposerOpen}
+            onTradeComposerOpenChange={setTradeComposerOpen}
           />
         </section>
       </div>

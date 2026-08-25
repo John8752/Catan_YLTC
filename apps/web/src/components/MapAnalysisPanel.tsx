@@ -2,13 +2,15 @@ import { analyzeMap, type GameMap, type MapResourceAnalysis, type ResourceType }
 import { Gauge, MapPinned, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge.js";
 import { cn } from "@/lib/utils.js";
+import { ResourceIcon } from "./ResourceIcon.js";
+import { resourceLabel } from "./ResourceCard.js";
 
-const RESOURCE_UI: Readonly<Record<ResourceType, { label: string; mark: string; color: string }>> = {
-  brick: { label: "砖", mark: "▧", color: "bg-[#a9503e]" },
-  lumber: { label: "木", mark: "♠", color: "bg-[#39714a]" },
-  wool: { label: "羊", mark: "●", color: "bg-[#73935e]" },
-  grain: { label: "麦", mark: "≋", color: "bg-[#c49735]" },
-  ore: { label: "矿", mark: "◆", color: "bg-[#66747a]" },
+const RESOURCE_UI: Readonly<Record<ResourceType, { color: string }>> = {
+  brick: { color: "bg-[#a9503e]" },
+  lumber: { color: "bg-[#39714a]" },
+  wool: { color: "bg-[#73935e]" },
+  grain: { color: "bg-[#c49735]" },
+  ore: { color: "bg-[#66747a]" },
 };
 
 export function MapAnalysisPanel({ map }: { readonly map: GameMap }) {
@@ -37,10 +39,10 @@ export function MapAnalysisPanel({ map }: { readonly map: GameMap }) {
 
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/72">
         <span className="inline-flex items-center gap-1">
-          <TrendingDown className="size-3.5 text-[#efbd79]" />全图最稀缺：{RESOURCE_UI[analysis.scarcestResource].label}
+          <TrendingDown className="size-3.5 text-[#efbd79]" />全图最稀缺：{resourceLabel(analysis.scarcestResource)}
         </span>
         <span className="inline-flex items-center gap-1">
-          <TrendingUp className="size-3.5 text-[#a9d69c]" />全图最高产：{RESOURCE_UI[analysis.mostAbundantResource].label}
+          <TrendingUp className="size-3.5 text-[#a9d69c]" />全图最高产：{resourceLabel(analysis.mostAbundantResource)}
         </span>
         <span className="inline-flex items-center gap-1">
           <MapPinned className="size-3.5 text-[#b9dce1]" />强力交叉点 {analysis.strongVertexCount} 个
@@ -62,8 +64,10 @@ function ResourceProduction({
     <div className="rounded-xl border border-white/10 bg-white/8 px-2.5 py-2" data-resource-analysis={resource.resource}>
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-black">
-          <span className={cn("grid size-5 place-items-center rounded-md text-[11px] text-white", ui.color)} aria-hidden="true">{ui.mark}</span>
-          {ui.label}
+          <span className={cn("grid size-5 place-items-center rounded-md text-white", ui.color)} aria-hidden="true">
+            <svg className="resource-analysis-icon size-4" viewBox="-22 -22 44 44"><ResourceIcon kind={resource.resource} context="analysis" /></svg>
+          </span>
+          {resourceLabel(resource.resource)}
         </span>
         <span className={cn(
           "text-[10px] font-black",

@@ -308,15 +308,23 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .phase-chip { border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: .45rem .75rem; color: rgba(255,255,255,.8); font-size: .75rem; }
 .board-stage { width: 100%; aspect-ratio: 1.25; }
 .board-svg { width: 100%; height: 100%; overflow: visible; }
-.hex-tile polygon { stroke: rgba(255,252,229,.8); stroke-width: 3; transition: transform .18s ease, filter .18s ease; }
-.hex-tile:hover polygon { transform: scale(1.035); filter: brightness(1.08); }
-.terrain-lumber polygon { fill: #3f7148; }.terrain-wool polygon { fill: #85a467; }.terrain-grain polygon { fill: #d2a948; }.terrain-brick polygon { fill: #a95842; }.terrain-ore polygon { fill: #65757b; }.terrain-desert polygon { fill: #d9bc78; }
-.terrain-mark { fill: rgba(255,255,255,.46); font-family: Georgia, serif; font-size: 28px; pointer-events: none; }
-.terrain-icon-wool { pointer-events: none; filter: drop-shadow(0 2px 1px rgba(33,66,43,.24)); }
-.terrain-icon-wool .wool-fleece { fill: rgba(255,255,255,.78); stroke: rgba(52,91,59,.55); stroke-width: 1.1; }
-.terrain-icon-wool .wool-face,.terrain-icon-wool .wool-ears { fill: rgba(55,82,60,.78); stroke: rgba(255,255,255,.58); stroke-width: .8; stroke-linejoin: round; }
-.terrain-icon-wool .wool-eyes { fill: #fff8df; }
-.terrain-icon-wool .wool-muzzle { fill: none; stroke: #fff8df; stroke-width: .9; stroke-linecap: round; stroke-linejoin: round; }
+.hex-content { transition: transform .18s ease, filter .18s ease; }
+.hex-tile:hover .hex-content { transform: scale(1.035); filter: brightness(1.08); }
+.hex-surface { stroke: rgba(255,252,229,.84); stroke-width: 3; }
+.hex-inset { fill: none; stroke: rgba(255,255,255,.2); stroke-width: 1.35; pointer-events: none; }
+.terrain-lumber .hex-surface { fill: url(#terrain-lumber-fill); }.terrain-wool .hex-surface { fill: url(#terrain-wool-fill); }.terrain-grain .hex-surface { fill: url(#terrain-grain-fill); }.terrain-brick .hex-surface { fill: url(#terrain-brick-fill); }.terrain-ore .hex-surface { fill: url(#terrain-ore-fill); }.terrain-desert .hex-surface { fill: url(#terrain-desert-fill); }
+.terrain-icon { pointer-events: none; filter: drop-shadow(0 2px 1px rgba(20,42,36,.3)); }
+.terrain-brick { --resource-icon-primary: #f7d3b5; --resource-icon-secondary: #fff0cf; --resource-icon-outline: #73372f; --resource-icon-highlight: #fff8e9; }
+.terrain-lumber { --resource-icon-primary: #e3efc6; --resource-icon-secondary: #bbd69c; --resource-icon-outline: #285238; --resource-icon-highlight: #fff9e6; }
+.terrain-wool { --resource-icon-primary: #fff8df; --resource-icon-secondary: #4e7157; --resource-icon-outline: #35523d; --resource-icon-highlight: #fffdf4; }
+.terrain-grain { --resource-icon-primary: #fff0b2; --resource-icon-secondary: #f6d476; --resource-icon-outline: #7c551d; --resource-icon-highlight: #fff9da; }
+.terrain-ore { --resource-icon-primary: #e9eff0; --resource-icon-secondary: #b9c9cc; --resource-icon-outline: #41555b; --resource-icon-highlight: #fff; }
+.terrain-desert { --resource-icon-primary: #f9e2a5; --resource-icon-secondary: #fff4c6; --resource-icon-outline: #86622f; --resource-icon-highlight: #fff9e3; }
+.resource-icon-primary { fill: var(--resource-icon-primary,currentColor); stroke: var(--resource-icon-outline,currentColor); stroke-width: 1.35; stroke-linejoin: round; }
+.resource-icon-secondary { fill: var(--resource-icon-secondary,currentColor); stroke: var(--resource-icon-outline,currentColor); stroke-width: 1.2; stroke-linejoin: round; }
+.resource-icon-line { fill: none; stroke: var(--resource-icon-outline,currentColor); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.resource-icon-highlight { fill: var(--resource-icon-highlight,currentColor); }
+.resource-icon-highlight-line { fill: none; stroke: var(--resource-icon-highlight,currentColor); stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
 .token > circle { fill: #f6e7c3; stroke: rgba(75,49,26,.3); stroke-width: 1.5; }
 .token-number { fill: #3c3529; font-family: Georgia, serif; font-size: 15px; font-weight: 800; }
 .token-pips circle { fill: #6f5130; stroke: none; }
@@ -365,15 +373,18 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   .construction-target-setup .construction-target-house-mark { opacity: 1; transform: scale(1); }
 }
 .board-ports { pointer-events: none; }
-.board-ports rect { fill: #efe1ba; stroke: rgba(63,81,83,.72); stroke-width: 2; filter: drop-shadow(0 3px 2px rgba(12,35,35,.24)); }
+.port-coast-shadow,.port-pier-shadow { stroke: rgba(38,52,45,.66); stroke-linecap: round; }
+.port-coast-shadow { stroke-width: 10; }.port-pier-shadow { stroke-width: 9; }
+.port-coast-deck,.port-pier-deck { stroke: #d8a754; stroke-linecap: round; }
+.port-coast-deck { stroke-width: 6; stroke-dasharray: 4 3; }.port-pier-deck { stroke-width: 5; stroke-dasharray: 3 2; }
+.port-endpoint-halo { fill: rgba(255,226,150,.34); stroke: #f4cb78; stroke-width: 2; filter: drop-shadow(0 0 3px rgba(255,219,126,.72)); }
+.port-sign { filter: drop-shadow(0 4px 3px rgba(12,35,35,.32)); }
+.port-sign rect { fill: #efe1ba; stroke: rgba(63,81,83,.78); stroke-width: 2; }
+.port-sign-crown { fill: #d8a754; stroke: rgba(63,81,83,.72); stroke-width: 1.5; stroke-linejoin: round; }
 .board-ports text { fill: #354649; pointer-events: none; }
 .port-ratio { font-size: 10px; font-weight: 900; }
-.port-resource-mark { font-family: Georgia, serif; font-size: 12px; font-weight: 800; }
-.port-resource-icon { pointer-events: none; }
-.port-resource-icon .wool-fleece { fill: #fffdf4; stroke: #47604e; stroke-width: 1.6; }
-.port-resource-icon .wool-face,.port-resource-icon .wool-ears { fill: #47604e; stroke: #fffdf4; stroke-width: 1; stroke-linejoin: round; }
-.port-resource-icon .wool-eyes { fill: #fffdf4; }
-.port-resource-icon .wool-muzzle { fill: none; stroke: #fffdf4; stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+.port-resource-icon { pointer-events: none; --resource-icon-primary: #557168; --resource-icon-secondary: #8ba097; --resource-icon-outline: #2e4642; --resource-icon-highlight: #fffdf4; }
+.resource-card-icon,.resource-analysis-icon { color: #fffdf0; --resource-icon-primary: rgba(255,253,240,.92); --resource-icon-secondary: rgba(255,253,240,.65); --resource-icon-outline: rgba(28,52,47,.5); --resource-icon-highlight: #fff; filter: drop-shadow(0 2px 1px rgba(20,35,31,.25)); }
 .placed-roads,.placed-buildings { pointer-events: none; }
 .piece-color-terracotta { --piece: #c85d42; --piece-dark: #7f3025; --piece-light: #ffd1bd; }
 .piece-color-ocean { --piece: #3383a5; --piece-dark: #17506a; --piece-light: #bcecff; }

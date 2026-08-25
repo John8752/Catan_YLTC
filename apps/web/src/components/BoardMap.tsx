@@ -1,4 +1,5 @@
 import type { GameView } from "@catan/protocol";
+import { ResourceIcon } from "./ResourceIcon.js";
 
 export const BOARD_HEX_SIZE = 56;
 
@@ -26,6 +27,7 @@ export function boardViewBox(map: GameMapView): string {
 export function BoardTerrain({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
   return (
     <g filter="url(#tile-shadow)">
+      <TerrainGradients />
       {map.hexes.map((tile) => {
         const center = axialToPixel(tile.q, tile.r, hexSize);
         const probabilityPips = tile.numberToken === null ? 0 : diceProbabilityPips(tile.numberToken);
@@ -40,18 +42,14 @@ export function BoardTerrain({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
             aria-label={`${terrainLabel(tile.terrain)}${tile.numberToken === null ? "" : `，点数 ${tile.numberToken}`}`}
           >
             <g className="hex-content">
-              <polygon points={hexPoints(hexSize)} />
-              {tile.terrain === "wool" ? (
-                <WoolIcon
-                  className="terrain-icon-wool"
-                  dataAttribute="tile"
-                  transform={`translate(0 ${tile.numberToken === null ? 0 : -13})`}
-                />
-              ) : (
-                <text className="terrain-mark" y={tile.numberToken === null ? 7 : -11} textAnchor="middle">
-                  {terrainMark(tile.terrain)}
-                </text>
-              )}
+              <polygon className="hex-surface" points={hexPoints(hexSize)} />
+              <polygon className="hex-inset" points={hexPoints(hexSize - 5)} />
+              <ResourceIcon
+                kind={tile.terrain}
+                context="tile"
+                className="terrain-icon"
+                transform={tile.numberToken === null ? "translate(0 0) scale(1.12)" : "translate(0 -16)"}
+              />
               {tile.numberToken === null ? null : (
                 <g className={tile.numberToken === 6 || tile.numberToken === 8 ? "token hot" : "token"}>
                   <circle cy="16" r="17" />
@@ -84,10 +82,11 @@ export function BoardPorts({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
         const second = map.vertices.find((vertex) => vertex.id === secondId);
         if (first === undefined || second === undefined) return null;
 
-        const x = ((first.x + second.x) / 2) * hexSize * 1.14;
-        const y = ((first.y + second.y) / 2) * hexSize * 1.14;
+        const geometry = portGeometry(first, second, hexSize);
         const label = port.kind === "generic" ? "3:1" : "2:1";
-        const accessibleLabel = port.kind === "generic" ? "通用港口，三换一" : `${terrainLabel(port.resource)}港口，二换一`;
+        const accessibleLabel = port.kind === "generic"
+          ? "通用港口，三换一，连接两个沿海交点"
+          : `${terrainLabel(port.resource)}港口，二换一，连接两个沿海交点`;
 
         return (
           <g
@@ -95,17 +94,27 @@ export function BoardPorts({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
             data-port-id={port.id}
             data-port-sign="true"
             data-port-resource={port.kind === "generic" ? "generic" : port.resource}
-            transform={`translate(${x} ${y})`}
             role="img"
             aria-label={accessibleLabel}
           >
-            <rect x={port.kind === "generic" ? -19 : -23} y="-12" width={port.kind === "generic" ? 38 : 46} height="24" rx="8" />
-            <text className="port-ratio" x={port.kind === "generic" ? 0 : -6} y="4" textAnchor="middle">{label}</text>
-            {port.kind === "generic" ? null : port.resource === "wool" ? (
-              <WoolIcon className="port-resource-icon port-resource-icon-wool" transform="translate(13 0) scale(.48)" />
-            ) : (
-              <text className="port-resource-mark" x="14" y="5" textAnchor="middle">{terrainMark(port.resource)}</text>
-            )}
+            <g className="port-coast-link" data-port-link="true">
+              <line className="port-coast-shadow" x1={geometry.first.x} y1={geometry.first.y} x2={geometry.second.x} y2={geometry.second.y} />
+              <line className="port-coast-deck" x1={geometry.first.x} y1={geometry.first.y} x2={geometry.second.x} y2={geometry.second.y} />
+              <line className="port-pier-shadow" x1={geometry.first.x} y1={geometry.first.y} x2={geometry.firstAttach.x} y2={geometry.firstAttach.y} />
+              <line className="port-pier-shadow" x1={geometry.second.x} y1={geometry.second.y} x2={geometry.secondAttach.x} y2={geometry.secondAttach.y} />
+              <line className="port-pier-deck" x1={geometry.first.x} y1={geometry.first.y} x2={geometry.firstAttach.x} y2={geometry.firstAttach.y} />
+              <line className="port-pier-deck" x1={geometry.second.x} y1={geometry.second.y} x2={geometry.secondAttach.x} y2={geometry.secondAttach.y} />
+              <circle className="port-endpoint-halo" data-port-endpoint={firstId} cx={geometry.first.x} cy={geometry.first.y} r="7" />
+              <circle className="port-endpoint-halo" data-port-endpoint={secondId} cx={geometry.second.x} cy={geometry.second.y} r="7" />
+            </g>
+            <g className="port-sign" transform={`translate(${geometry.sign.x} ${geometry.sign.y})`}>
+              <path className="port-sign-crown" d="M-9-13Q0-22 9-13Z" />
+              <rect x="-24" y="-13" width="48" height="26" rx="8" />
+              <text className="port-ratio" x={port.kind === "generic" ? 0 : -7} y="4" textAnchor="middle">{label}</text>
+              {port.kind === "generic" ? null : (
+                <ResourceIcon kind={port.resource} context="port" className="port-resource-icon" transform="translate(13 0) scale(.43)" />
+              )}
+            </g>
           </g>
         );
       })}
@@ -120,17 +129,6 @@ export function axialToPixel(q: number, r: number, hexSize = BOARD_HEX_SIZE) {
   };
 }
 
-export function terrainMark(terrain: Terrain): string {
-  return {
-    brick: "▧",
-    lumber: "♠",
-    wool: "⌁",
-    grain: "≋",
-    ore: "◆",
-    desert: "☀",
-  }[terrain];
-}
-
 export function terrainLabel(terrain: Terrain): string {
   return TERRAIN_LABELS[terrain];
 }
@@ -139,33 +137,41 @@ export function diceProbabilityPips(numberToken: number): number {
   return 6 - Math.abs(7 - numberToken);
 }
 
-function WoolIcon({
-  className,
-  transform,
-  dataAttribute,
-}: {
-  readonly className: string;
-  readonly transform: string;
-  readonly dataAttribute?: "tile";
-}) {
+function TerrainGradients() {
   return (
-    <g
-      className={className}
-      data-tile-resource-icon={dataAttribute === "tile" ? "wool" : undefined}
-      transform={transform}
-      aria-hidden="true"
-    >
-      <path
-        className="wool-fleece"
-        d="M-14 2C-17-2-14-7-10-8C-9-13-3-14 0-10C4-14 10-11 10-7C15-7 17-2 14 2C16 6 12 10 8 9C4 12-5 12-9 9C-14 10-17 6-14 2Z"
-      />
-      <path className="wool-ears" d="M-5-3L-12-7L-10 0ZM5-3L12-7L10 0Z" />
-      <path className="wool-face" d="M-6-3Q0-7 6-3L5 5Q0 10-5 5Z" />
-      <circle className="wool-eyes" cx="-2.2" cy="0" r=".9" />
-      <circle className="wool-eyes" cx="2.2" cy="0" r=".9" />
-      <path className="wool-muzzle" d="M-1 4L0 5L1 4" />
-    </g>
+    <defs>
+      <linearGradient id="terrain-brick-fill" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#c96e50" /><stop offset="1" stopColor="#914330" /></linearGradient>
+      <linearGradient id="terrain-lumber-fill" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#57905e" /><stop offset="1" stopColor="#285a39" /></linearGradient>
+      <linearGradient id="terrain-wool-fill" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#a5bd7d" /><stop offset="1" stopColor="#688a52" /></linearGradient>
+      <linearGradient id="terrain-grain-fill" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#e3bd55" /><stop offset="1" stopColor="#b6852b" /></linearGradient>
+      <linearGradient id="terrain-ore-fill" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#84969b" /><stop offset="1" stopColor="#53666d" /></linearGradient>
+      <linearGradient id="terrain-desert-fill" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ecd28e" /><stop offset="1" stopColor="#bd9250" /></linearGradient>
+    </defs>
   );
+}
+
+function portGeometry(
+  firstVertex: { readonly x: number; readonly y: number },
+  secondVertex: { readonly x: number; readonly y: number },
+  hexSize: number,
+) {
+  const first = { x: firstVertex.x * hexSize, y: firstVertex.y * hexSize };
+  const second = { x: secondVertex.x * hexSize, y: secondVertex.y * hexSize };
+  const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+  const radius = Math.hypot(midpoint.x, midpoint.y) || 1;
+  const outward = { x: midpoint.x / radius, y: midpoint.y / radius };
+  const edgeLength = Math.hypot(second.x - first.x, second.y - first.y) || 1;
+  const tangent = { x: (second.x - first.x) / edgeLength, y: (second.y - first.y) / edgeLength };
+  const sign = { x: midpoint.x + outward.x * 39, y: midpoint.y + outward.y * 39 };
+  const attachBase = { x: sign.x - outward.x * 13, y: sign.y - outward.y * 13 };
+
+  return {
+    first,
+    second,
+    sign,
+    firstAttach: { x: attachBase.x - tangent.x * 10, y: attachBase.y - tangent.y * 10 },
+    secondAttach: { x: attachBase.x + tangent.x * 10, y: attachBase.y + tangent.y * 10 },
+  };
 }
 
 function hexPoints(size: number): string {

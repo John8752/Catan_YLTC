@@ -59,6 +59,7 @@ export function Board({
             </filter>
           </defs>
           <BoardTerrain map={game.map} />
+          <BoardPorts map={game.map} />
           <g className="robber-layer" aria-label="强盗位置与可选目的地">
             {robberHex === undefined ? null : (
               <g
@@ -211,7 +212,6 @@ export function Board({
             coordinateScale={BOARD_HEX_SIZE}
             onCommand={onCommand}
           />
-            <BoardPorts map={game.map} />
           </svg>
         </div>
         <div className="board-zoom-controls" aria-label="地图缩放">

@@ -1,5 +1,6 @@
 import type { ResourceType } from "@catan/game-core";
 import { cn } from "@/lib/utils.js";
+import { ResourceIcon } from "./ResourceIcon.js";
 
 export type ResourceCardKind = ResourceType | "unknown";
 
@@ -51,9 +52,13 @@ export function ResourceCard({
   const content = (
     <>
       <span className="absolute inset-x-0 top-0 h-px bg-white/55" aria-hidden="true" />
-      <span className={cn("font-serif leading-none opacity-80", variant === "hand" ? "text-2xl" : "text-lg")} aria-hidden="true">
-        {presentation.mark}
-      </span>
+      <svg
+        className={cn("resource-card-icon", variant === "hand" ? "size-7" : "size-5")}
+        viewBox="-22 -22 44 44"
+        aria-hidden="true"
+      >
+        <ResourceIcon kind={resource} context="card" />
+      </svg>
       <span className={cn("mt-auto font-black tracking-wide", variant === "hand" ? "text-[11px]" : "text-[9px]")}>
         {presentation.label}
       </span>

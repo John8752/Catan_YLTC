@@ -245,7 +245,10 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   bottom: 0;
   left: 0;
   width: 100%;
-  translate: none;
+  /* Dialog 的基础类用独立的 translate 属性做居中定位。这里必须带 !important:
+     不带的话 CSS 压缩器会把 translate 折进 transform 一起丢掉，于是只有生产构建
+     里定位失效、面板被推出屏幕，而 dev 服务器不压缩，本地永远复现不出来。 */
+  translate: none !important;
   transform: none;
   border-radius: 1.25rem 1.25rem 0 0;
   padding-bottom: max(.75rem, env(safe-area-inset-bottom));
@@ -513,7 +516,8 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
     bottom: auto;
     left: 50%;
     width: min(48rem,calc(100vw - 2rem));
-    translate: none;
+    /* 同上：不加 !important 会和基础类的 translate 叠加成 -100%。 */
+    translate: none !important;
     transform: translate(-50%,-50%);
     border-radius: 1rem;
     padding-bottom: .75rem;

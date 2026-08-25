@@ -1,6 +1,10 @@
 import { useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type WheelEvent } from "react";
 
-const MIN_SCALE = 1;
+// Below 1 so the whole board can always be pulled into view. The layout sizes the
+// board from an assumed chrome height, so on a short window it is laid out taller
+// than the space it actually gets and the bottom row is clipped; zooming out has to
+// be able to compensate, whatever the layout got wrong.
+const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.6;
 
 interface Point {
@@ -129,11 +133,14 @@ function gestureFromPointers(pointers: ReadonlyMap<number, Point>, view: ViewTra
 
 function boundedView(view: ViewTransform): ViewTransform {
   const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale));
-  const maxOffset = 240 * (scale - 1);
+  // Panning only means something once the board is larger than its frame. Deriving
+  // the bound straight from the scale would go negative below 1 and snap the board
+  // to a corner, so it is floored instead.
+  const maxOffset = Math.max(0, 240 * (scale - 1));
   return {
     scale,
-    x: scale === 1 ? 0 : Math.min(maxOffset, Math.max(-maxOffset, view.x)),
-    y: scale === 1 ? 0 : Math.min(maxOffset, Math.max(-maxOffset, view.y)),
+    x: maxOffset === 0 ? 0 : Math.min(maxOffset, Math.max(-maxOffset, view.x)),
+    y: maxOffset === 0 ? 0 : Math.min(maxOffset, Math.max(-maxOffset, view.y)),
   };
 }
 

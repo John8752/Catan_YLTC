@@ -53,58 +53,169 @@ Caddy ──静态文件──▶ /opt/catan/apps/web/dist      （前端构建�
 
 ## 首次部署
 
-前置：Ubuntu/Debian 等 Linux，Node ≥ 22.12、pnpm 9（`corepack enable`）、git、Caddy。
-Ubuntu 24.04 自带的 Node 是 18，需从 NodeSource 装 22；Caddy 走官方 apt 源。
+前置：一台 Linux，Node ≥ 22.12、pnpm 9（`corepack enable`）、git、Caddy。
+**两大发行版的运行时安装方式完全不同**（步骤 0），从步骤 1 起两边一样。
+
+> **当前生产环境**（2026-08-24 部署，本节命令即为实际执行并验证过的）：
+> AWS EC2 `t3.micro`（2 核 / 913 Mi 内存 / 8 GB 磁盘，us-east-2），
+> **Amazon Linux 2023**，Node 22.23.2，Caddy 2.11.4，IP 直连 HTTP。
+
+### 步骤 0：运行时（按发行版二选一）
+
+#### Amazon Linux 2023
+
+系统仓库里的 Node 是 **18.20.8**，低于本项目要求，必须走 NodeSource；
+仓库里**根本没有 caddy 包**，用官方静态二进制，并自己建服务账号和 systemd 单元。
 
 ```bash
-# 0. 运行时
+# git 与 Node 22
+sudo dnf install -y git
+curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+sudo dnf install -y nodejs
+sudo corepack enable          # 仓库内按 packageManager 字段自动切到 pnpm 9
+
+# Caddy：官方二进制 + 服务账号 + 单元文件
+cd /tmp
+curl -fsSL -o caddy.tar.gz https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_linux_amd64.tar.gz
+tar xzf caddy.tar.gz caddy && sudo install -m 755 caddy /usr/bin/caddy && rm -f caddy caddy.tar.gz
+sudo groupadd --system caddy
+sudo useradd --system --gid caddy --create-home --home-dir /var/lib/caddy --shell /usr/sbin/nologin caddy
+sudo mkdir -p /etc/caddy
+sudo tee /etc/systemd/system/caddy.service >/dev/null <<'UNIT'
+[Unit]
+Description=Caddy
+After=network.target network-online.target
+Requires=network-online.target
+
+[Service]
+Type=notify
+User=caddy
+Group=caddy
+ExecStart=/usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
+ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --force
+TimeoutStopSec=5s
+LimitNOFILE=1048576
+PrivateTmp=true
+ProtectSystem=full
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload
+```
+
+#### Ubuntu / Debian
+
+Ubuntu 24.04 自带的 Node 也是 18，同样需要 NodeSource；Caddy 有官方 apt 源，
+装完即自带 `caddy` 用户、`/etc/caddy` 和 systemd 单元，不用手工建。
+
+```bash
+sudo apt-get install -y git
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs
-sudo corepack enable                                       # 仓库内按 packageManager 字段自动切到 pnpm 9
+sudo corepack enable
 curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
   | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
   | sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo apt-get update && sudo apt-get install -y caddy
+```
 
-# 1. 专用用户与目录
+### 步骤 1：swap（内存不足 2 GB 时）
+
+```bash
+sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+t3.micro 只有 913 Mi 内存，构建期跑 TypeScript 和 Vite 有被 OOM 杀掉的风险。
+实测这一步其实只用掉 4 MB swap、构建 6 秒完成 —— 但它是免费的保险，机器小就加上。
+
+### 步骤 2：专用用户与目录
+
+```bash
 sudo useradd --system --home /opt/catan --shell /usr/sbin/nologin catan
-sudo mkdir -p /opt/catan /etc/catan /var/log/catan
+sudo mkdir -p /opt/catan /var/log/catan
 sudo chown -R catan:catan /opt/catan /var/log/catan
+```
 
-# 2. 部署密钥（私有仓库必需；catan 是 nologin 账号，密钥放仓库目录之外）
+### 步骤 3：取代码
+
+仓库目前是**公开**的，直接 HTTPS clone 即可：
+
+```bash
+sudo -u catan git clone https://github.com/John8752/Catan_YLTC.git /opt/catan
+```
+
+<details>
+<summary>如果仓库转为私有，改用部署密钥</summary>
+
+```bash
+sudo mkdir -p /etc/catan
 sudo ssh-keygen -t ed25519 -N "" -C "catan-deploy@<机器名>" -f /etc/catan/deploy_key
 ssh-keyscan -t ed25519,rsa ssh.github.com github.com | sudo tee /etc/catan/known_hosts
 sudo chown catan:catan /etc/catan/deploy_key /etc/catan/deploy_key.pub /etc/catan/known_hosts
 sudo chmod 600 /etc/catan/deploy_key
 sudo cat /etc/catan/deploy_key.pub
-# → 把公钥加到 GitHub 仓库 Settings → Deploy keys，**不要勾 Allow write access**
+# → 加到 GitHub 仓库 Settings → Deploy keys，**不要勾 Allow write access**
 
-# 3. 代码与构建
 SSHCMD="ssh -i /etc/catan/deploy_key -o IdentitiesOnly=yes -o UserKnownHostsFile=/etc/catan/known_hosts"
 sudo -u catan env GIT_SSH_COMMAND="$SSHCMD" git clone <repo-url> /opt/catan
-cd /opt/catan
-sudo -u catan git config core.sshCommand "$SSHCMD"   # 固化，release.sh 的 git pull 直接可用
-sudo -u catan pnpm install --frozen-lockfile
-sudo -u catan pnpm build        # 服务端产物在 apps/server/dist，前端在 apps/web/dist
+sudo -u catan git -C /opt/catan config core.sshCommand "$SSHCMD"   # 固化，release.sh 的 git pull 直接可用
+```
+</details>
 
-# 4. 服务与反代（模板在 deploy/ 下，默认即 IP 访问 :80，无需改动）
+### 步骤 4：构建
+
+```bash
+cd /opt/catan
+sudo -u catan env HOME=/opt/catan pnpm install --frozen-lockfile
+sudo -u catan env HOME=/opt/catan pnpm build
+```
+
+> **`HOME=/opt/catan` 不能省。** `sudo -u` 默认保留调用者的 `HOME`，而 corepack 和 pnpm
+> 要往 `$HOME` 里写缓存 —— 不显式设置的话它们会去写 `/home/ec2-user`，catan 用户没有权限。
+
+产物：服务端在 `apps/server/dist`，前端在 `apps/web/dist`。
+
+### 步骤 5：服务与反代
+
+模板默认就是 IP 直连 `:80`，一个字都不用改：
+
+```bash
+cd /opt/catan
 sudo cp deploy/catan.service /etc/systemd/system/catan.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now catan
+
 sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
-sudo systemctl reload caddy
+sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile   # 先查语法
+sudo systemctl enable --now caddy      # Amazon Linux：单元是刚建的，首次要 enable --now
+# Ubuntu：apt 装完 caddy 已在运行且已 enable，改用 sudo systemctl reload caddy
 ```
 
-没有第 5 步 —— 无数据库、无账号体系，服务起来就能开房。
+没有第 6 步 —— 无数据库、无账号体系，服务起来就能开房。
 
-验证：浏览器打开 `http://<服务器IP>/`，输入名字建房，**换一个标签页用房间号加入**
-（这一步才真正验证了 `/ws` 反代；只建房不加入的话 WebSocket 断了也看不出来）。
-命令行侧：`systemctl status catan` 正常，`journalctl -u catan` 里有启动横幅
-（`Catan server listening`，含端口、Node 版本、日志级别）。
+### 验证
+
+```bash
+systemctl is-enabled catan caddy    # 都应为 enabled，否则重启机器不会自动拉起
+systemctl is-active catan caddy
+sudo journalctl -u catan -n 5       # 应有 "Catan server listening"
+curl -s http://127.0.0.1:8787/health
+```
+
+然后浏览器打开 `http://<服务器IP>/`，建房，**再换一台设备用房间码加入并真的走两步**。
+这一步不能省：只建房不开局的话，`/ws` 反代断了也看不出来 —— 症状是首页 200、建房 201、
+大厅一切正常，唯独对局连不上。
 
 安全提示（IP + HTTP 阶段）：流量未加密。这是个 demo，没有账号密码，风险主要是
 陌生人建房占内存 —— 已由 `ROOM_CREATIONS_PER_MINUTE` 限流和 `MemoryMax=512M` 兜住。
 若要收窄到熟人范围，用云厂商安全组把 80 端口来源限制到你们的出口 IP。
+
+> 云厂商侧别忘了放行入站 **80**（和 SSH 的 22）。安全组不放行的话，机器里一切正常，
+> 外面就是连不上。
 
 ## 接入域名与 HTTPS（后续升级）
 
@@ -206,6 +317,9 @@ MaxRetentionSec=30day
 `catan.service` 里的 `MemoryMax=512M` 按上表大约能容纳两三局同时进行的长局。私人局够用；
 要开更多桌就调高它。真触发了 systemd 只会重启 Catan 自己（**代价是所有对局全丢**）。
 
+放到当前这台 `t3.micro`（913 Mi）上看：这个上限已经超过整机内存的一半，所以它更像是
+"别把机器拖垮"的保险丝而不是宽松余量。要同时开很多桌，先换更大的机器，别只调高这个数。
+
 > 历史教训（2026-08-21 实测）：`RoomRegistry` 早期给每条命令缓存了一份完整的房间投影做
 > 幂等，导致单局内存是命令数的**二次函数**，一局长局就能把 4 GB 堆撑爆并让进程 OOM。
 > 现在只记命令的键，重试时按当前状态重新投影。改这块时别把整份投影再存回去。
@@ -283,11 +397,17 @@ API 挂掉时 Caddy 仍然照常返回页面，只有 `/api` 返回 502。所以
 - **单实例**：禁止 PM2 cluster / Node cluster / 多容器 / 多后端负载均衡 —— 房间在进程
   内存里，第二个实例看不到第一个实例的房间（ADR-0007）。
 - **重启即丢局**：没有持久化，也没有跨进程的断线重连。发布挑没人玩的时候。
-- **掉线会卡死整局**：游戏开始后座位无法释放，也没有超时代打，一个人关标签页那局就走不下去了，
-  只能重开。处理方案已记在 `docs/risks-and-open-questions.md` 的 O3，尚未实现。
+- **人真的不回来了会卡死整局**：游戏开始后座位无法释放，也没有超时代打。座位存在浏览器里，
+  所以关标签页、关浏览器、手机锁屏之后回来都还在原位；卡死的只剩"这个人再也不来了"这一种情况，
+  剩下的人只能重开。处理方案已记在 `docs/risks-and-open-questions.md` 的 O3，尚未实现。
 - **`/ws` 必须反代**：漏了这条 Caddy 规则，大厅正常但所有对局连不上，症状很隐蔽。
 - **日志不记原始 URL**：seatToken 在 query string 里。
 - **投影带的事件记录有上限**：完整历史留在服务端供重放，下发给客户端的只有最近一段。
 - **API 绑 127.0.0.1**：公网入口只有 Caddy 一个。
 - **限流依赖 `TRUST_PROXY`**：反代后面拿不到真实客户端 IP 的话，限流会误伤所有人。
+- **发行版差异只在步骤 0**：Amazon Linux 与 Ubuntu 的运行时安装方式完全不同，
+  且两边的系统仓库给的 Node 都是 18（太老），必须走 NodeSource。之后的步骤两边一致。
+- **`catan.service` 的加固已在 Amazon Linux 2023 实测通过**（`ProtectSystem=strict`、
+  `ProtectHome=true`）。换发行版后服务起不来时，先注释这两条确认能起，再逐条加回来定位。
+- **云厂商安全组要放行 80**：机器里一切正常但外面连不上，先查这里再查 Caddy。
 - 持久化对局是远期计划（ADR-0002 已按可重放的命令/事件记录设计），当前规模不需要。

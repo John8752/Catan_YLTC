@@ -45,6 +45,36 @@
 
 See ADR-0005 before changing the frontend stack or introducing another component library. See ADR-0006 before changing how server events drive client effects.
 
+## Insecure-context constraint (plain HTTP)
+
+Production is served over plain HTTP on a bare IP (`http://18.117.234.107`) and TLS is **not**
+on the table for now. Such an origin is not a *secure context*, so every browser — Safari and
+Chrome alike — withholds a whole family of Web APIs and leaves them `undefined`. Local
+development on `localhost` *is* a secure context, so none of this reproduces on a dev machine:
+it only surfaces on the phones people actually play on. Treat that asymmetry as the default
+hazard when adding anything that touches a browser API.
+
+- Never call a secure-context-only API unguarded from `apps/web`. Blocked: `crypto.randomUUID`,
+  `crypto.subtle`, `navigator.clipboard`, `navigator.share`, `navigator.geolocation`,
+  `navigator.mediaDevices` / `getUserMedia`, `navigator.serviceWorker`, `navigator.credentials`,
+  `navigator.wakeLock`, `navigator.storage`, `navigator.bluetooth` / `usb` / `serial` / `hid`,
+  `caches`, `Notification`, `PushManager`, `PaymentRequest`, `IdleDetector`.
+- `crypto.getRandomValues`, `localStorage`, `sessionStorage`, `fetch` and `WebSocket` carry no such
+  restriction. They are the supported building blocks.
+- Need a unique id? Call `randomId()` from `src/lib/random-id.ts`. Never call `crypto.randomUUID()`
+  directly — that exact mistake shipped a client that could not submit a single game command.
+- A genuinely optional affordance (copy-to-clipboard, share sheet) must feature-detect and degrade
+  to something that works. It must never throw on an origin without TLS.
+- Never set the `Secure` cookie attribute and never emit HSTS; both make the site unusable here.
+  The app currently uses no cookies at all — seat tokens live in `localStorage`.
+- Derive the socket scheme from `window.location.protocol` (see `connectToRoom` in `src/api.ts`).
+  Never hardcode `ws://` or `wss://`, and never hardcode an `https://` origin.
+- `apps/web/src/lib/secure-context.test.ts` fails the build when a blocked API appears in
+  `apps/web/src`. Add a guarded helper rather than weakening that test.
+
+This constraint is lifted only by an ADR that also moves the deployment to HTTPS; see
+`docs/deployment.md` for what that migration involves.
+
 ## Domain modularity
 
 `packages/game-core` is one package for now, but it must contain explicit domain modules rather than one connected rules blob:

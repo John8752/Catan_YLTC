@@ -217,7 +217,32 @@ curl -s http://127.0.0.1:8787/health
 > 云厂商侧别忘了放行入站 **80**（和 SSH 的 22）。安全组不放行的话，机器里一切正常，
 > 外面就是连不上。
 
-## 接入域名与 HTTPS（后续升级）
+## 明文 HTTP 是现行状态（不是待办）
+
+**当前不接域名、不上 TLS**，线上长期就是 `http://<IP>/`。这不是"还没来得及做"，
+而是一个需要写进代码约束的前提。
+
+明文 IP 源不是**安全上下文（secure context）**，浏览器会对一整族 Web API 闭嘴，
+直接把它们留成 `undefined` —— Safari 和 Chrome 一样。而本地开发跑在 `localhost`，
+**localhost 算安全上下文**，所以这类故障在开发机上一次都不会复现，只在大家真正
+用来玩的手机上炸。
+
+已经踩过一次：`crypto.randomUUID` 在手机 Safari 上是 `undefined`，导致客户端提交
+不了任何一条游戏命令，摆放定居点直接卡死；桌面开发全程无感。
+
+约束与执行方式写在 `AGENTS.md` 的「Insecure-context constraint」一节，并由
+`apps/web/src/lib/secure-context.test.ts` 在构建时拦截（`pnpm --filter @catan/web test`）。
+要点：
+
+- 禁止无保护地调用 secure-context-only API（`crypto.subtle`、`navigator.clipboard`、
+  `navigator.share`、`navigator.geolocation`、Service Worker、`Notification` 等）
+- 生成 id 一律走 `apps/web/src/lib/random-id.ts` 的 `randomId()`
+- 不设 `Secure` cookie、不发 HSTS —— 两者都会让站点在这个源上直接不可用
+- socket 协议从 `window.location.protocol` 推导，不写死 `wss://`
+
+`crypto.getRandomValues`、`localStorage`、`fetch`、`WebSocket` 不受限制，可放心用。
+
+## 将来接入域名与 HTTPS
 
 只有一步，服务不动：`/etc/caddy/Caddyfile` 里把站点地址 `:80` 换成域名
 （如 `catan.example.com`），`sudo systemctl reload caddy`。Caddy 自动申请并续期证书、

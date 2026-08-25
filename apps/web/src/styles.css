@@ -206,6 +206,13 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .board-transform {
   width: 100%;
   height: 100%;
+  /* Both this element and the svg inside it are grid items, and a grid item's
+     default `min-height: auto` refuses to shrink below its content's intrinsic
+     size. The board derives that size from the viewBox aspect ratio, so without
+     these the item overrules `height: 100%`, grows past the stage, and the stage
+     clips whatever hangs out the bottom. */
+  min-height: 0;
+  min-width: 0;
   display: grid;
   place-items: center;
   transform: translate3d(var(--board-pan-x,0),var(--board-pan-y,0),0) scale(var(--board-zoom,1));
@@ -310,7 +317,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .board-heading h2 { margin-bottom: .35rem; font-size: 2rem; }
 .phase-chip { border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: .45rem .75rem; color: rgba(255,255,255,.8); font-size: .75rem; }
 .board-stage { width: 100%; aspect-ratio: 1.25; }
-.board-svg { width: 100%; height: 100%; overflow: visible; }
+.board-svg { width: 100%; height: 100%; min-height: 0; min-width: 0; overflow: visible; }
 .hex-content { transition: transform .18s ease, filter .18s ease; }
 .hex-tile:hover .hex-content { transform: scale(1.035); filter: brightness(1.08); }
 .hex-surface { stroke: rgba(255,252,229,.84); stroke-width: 3; }

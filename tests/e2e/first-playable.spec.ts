@@ -88,7 +88,11 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
               currentTime: Number(animation?.currentTime ?? 0),
             };
           });
-          expect(flightTiming.duration).toBeGreaterThanOrEqual(1_900);
+          // Bracketed rather than a lower bound: the flight was two seconds until it
+          // was retuned to one, and a one-sided assertion would have gone on passing
+          // while the browser played something twice as long as intended.
+          expect(flightTiming.duration).toBeGreaterThanOrEqual(900);
+          expect(flightTiming.duration).toBeLessThanOrEqual(1_200);
           const targetKey = await flights.first().getAttribute("data-resource-flight");
           await settlementPage.waitForTimeout(260);
           await settlementPage.screenshot({ path: path.join(artifactDir, "resource-production-fx.png"), fullPage: true });

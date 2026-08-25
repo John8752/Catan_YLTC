@@ -4,6 +4,13 @@ import type { CSSProperties } from "react";
 import { useLayoutEffect, useMemo, useState } from "react";
 import { ResourceCard, type ResourceCardKind } from "@/components/ResourceCard.js";
 
+const RESOURCE_FLIGHT_DURATION_MS = 1_000;
+const RESOURCE_ARRIVAL_DELAY_MS = RESOURCE_FLIGHT_DURATION_MS - 100;
+const RESOURCE_EFFECT_COMPLETION_MS = RESOURCE_FLIGHT_DURATION_MS + 450;
+const ROBBER_FLIGHT_DURATION_MS = 1_000;
+const ROBBER_REVEAL_DELAY_MS = ROBBER_FLIGHT_DURATION_MS - 100;
+const ROBBER_EFFECT_COMPLETION_MS = ROBBER_FLIGHT_DURATION_MS + 180;
+
 interface ResourceFlight {
   readonly id: string;
   readonly playerId: string;
@@ -60,8 +67,8 @@ export function ResourceEffectLayer({
       const revealTimer = window.setTimeout(() => {
         if (settledRobber !== null) settledRobber.style.opacity = "";
         animateTargets(effect, reducedMotion);
-      }, reducedMotion ? 40 : 1_900);
-      const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : 2_180);
+      }, reducedMotion ? 40 : ROBBER_REVEAL_DELAY_MS);
+      const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : ROBBER_EFFECT_COMPLETION_MS);
       return () => {
         window.clearTimeout(revealTimer);
         window.clearTimeout(completionTimer);
@@ -78,12 +85,12 @@ export function ResourceEffectLayer({
     const arrivalTimers = reducedMotion
       ? [window.setTimeout(() => animateTargets(effect, true), 40)]
       : effect.kind === "resource-spend"
-        ? [window.setTimeout(() => animateTargets(effect, false), 1_900 + longestFlightDelay(nextFlights))]
+        ? [window.setTimeout(() => animateTargets(effect, false), RESOURCE_ARRIVAL_DELAY_MS + longestFlightDelay(nextFlights))]
       : nextFlights.length === 0
-        ? [window.setTimeout(() => animateTargets(effect, false), 1_900)]
-        : nextFlights.map((flight) => window.setTimeout(() => animateFlightTarget(flight), 1_900 + flight.delay));
+        ? [window.setTimeout(() => animateTargets(effect, false), RESOURCE_ARRIVAL_DELAY_MS)]
+        : nextFlights.map((flight) => window.setTimeout(() => animateFlightTarget(flight), RESOURCE_ARRIVAL_DELAY_MS + flight.delay));
     const longestDelay = longestFlightDelay(nextFlights);
-    const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : 2_450 + longestDelay);
+    const completionTimer = window.setTimeout(onComplete, reducedMotion ? 320 : RESOURCE_EFFECT_COMPLETION_MS + longestDelay);
     return () => {
       for (const timer of arrivalTimers) window.clearTimeout(timer);
       window.clearTimeout(completionTimer);
@@ -380,8 +387,9 @@ function flightStyle(flight: ResourceFlight): CSSProperties {
     "--flight-mid-y": `${flight.midY}px`,
     "--flight-end-x": `${flight.endX}px`,
     "--flight-end-y": `${flight.endY}px`,
+    "--flight-duration": `${RESOURCE_FLIGHT_DURATION_MS}ms`,
     "--flight-delay": `${flight.delay}ms`,
-    "--arrival-delay": `${1_900 + flight.delay}ms`,
+    "--arrival-delay": `${RESOURCE_ARRIVAL_DELAY_MS + flight.delay}ms`,
   } as CSSProperties;
 }
 
@@ -410,6 +418,7 @@ function robberStyle(motion: RobberMotion): CSSProperties {
     "--robber-mid-y": `${motion.midY}px`,
     "--robber-end-x": `${motion.endX}px`,
     "--robber-end-y": `${motion.endY}px`,
+    "--robber-flight-duration": `${ROBBER_FLIGHT_DURATION_MS}ms`,
   } as CSSProperties;
 }
 

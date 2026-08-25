@@ -137,7 +137,10 @@ describe("resource flight measurement", () => {
       />,
     );
 
-    expect(container.querySelector('[data-resource-flight="player_1:grain"] [data-resource-card="grain"]')).not.toBeNull();
+    const flight = container.querySelector<HTMLElement>('[data-resource-flight="player_1:grain"]');
+    expect(flight?.querySelector('[data-resource-card="grain"]')).not.toBeNull();
+    expect(flight?.style.getPropertyValue("--flight-duration")).toBe("1000ms");
+    expect(container.querySelector<HTMLElement>(".resource-arrival-pop")?.style.getPropertyValue("--arrival-delay")).toBe("900ms");
   });
 
   it("removes flight motion while retaining a short reduced-motion feedback cycle", () => {
@@ -204,7 +207,7 @@ describe("resource flight measurement", () => {
     ]));
   });
 
-  it("keeps the robber in flight for two seconds before completing the effect", () => {
+  it("keeps the robber in flight for one second before completing the effect", () => {
     vi.useFakeTimers();
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -227,8 +230,9 @@ describe("resource flight measurement", () => {
     }} onComplete={onComplete} />);
 
     expect(container.querySelector(".robber-flight")).not.toBeNull();
+    expect(container.querySelector<HTMLElement>(".robber-flight")?.style.getPropertyValue("--robber-flight-duration")).toBe("1000ms");
     expect(robber.style.opacity).toBe("0");
-    act(() => vi.advanceTimersByTime(1_899));
+    act(() => vi.advanceTimersByTime(899));
     expect(onComplete).not.toHaveBeenCalled();
     expect(robber.style.opacity).toBe("0");
     act(() => vi.advanceTimersByTime(1));

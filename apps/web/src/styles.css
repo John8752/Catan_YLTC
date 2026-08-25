@@ -469,7 +469,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   left: 0;
   opacity: 0;
   will-change: transform, opacity;
-  animation: resource-flight 2000ms cubic-bezier(.22,.68,.2,1) var(--flight-delay) both;
+  animation: resource-flight var(--flight-duration,1000ms) cubic-bezier(.22,.68,.2,1) var(--flight-delay) both;
 }
 .resource-arrival-pop {
   position: absolute;
@@ -515,7 +515,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   height: 42px;
   will-change: transform,opacity;
   filter: drop-shadow(0 8px 5px rgba(6,19,18,.5));
-  animation: robber-flight 2000ms cubic-bezier(.32,.02,.2,1) both;
+  animation: robber-flight var(--robber-flight-duration,1000ms) cubic-bezier(.32,.02,.2,1) both;
 }
 .robber-flight-head { position: absolute; top: 1px; left: 8px; width: 12px; height: 12px; border: 2px solid #f0d79e; border-radius: 50%; background: #25312f; }
 .robber-flight-body { position: absolute; top: 11px; left: 2px; width: 24px; height: 27px; border: 2px solid #f0d79e; border-radius: 50% 50% 35% 35%; background: #25312f; clip-path: polygon(30% 0,70% 0,100% 100%,0 100%); }

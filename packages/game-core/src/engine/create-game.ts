@@ -107,6 +107,7 @@ export function createGame(input: CreateGameInput): GameState {
     developmentCardPlayedThisTurn: false,
     robberResumeStep: null,
     freeRoadsRemaining: 0,
+    freeRoadsGranted: 0,
     developmentResumeStep: null,
     awards: emptyAwards(),
   };
@@ -125,6 +126,19 @@ export function assertGameInvariant(state: GameState): void {
   }
 
   if (state.ruleProfile === "two-player") throw new Error("The two-player profile is not playable");
+  if (
+    !Number.isInteger(state.freeRoadsRemaining) ||
+    !Number.isInteger(state.freeRoadsGranted) ||
+    state.freeRoadsRemaining < 0 ||
+    state.freeRoadsGranted < 0 ||
+    state.freeRoadsRemaining > state.freeRoadsGranted ||
+    state.freeRoadsGranted > 2 ||
+    (state.phase.kind === "turn" && state.phase.step === "free-road"
+      ? state.freeRoadsRemaining === 0 || state.freeRoadsGranted === 0
+      : state.freeRoadsRemaining !== 0 || state.freeRoadsGranted !== 0)
+  ) {
+    throw new Error("Free-road development state is invalid");
+  }
   const profile = getRuleProfileDefinition(state.ruleProfile);
   const expectedHexCount = Object.values(profile.terrainCounts).reduce((total, count) => total + count, 0);
   if (state.map.hexes.length !== expectedHexCount) {

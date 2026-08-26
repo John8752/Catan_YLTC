@@ -23,6 +23,7 @@ import { RoomPanel } from "./components/RoomPanel.js";
 import { ActiveTradePanel } from "./components/ActiveTradePanel.js";
 import { Welcome } from "./components/Welcome.js";
 import { ResourceEffectLayer } from "./effects/ResourceEffectLayer.js";
+import { DevelopmentEffectLayer, isDevelopmentEffect } from "./effects/DevelopmentEffectLayer.js";
 import { useGameEffectQueue } from "./effects/use-game-effect-queue.js";
 import {
   adoptLegacyTabSession,
@@ -275,6 +276,12 @@ export function App() {
               onCommand={handleGameCommand}
               onRobberHexSelect={handleRobberHexSelect}
             />
+            <DevelopmentEffectLayer
+              effect={isDevelopmentEffect(activeEffect) ? activeEffect : null}
+              currentPlayerId={session.playerId}
+              playerName={(playerId) => liveGame?.players.find((player) => player.id === playerId)?.name ?? "玩家"}
+              onComplete={completeActiveEffect}
+            />
             {room.game.phase.kind === "finished" && activeEffect === null ? <GameResult game={room.game} /> : null}
           </>
         )}
@@ -316,7 +323,7 @@ export function App() {
         </div>
       )}
       <ResourceEffectLayer
-        effect={activeEffect}
+        effect={isDevelopmentEffect(activeEffect) ? null : activeEffect}
         onComplete={completeActiveEffect}
         playerName={(playerId) => liveGame?.players.find((player) => player.id === playerId)?.name ?? "玩家"}
       />

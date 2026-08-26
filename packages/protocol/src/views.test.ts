@@ -176,7 +176,104 @@ describe("player-safe game projections", () => {
     }];
 
     expect(projectGameForPlayer(game, "player_1", records).history[0]?.privateDetail).toBeNull();
-    expect(projectGameForPlayer(game, "player_2", records).history[0]?.privateDetail).toContain("victory-point");
+    expect(projectGameForPlayer(game, "player_2", records).history[0]?.privateDetail).toBe("购入：胜利点");
+  });
+
+  it("projects development-card feedback while keeping monopoly contributions private", () => {
+    const game = createBaseGame({
+      id: "game_development_feedback",
+      seed: 10,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+        { id: "player_4", name: "岚", color: "wheat" },
+      ],
+    });
+    const records = [
+      {
+        revision: 4,
+        event: {
+          type: "development_card_played",
+          playerId: "player_1",
+          cardId: "card_monopoly",
+          cardType: "monopoly",
+          resource: "ore",
+          total: 5,
+          transfers: [
+            { playerId: "player_2", amount: 3 },
+            { playerId: "player_3", amount: 2 },
+          ],
+        },
+      },
+      {
+        revision: 5,
+        event: {
+          type: "development_card_played",
+          playerId: "player_1",
+          cardId: "card_choice",
+          cardType: "resource-choice",
+          resources: resourceAmounts({ lumber: 1, grain: 1 }),
+        },
+      },
+      {
+        revision: 6,
+        event: {
+          type: "free_road_built",
+          playerId: "player_1",
+          edgeId: "edge_4",
+          placed: 1,
+          total: 2,
+          completed: false,
+        },
+      },
+    ] satisfies GameEventRecord[];
+
+    const victimView = projectGameForPlayer(game, "player_2", records);
+    const bystanderView = projectGameForPlayer(game, "player_4", records);
+    expect(victimView.history.map((entry) => entry.message)).toEqual([
+      "林 使用了垄断：矿，共获得 5 张",
+      "林 使用了丰收：1 木、1 麦",
+      "林 放置了免费道路（1/2）",
+    ]);
+    expect(victimView.history[0]?.privateDetail).toBe("你交出了 3 张矿");
+    expect(bystanderView.history[0]?.privateDetail).toBeNull();
+    expect(victimView.effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: "development-card-play",
+        card: { type: "monopoly", resource: "ore", total: 5, ownLoss: 3 },
+      }),
+      expect.objectContaining({ kind: "resource-grant", reason: "monopoly", grants: [expect.objectContaining({ resources: resourceAmounts({ ore: 5 }) })] }),
+      expect.objectContaining({ kind: "development-card-play", card: { type: "resource-choice", resources: resourceAmounts({ lumber: 1, grain: 1 }) } }),
+      expect.objectContaining({ kind: "resource-grant", reason: "resource-choice", grants: [expect.objectContaining({ origin: { kind: "bank" } })] }),
+      expect.objectContaining({ kind: "free-road-built", edgeId: "edge_4", placed: 1, total: 2 }),
+    ]));
+    expect(JSON.stringify(victimView.effects)).not.toContain("transfers");
+    expect(JSON.stringify(bystanderView.effects)).not.toContain("player_2");
+    expect(JSON.stringify(bystanderView.effects)).not.toContain("player_3");
+  });
+
+  it("tells observers which mandatory development-card action is pending", () => {
+    const game = createBaseGame({
+      id: "game_development_waiting",
+      seed: 18,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const turn = { kind: "turn" as const, activePlayerId: "player_1", turnNumber: 3 };
+
+    expect(projectGameForPlayer({ ...game, phase: { ...turn, step: "robber" } }, "player_2").interaction)
+      .toMatchObject({ kind: "waiting", instruction: "等待 林 移动强盗" });
+    expect(projectGameForPlayer({
+      ...game,
+      phase: { ...turn, step: "free-road" },
+      freeRoadsRemaining: 2,
+      freeRoadsGranted: 2,
+    }, "player_2").interaction)
+      .toMatchObject({ kind: "waiting", instruction: "等待 林 放置免费道路" });
   });
 
   it("projects only build actions the player can currently afford", () => {

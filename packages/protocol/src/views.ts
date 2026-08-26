@@ -303,10 +303,20 @@ function projectHistoryRecord(
     case "maritime_trade_completed": message = `${playerName(event.playerId)} 用 ${event.ratio} ${resourceLabel(event.give)}换得 1 ${resourceLabel(event.receive)}`; break;
     case "development_card_bought":
       message = `${playerName(event.playerId)} 购买了一张发展卡`;
-      if (event.playerId === viewerId) privateDetail = `购入：${event.cardType}`;
+      if (event.playerId === viewerId) privateDetail = `购入：${developmentLabel(event.cardType)}`;
       break;
-    case "development_card_played": message = `${playerName(event.playerId)} 使用了 ${developmentLabel(event.cardType)}`; break;
-    case "free_road_built": message = `${playerName(event.playerId)} 放置了一条免费道路`; break;
+    case "development_card_played":
+      message = event.cardType === "monopoly"
+        ? `${playerName(event.playerId)} 使用了垄断：${resourceLabel(event.resource)}，共获得 ${event.total} 张`
+        : event.cardType === "resource-choice"
+          ? `${playerName(event.playerId)} 使用了丰收：${formatResources(event.resources)}`
+          : `${playerName(event.playerId)} 使用了 ${developmentLabel(event.cardType)}`;
+      if (event.cardType === "monopoly") {
+        const ownLoss = event.transfers.find((transfer) => transfer.playerId === viewerId)?.amount ?? 0;
+        if (ownLoss > 0) privateDetail = `你交出了 ${ownLoss} 张${resourceLabel(event.resource)}`;
+      }
+      break;
+    case "free_road_built": message = `${playerName(event.playerId)} 放置了免费道路（${event.placed}/${event.total}${event.completed ? "，完成" : ""}）`; break;
     case "award_changed": message = event.holderId === null ? `${awardLabel(event.award)} 暂时无人持有` : `${playerName(event.holderId)} 获得 ${awardLabel(event.award)}`; break;
     case "game_won": message = `${playerName(event.playerId)} 赢得对局`; break;
   }
@@ -373,9 +383,14 @@ function projectInteraction(state: GameState, viewerId: string): GameInteraction
     if (state.phase.activePlayerId !== viewerId) {
       const activePlayerId = state.phase.activePlayerId;
       const actor = state.players.find((player) => player.id === activePlayerId);
+      const actorName = actor?.name ?? "当前玩家";
       return {
         kind: "waiting",
-        instruction: `等待 ${actor?.name ?? "当前玩家"} 行动`,
+        instruction: state.phase.step === "robber"
+          ? `等待 ${actorName} 移动强盗`
+          : state.phase.step === "free-road"
+            ? `等待 ${actorName} 放置免费道路`
+            : `等待 ${actorName} 行动`,
         vertexIds: [],
         edgeIds: [],
       };

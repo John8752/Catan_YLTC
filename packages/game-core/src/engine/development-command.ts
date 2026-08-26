@@ -102,7 +102,7 @@ function playKnight(state: GameState, actorId: PlayerId, cardId: string): GameCo
       actorId,
       cardId,
     ),
-    playedEvent(actorId, card.card),
+    { type: "development_card_played", playerId: actorId, cardId: card.card.id, cardType: "knight" },
   );
 }
 
@@ -114,19 +114,27 @@ function playRoadBuilding(state: GameState, actorId: PlayerId, cardId: string): 
   if (player.pieces.roads < 1 || findLegalRoadEdges(state.map, state.buildings, state.roads, actorId).length === 0) {
     return reject(state, "NO_PIECES_LEFT", "No legal free road can be placed");
   }
+  const roadsGranted = Math.min(2, player.pieces.roads);
   return accepted(
     consumeCard(
       {
         ...state,
         revision: state.revision + 1,
         developmentResumeStep: resume,
-        freeRoadsRemaining: Math.min(2, player.pieces.roads),
+        freeRoadsRemaining: roadsGranted,
+        freeRoadsGranted: roadsGranted,
         phase: { ...requireTurnPhase(state), step: "free-road" },
       },
       actorId,
       cardId,
     ),
-    playedEvent(actorId, card.card),
+    {
+      type: "development_card_played",
+      playerId: actorId,
+      cardId: card.card.id,
+      cardType: "road-building",
+      roadsGranted,
+    },
   );
 }
 
@@ -155,15 +163,24 @@ function buildFreeRoad(state: GameState, actorId: PlayerId, edgeId: EdgeId): Gam
     player.pieces.roads > 1 &&
     findLegalRoadEdges(changed.map, changed.buildings, changed.roads, actorId).length > 0;
   const resume = state.developmentResumeStep ?? "action";
+  const placed = state.freeRoadsGranted - remaining;
   return accepted(
     {
       ...changed,
       revision: state.revision + 1,
       freeRoadsRemaining: canContinue ? remaining : 0,
+      freeRoadsGranted: canContinue ? state.freeRoadsGranted : 0,
       developmentResumeStep: canContinue ? state.developmentResumeStep : null,
       phase: canContinue ? state.phase : { ...state.phase, step: resume },
     },
-    { type: "free_road_built", playerId: actorId, edgeId },
+    {
+      type: "free_road_built",
+      playerId: actorId,
+      edgeId,
+      placed,
+      total: state.freeRoadsGranted,
+      completed: !canContinue,
+    },
   );
 }
 
@@ -178,6 +195,9 @@ function playMonopoly(
   const amount = state.players
     .filter((player) => player.id !== actorId)
     .reduce((total, player) => total + player.resources[resource], 0);
+  const transfers = state.players
+    .filter((player) => player.id !== actorId && player.resources[resource] > 0)
+    .map((player) => ({ playerId: player.id, amount: player.resources[resource] }));
   const players = state.players.map((player) => {
     if (player.id === actorId) {
       return { ...player, resources: addResourceHands(player.resources, resourceAmounts({ [resource]: amount })) };
@@ -186,7 +206,15 @@ function playMonopoly(
   });
   return accepted(
     consumeCard({ ...state, revision: state.revision + 1, players }, actorId, cardId),
-    playedEvent(actorId, card.card),
+    {
+      type: "development_card_played",
+      playerId: actorId,
+      cardId: card.card.id,
+      cardType: "monopoly",
+      resource,
+      total: amount,
+      transfers,
+    },
   );
 }
 
@@ -217,7 +245,13 @@ function playResourceChoice(
       actorId,
       cardId,
     ),
-    playedEvent(actorId, card.card),
+    {
+      type: "development_card_played",
+      playerId: actorId,
+      cardId: card.card.id,
+      cardType: "resource-choice",
+      resources: grant,
+    },
   );
 }
 
@@ -295,10 +329,6 @@ function requireTurnPhase(state: GameState): Extract<GameState["phase"], { kind:
 
 function turnNumber(state: GameState): number {
   return requireTurnPhase(state).turnNumber;
-}
-
-function playedEvent(playerId: PlayerId, card: DevelopmentCardState): GameEvent {
-  return { type: "development_card_played", playerId, cardId: card.id, cardType: card.type };
 }
 
 function accepted(state: GameState, event: GameEvent): GameCommandResult {

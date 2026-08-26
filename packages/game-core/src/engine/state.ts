@@ -78,6 +78,7 @@ export interface GameState {
   readonly developmentCardPlayedThisTurn: boolean;
   readonly robberResumeStep: "roll" | "action" | "paired-action" | null;
   readonly freeRoadsRemaining: number;
+  readonly freeRoadsGranted: number;
   readonly developmentResumeStep: "roll" | "action" | "paired-action" | null;
   readonly awards: AwardsState;
 }

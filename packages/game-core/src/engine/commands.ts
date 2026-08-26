@@ -146,8 +146,43 @@ export type GameEvent =
       readonly cardId: string;
       readonly cardType: string;
     }
-  | { readonly type: "development_card_played"; readonly playerId: PlayerId; readonly cardId: string; readonly cardType: string }
-  | { readonly type: "free_road_built"; readonly playerId: PlayerId; readonly edgeId: EdgeId }
+  | {
+      readonly type: "development_card_played";
+      readonly playerId: PlayerId;
+      readonly cardId: string;
+      readonly cardType: "knight";
+    }
+  | {
+      readonly type: "development_card_played";
+      readonly playerId: PlayerId;
+      readonly cardId: string;
+      readonly cardType: "road-building";
+      readonly roadsGranted: number;
+    }
+  | {
+      readonly type: "development_card_played";
+      readonly playerId: PlayerId;
+      readonly cardId: string;
+      readonly cardType: "monopoly";
+      readonly resource: ResourceType;
+      readonly total: number;
+      readonly transfers: readonly { readonly playerId: PlayerId; readonly amount: number }[];
+    }
+  | {
+      readonly type: "development_card_played";
+      readonly playerId: PlayerId;
+      readonly cardId: string;
+      readonly cardType: "resource-choice";
+      readonly resources: ResourceHand;
+    }
+  | {
+      readonly type: "free_road_built";
+      readonly playerId: PlayerId;
+      readonly edgeId: EdgeId;
+      readonly placed: number;
+      readonly total: number;
+      readonly completed: boolean;
+    }
   | {
       readonly type: "award_changed";
       readonly award: "longest-road" | "largest-army";

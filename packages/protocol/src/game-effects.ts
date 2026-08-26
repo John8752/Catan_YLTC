@@ -12,13 +12,15 @@ export type PublicGameEffectView =
   | PrivateResourceTransferEffectView
   | PublicResourceSpendEffectView
   | PublicScoreChangeEffectView
-  | PublicRobberMoveEffectView;
+  | PublicRobberMoveEffectView
+  | PublicDevelopmentCardPlayEffectView
+  | PublicFreeRoadBuiltEffectView;
 
 export interface PublicResourceGrantEffectView {
   readonly id: string;
   readonly revision: number;
   readonly kind: "resource-grant";
-  readonly reason: "production" | "starting-resources" | "player-trade" | "maritime-trade";
+  readonly reason: "production" | "starting-resources" | "player-trade" | "maritime-trade" | "monopoly" | "resource-choice";
   readonly grants: readonly {
     readonly playerId: string;
     readonly resources: ResourceHand;
@@ -68,6 +70,29 @@ export interface PublicRobberMoveEffectView {
   readonly playerId: string;
   readonly fromHexId: string;
   readonly toHexId: string;
+}
+
+export interface PublicDevelopmentCardPlayEffectView {
+  readonly id: string;
+  readonly revision: number;
+  readonly kind: "development-card-play";
+  readonly playerId: string;
+  readonly card:
+    | { readonly type: "knight" }
+    | { readonly type: "road-building"; readonly roadsGranted: number }
+    | { readonly type: "monopoly"; readonly resource: ResourceType; readonly total: number; readonly ownLoss: number }
+    | { readonly type: "resource-choice"; readonly resources: ResourceHand };
+}
+
+export interface PublicFreeRoadBuiltEffectView {
+  readonly id: string;
+  readonly revision: number;
+  readonly kind: "free-road-built";
+  readonly playerId: string;
+  readonly edgeId: string;
+  readonly placed: number;
+  readonly total: number;
+  readonly completed: boolean;
 }
 
 export function projectPlayerSafeEffect(
@@ -193,6 +218,62 @@ export function projectPlayerSafeEffect(
       });
     }
     return effects;
+  }
+  if (event.type === "development_card_played") {
+    const card = event.cardType === "knight"
+      ? { type: "knight" as const }
+      : event.cardType === "road-building"
+        ? { type: "road-building" as const, roadsGranted: event.roadsGranted }
+        : event.cardType === "monopoly"
+          ? {
+              type: "monopoly" as const,
+              resource: event.resource,
+              total: event.total,
+              ownLoss: event.transfers.find((transfer) => transfer.playerId === viewerId)?.amount ?? 0,
+            }
+          : { type: "resource-choice" as const, resources: event.resources };
+    const effects: PublicGameEffectView[] = [{
+      id: `${record.revision}:development-card:${event.playerId}:${event.cardType}`,
+      revision: record.revision,
+      kind: "development-card-play",
+      playerId: event.playerId,
+      card,
+    }];
+    if (event.cardType === "monopoly" && event.total > 0) {
+      effects.push({
+        id: `${record.revision}:monopoly:${event.playerId}`,
+        revision: record.revision,
+        kind: "resource-grant",
+        reason: "monopoly",
+        grants: [{ playerId: event.playerId, resources: resourceAmounts({ [event.resource]: event.total }) }],
+        sources: [],
+        triggeredHexIds: [],
+      });
+    }
+    if (event.cardType === "resource-choice") {
+      effects.push({
+        id: `${record.revision}:resource-choice:${event.playerId}`,
+        revision: record.revision,
+        kind: "resource-grant",
+        reason: "resource-choice",
+        grants: [{ playerId: event.playerId, resources: event.resources, origin: { kind: "bank" } }],
+        sources: [],
+        triggeredHexIds: [],
+      });
+    }
+    return effects;
+  }
+  if (event.type === "free_road_built") {
+    return [{
+      id: `${record.revision}:free-road:${event.playerId}:${event.edgeId}`,
+      revision: record.revision,
+      kind: "free-road-built",
+      playerId: event.playerId,
+      edgeId: event.edgeId,
+      placed: event.placed,
+      total: event.total,
+      completed: event.completed,
+    }];
   }
   if (event.type === "award_changed" && event.holderId !== null) {
     return [{

@@ -37,11 +37,25 @@ describe("development card commands", () => {
       player_2: resourceAmounts({ ore: 3 }),
       player_3: resourceAmounts({ ore: 2 }),
     });
-    game = accept(executeGameCommand(game, "player_1", {
+    const monopoly = executeGameCommand(game, "player_1", {
       type: "PlayMonopoly",
       cardId: "card_test",
       resource: "ore",
-    }));
+    });
+    expect(monopoly).toMatchObject({
+      accepted: true,
+      events: [{
+        type: "development_card_played",
+        cardType: "monopoly",
+        resource: "ore",
+        total: 5,
+        transfers: [
+          { playerId: "player_2", amount: 3 },
+          { playerId: "player_3", amount: 2 },
+        ],
+      }],
+    });
+    game = accept(monopoly);
     expect(game.players.find((player) => player.id === "player_1")?.resources.ore).toBe(5);
 
     const second = executeGameCommand(game, "player_1", {
@@ -50,6 +64,24 @@ describe("development card commands", () => {
       resources: ["grain", "grain"],
     });
     expect(second).toMatchObject({ accepted: false, error: { code: "DEVELOPMENT_CARD_ALREADY_PLAYED" } });
+  });
+
+  it("records the publicly selected resources for a resource-choice result", () => {
+    const game = withCards(actionState(), "player_1", [card("resource-choice")]);
+    const result = executeGameCommand(game, "player_1", {
+      type: "PlayResourceChoice",
+      cardId: "card_test",
+      resources: ["grain", "ore"],
+    });
+
+    expect(result).toMatchObject({
+      accepted: true,
+      events: [{
+        type: "development_card_played",
+        cardType: "resource-choice",
+        resources: resourceAmounts({ grain: 1, ore: 1 }),
+      }],
+    });
   });
 
   it("plays a knight before rolling and resumes the roll after moving the robber", () => {
@@ -81,9 +113,20 @@ describe("development card commands", () => {
     for (let remaining = 2; remaining > 0; remaining -= 1) {
       const edgeId = legalFreeRoadEdges(game, "player_1")[0];
       if (edgeId === undefined) throw new Error("Missing free road edge");
-      game = accept(executeGameCommand(game, "player_1", { type: "BuildFreeRoad", edgeId }));
+      const result = executeGameCommand(game, "player_1", { type: "BuildFreeRoad", edgeId });
+      expect(result).toMatchObject({
+        accepted: true,
+        events: [{
+          type: "free_road_built",
+          placed: 3 - remaining,
+          total: 2,
+          completed: remaining === 1,
+        }],
+      });
+      game = accept(result);
     }
     expect(game.phase).toMatchObject({ kind: "turn", step: "action" });
+    expect(game).toMatchObject({ freeRoadsRemaining: 0, freeRoadsGranted: 0 });
   });
 });
 

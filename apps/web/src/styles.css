@@ -463,6 +463,10 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .loading-table { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 1rem; color: var(--pine); }
 
 .resource-effect-layer { position: fixed; inset: 0; z-index: 45; pointer-events: none; overflow: hidden; }
+.development-effect-card {
+  animation: development-effect-card 1650ms cubic-bezier(.18,.82,.22,1) both;
+}
+.development-effect-card.is-free-road { animation-duration: 1150ms; }
 .resource-flight {
   position: absolute;
   top: 0;
@@ -549,6 +553,22 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   18% { transform: translateY(0) scale(1.08); opacity: 1; }
   72% { transform: translateY(0) scale(1); opacity: 1; }
   100% { transform: translateY(-18px) scale(.95); opacity: 0; }
+}
+
+@keyframes development-effect-card {
+  0% { transform: translateY(-14px) scale(.9); opacity: 0; }
+  14% { transform: translateY(0) scale(1.025); opacity: 1; }
+  76% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-8px) scale(.98); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .development-effect-card { animation: development-effect-fade 700ms ease both; }
+}
+
+@keyframes development-effect-fade {
+  0%,100% { opacity: 0; }
+  12%,82% { opacity: 1; }
 }
 
 @keyframes robber-flight {

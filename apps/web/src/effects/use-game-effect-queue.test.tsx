@@ -33,6 +33,36 @@ describe("useGameEffectQueue", () => {
     act(() => result.current.completeActiveEffect());
     expect(result.current.activeEffect).toBeNull();
   });
+
+  it("queues a card reveal before its same-revision resource result", () => {
+    const reveal: PublicGameEffectView = {
+      id: "8:development-card:player_1:resource-choice",
+      revision: 8,
+      kind: "development-card-play",
+      playerId: "player_1",
+      card: { type: "resource-choice", resources: resourceAmounts({ grain: 1, ore: 1 }) },
+    };
+    const grant: PublicGameEffectView = {
+      id: "8:resource-choice:player_1",
+      revision: 8,
+      kind: "resource-grant",
+      reason: "resource-choice",
+      grants: [{ playerId: "player_1", resources: resourceAmounts({ grain: 1, ore: 1 }), origin: { kind: "bank" } }],
+      sources: [],
+      triggeredHexIds: [],
+    };
+    const { result, rerender } = renderHook(
+      ({ game }) => useGameEffectQueue(game),
+      { initialProps: { game: gameView(7, []) } },
+    );
+
+    rerender({ game: gameView(8, [reveal, grant]) });
+    expect(result.current.activeEffect?.id).toBe(reveal.id);
+    act(() => result.current.completeActiveEffect());
+    expect(result.current.activeEffect?.id).toBe(grant.id);
+    act(() => result.current.completeActiveEffect());
+    expect(result.current.activeEffect).toBeNull();
+  });
 });
 
 function gameView(revision: number, effects: readonly PublicGameEffectView[]) {

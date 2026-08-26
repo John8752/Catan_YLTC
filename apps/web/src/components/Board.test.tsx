@@ -37,6 +37,9 @@ describe("Board", () => {
     expect(markup).toContain('data-port-resource="wool"');
     expect(markup.match(/data-robber-piece=/g)).toHaveLength(1);
     expect(markup).toContain("强盗位于荒漠");
+    expect(markup).toContain("银行剩余资源");
+    expect(markup).toContain("银行剩余砖 19 张");
+    expect(markup).toContain("银行剩余矿 19 张");
     expect(markup).not.toContain("群岛初现");
   });
 

@@ -88,6 +88,45 @@ describe("player-safe game projections", () => {
     expect(serialized).not.toContain('"resources"');
   });
 
+  it("projects public bank supply, remaining pieces and road achievements", () => {
+    const game = createBaseGame({
+      id: "game_public_supplies",
+      seed: 43,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const [firstEdge, secondEdge] = game.map.edges;
+    if (firstEdge === undefined || secondEdge === undefined) throw new Error("Map needs test edges");
+    const publicState = {
+      ...game,
+      bank: resourceAmounts({ brick: 17, lumber: 16, wool: 15, grain: 14, ore: 13 }),
+      roads: [
+        { ownerId: "player_2", edgeId: firstEdge.id },
+        { ownerId: "player_2", edgeId: secondEdge.id },
+      ],
+      players: game.players.map((player) => player.id === "player_2"
+        ? {
+            ...player,
+            pieces: { roads: 13, settlements: 3, cities: 4 },
+            playedKnights: 2,
+          }
+        : player),
+    };
+
+    const view = projectGameForPlayer(publicState, "player_1");
+    const opponent = view.players.find((player) => player.id === "player_2");
+
+    expect(view.bankResources).toEqual(resourceAmounts({ brick: 17, lumber: 16, wool: 15, grain: 14, ore: 13 }));
+    expect(opponent).toMatchObject({
+      remainingPieces: { roads: 13, settlements: 3, cities: 4 },
+      playedKnights: 2,
+      longestRoadLength: 2,
+    });
+  });
+
   it("reveals development card identities only to their owner", () => {
     const game = createBaseGame({
       id: "game_cards",

@@ -1,16 +1,9 @@
 import type { GameView } from "@catan/protocol";
-import { Route, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils.js";
+import { PlayerColorDot } from "./PlayerColorDot.js";
 import { TurnTimerBadge } from "./TurnTimerBadge.js";
 
-const PLAYER_COLORS = {
-  terracotta: "bg-[#c85d42]",
-  ocean: "bg-[#3886a5]",
-  pine: "bg-[#3f8057]",
-  wheat: "bg-[#d2a534]",
-  plum: "bg-[#81577d]",
-  charcoal: "bg-[#48504f]",
-} as const;
+const MAX_VISIBLE_PLAYER_NAME_LENGTH = 6;
 
 export function OpponentStrip({ game }: { readonly game: GameView }) {
   const activePlayerId = game.phase.kind === "turn"
@@ -21,7 +14,7 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
   const opponents = game.players.filter((player) => player.id !== game.you.id);
 
   return (
-    <section className="opponent-strip grid min-w-0 grid-flow-col auto-cols-fr gap-1 lg:gap-2" aria-label="其他玩家">
+    <section className="opponent-strip grid min-w-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 lg:auto-cols-fr lg:gap-2 lg:overflow-visible lg:pb-0" aria-label="其他玩家">
       {opponents.map((player) => {
         const active = player.id === activePlayerId;
         const timer = game.turnTimer?.playerId === player.id ? game.turnTimer : null;
@@ -34,30 +27,47 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
             key={player.id}
             data-player-id={player.id}
             data-player-target={player.id}
-            aria-label={`${player.name}，${player.visibleVictoryPoints} 分，${player.resourceCardCount} 张资源卡，${player.developmentCardCount} 张发展卡${active ? "，当前行动" : ""}`}
+            aria-label={`${player.name}，${player.visibleVictoryPoints} 分，${player.resourceCardCount} 张资源卡，${player.developmentCardCount} 张发展卡，已出 ${player.playedKnights} 张骑士，最长道路 ${player.longestRoadLength}${active ? "，当前行动" : ""}`}
           >
-            <div className="flex min-w-0 items-center gap-1">
-              <span className={cn("size-2.5 shrink-0 rounded-sm ring-1 ring-white/65 lg:size-3", PLAYER_COLORS[player.color])} aria-hidden="true" />
-              <strong className="min-w-0 flex-1 truncate text-[11px] lg:text-sm" title={player.name}>{player.name}</strong>
+            <div className="flex min-w-0 items-center gap-1" data-opponent-summary={player.id}>
+              <PlayerColorDot color={player.color} className="size-2.5 rounded-sm lg:size-3" />
+              <strong className="min-w-0 flex-1 truncate text-[10px] lg:text-sm" title={player.name}>{truncatePlayerName(player.name)}</strong>
+              <span className="flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#d7e2da] lg:gap-2 lg:text-[11px]">
+                <span title="资源卡">资 {player.resourceCardCount}</span>
+                <span title="发展卡">发 {player.developmentCardCount}</span>
+                <span
+                  className={cn(game.awards.largestArmy.holderId === player.id && "rounded bg-[#f0c56b]/20 px-0.5 text-[#ffe69a]")}
+                  title="已出骑士"
+                  aria-label={`已出骑士 ${player.playedKnights}`}
+                >骑 {player.playedKnights}</span>
+                <span
+                  className={cn(game.awards.longestRoad.holderId === player.id && "rounded bg-[#f0c56b]/20 px-0.5 text-[#ffe69a]")}
+                  title="最长道路长度"
+                  aria-label={`最长道路长度 ${player.longestRoadLength}`}
+                >长 {player.longestRoadLength}</span>
+              </span>
               <b className="grid size-5 shrink-0 place-items-center rounded-full bg-[#f4e4bd] text-[11px] text-[#28433e] lg:size-6 lg:text-xs">{player.visibleVictoryPoints}</b>
             </div>
-            <div className="mt-0.5 flex items-center gap-1 text-[9px] font-bold text-[#d7e2da] lg:gap-2 lg:text-[11px]">
-              <span title="资源卡">资 {player.resourceCardCount}</span>
-              <span title="发展卡">发 {player.developmentCardCount}</span>
-              <span className="ml-auto flex gap-0.5 [&_svg]:size-3">
-                {game.awards.longestRoad.holderId === player.id ? <Route aria-label="最长道路" /> : null}
-                {game.awards.largestArmy.holderId === player.id ? <ShieldCheck aria-label="最大骑士力" /> : null}
-              </span>
+            <div className="mt-1 grid grid-cols-3 gap-0.5 text-[8px] font-bold text-[#d7e2da] lg:text-[10px]" data-opponent-supply={player.id}>
+              <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余城市 ${player.remainingPieces.cities}`}>城市 <b className="text-[#fff4c9]">{player.remainingPieces.cities}</b></span>
+              <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余村庄 ${player.remainingPieces.settlements}`}>村庄 <b className="text-[#fff4c9]">{player.remainingPieces.settlements}</b></span>
+              <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余道路 ${player.remainingPieces.roads}`}>道路 <b className="text-[#fff4c9]">{player.remainingPieces.roads}</b></span>
             </div>
             {timer === null ? null : (
               <span className="absolute top-[calc(100%+.25rem)] left-0 z-30" data-turn-timer-slot="opponent">
                 <TurnTimerBadge timer={timer} className="px-2 py-1 text-xs" />
               </span>
             )}
-            {active && timer === null ? <span className="absolute right-1 bottom-0.5 text-[8px] font-black tracking-wide text-[#ffd980] lg:static lg:mt-0.5 lg:block lg:text-[9px]">行动中</span> : null}
           </article>
         );
       })}
     </section>
   );
+}
+
+function truncatePlayerName(name: string): string {
+  const characters = Array.from(name);
+  return characters.length <= MAX_VISIBLE_PLAYER_NAME_LENGTH
+    ? name
+    : `${characters.slice(0, MAX_VISIBLE_PLAYER_NAME_LENGTH).join("")}…`;
 }

@@ -21,6 +21,7 @@ import {
   terrainLabel,
 } from "./BoardMap.js";
 import { ConstructionTargets } from "./ConstructionTargets.js";
+import { BankSupply } from "./BankSupply.js";
 
 export interface BoardProps {
   readonly game: GameView;
@@ -57,6 +58,7 @@ export function Board({
     <section className="board-shell" data-board-root="true" aria-label="游戏棋盘">
       <div className="board-heading">
         <p className="eyebrow">种子 {game.seed}</p>
+        <BankSupply resources={game.bankResources} />
         <span className="phase-chip">{phaseLabel(game)}</span>
       </div>
 

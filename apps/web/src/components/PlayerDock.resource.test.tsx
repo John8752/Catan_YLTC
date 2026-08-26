@@ -15,6 +15,18 @@ const players = [
 afterEach(() => cleanup());
 
 describe("PlayerDock resource cards", () => {
+  it("shows the player's total resources, remaining pieces and public achievements", () => {
+    renderDock(actionView(), vi.fn<(command: GameCommand) => void>());
+
+    expect(screen.getByText("资源总数 2")).toBeTruthy();
+    expect(screen.queryByText("你的席位")).toBeNull();
+    expect(screen.getByLabelText("剩余道路 15")).toBeTruthy();
+    expect(screen.getByLabelText("剩余村庄 5")).toBeTruthy();
+    expect(screen.getByLabelText("剩余城市 4")).toBeTruthy();
+    expect(screen.getByLabelText("已出骑士 0")).toBeTruthy();
+    expect(screen.getByLabelText("最长道路长度 0")).toBeTruthy();
+  });
+
   it("uses the persistent hand cards to select and remove an exact discard", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
     renderDock(discardView(), onCommand);

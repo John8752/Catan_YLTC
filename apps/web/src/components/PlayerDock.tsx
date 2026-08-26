@@ -1,6 +1,6 @@
 import { RESOURCE_TYPES, type ResourceHand, type ResourceType } from "@catan/game-core";
 import type { GameCommand, GameView } from "@catan/protocol";
-import { Dices, Hammer, UserRound } from "lucide-react";
+import { Dices, Hammer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge.js";
 import { Card } from "@/components/ui/card.js";
@@ -8,6 +8,8 @@ import { GameControls } from "./GameControls.js";
 import { ResourceCard, resourceLabel } from "./ResourceCard.js";
 import { emptyResourceSelection, incrementResource } from "./ResourceCardPicker.js";
 import { TurnTimerBadge } from "./TurnTimerBadge.js";
+import { PlayerPublicStats } from "./PlayerPublicStats.js";
+import { PlayerColorDot } from "./PlayerColorDot.js";
 
 export interface PlayerDockProps {
   readonly game: GameView;
@@ -49,17 +51,17 @@ export function PlayerDock({
           <TurnTimerBadge timer={ownTimer} className="px-2 py-1 text-xs" />
         </span>
       )}
-      <div className="grid grid-cols-[minmax(72px,.26fr)_minmax(0,1fr)] items-stretch gap-2 lg:gap-3 xl:grid-cols-[auto_minmax(270px,.75fr)_minmax(430px,1.25fr)]">
+      <div className="grid grid-cols-[minmax(88px,.26fr)_minmax(0,1fr)] items-stretch gap-2 lg:gap-3 xl:grid-cols-[minmax(132px,auto)_minmax(270px,.75fr)_minmax(430px,1.25fr)]">
         <div
-          className="self-seat flex min-w-0 items-center gap-2 rounded-xl border border-[#6d5434]/15 bg-white/35 px-2 py-1.5 lg:min-w-28 lg:px-3 lg:py-2"
+          className="self-seat flex min-w-0 items-center gap-1.5 rounded-xl border border-[#6d5434]/15 bg-white/35 px-2 py-1.5 lg:gap-2 lg:px-3 lg:py-2"
           data-player-id={game.you.id}
           data-player-target={game.you.id}
           data-current-player="true"
         >
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#1f5651] text-[#fff8df] lg:size-10"><UserRound className="size-4 lg:size-5" /></span>
+          <PlayerColorDot color={game.you.color} className="size-2.5 ring-[#6d5434]/25 lg:size-3" />
           <div className="min-w-0">
-            <span className="block text-[10px] font-black tracking-[.12em] text-[#9d513d] uppercase">你的席位</span>
-            <strong className="block truncate text-sm text-[#243d39]">{game.you.name}</strong>
+            <strong className="block truncate text-xs text-[#243d39] lg:text-sm" title={game.you.name}>{game.you.name}</strong>
+            <span className="block text-[9px] font-bold text-[#6c6d62] lg:text-[10px]">资源总数 {game.you.resourceCardCount}</span>
           </div>
         </div>
 
@@ -86,7 +88,14 @@ export function PlayerDock({
           })}
         </section>
 
-        <section className="col-span-2 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1.5 lg:px-3 lg:py-2 xl:col-span-1" aria-label="本回合操作">
+        <PlayerPublicStats
+          player={game.you}
+          tone="light"
+          density="comfortable"
+          className="col-span-2 rounded-lg border border-[#6d5434]/10 bg-white/25 p-0.5 xl:col-start-1 xl:row-start-2"
+        />
+
+        <section className="col-span-2 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1.5 lg:px-3 lg:py-2 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1" aria-label="本回合操作">
           <div className="mb-1 flex items-center justify-between gap-2 lg:mb-1.5">
             <span className="flex items-center gap-1.5 text-[10px] font-black tracking-[.12em] text-[#5d665f] uppercase"><Hammer className="size-3.5" />本回合操作</span>
             {game.lastRoll === null ? null : (

@@ -1,6 +1,7 @@
 import {
   BUILD_COSTS,
   hasResources,
+  longestRoadLength,
   resourceCardCount,
   legalInitialRoadEdges,
   legalInitialSettlementVertices,
@@ -43,6 +44,7 @@ export interface PublicPlayerView {
   };
   readonly developmentCardCount: number;
   readonly playedKnights: number;
+  readonly longestRoadLength: number;
 }
 
 export interface PrivatePlayerView extends PublicPlayerView {
@@ -63,6 +65,7 @@ export interface GameView {
   readonly players: readonly PublicPlayerView[];
   readonly phase: GamePhase;
   readonly lastRoll: readonly [number, number] | null;
+  readonly bankResources: ResourceHand;
   readonly you: PrivatePlayerView;
   readonly interaction: GameInteractionView;
   readonly openTrade: TradeOfferState | null;
@@ -204,6 +207,7 @@ export function projectGameForPlayer(
     remainingPieces: { ...player.pieces },
     developmentCardCount: player.developmentCards.length,
     playedKnights: player.playedKnights,
+    longestRoadLength: longestRoadLength(state.map, state.buildings, state.roads, player.id),
   }));
 
   const publicViewer = players.find((player) => player.id === viewerId);
@@ -229,6 +233,7 @@ export function projectGameForPlayer(
     players,
     phase: state.phase,
     lastRoll: state.lastRoll,
+    bankResources: { ...state.bank },
     you: {
       ...publicViewer,
       resources: { ...viewer.resources },

@@ -26,7 +26,7 @@ it("carries the server's code alongside the message it shows the player", async 
 });
 
 it("keeps a stale revision distinguishable from a refused move", async () => {
-  stubRejection("STALE_REVISION", "Game state changed; refresh and try again");
+  stubRejection("STALE_REVISION", "游戏状态已更新，请重试");
 
   const caught = await submitGameCommand(session, 7, { type: "RollDice" }).catch((error: unknown) => error);
 

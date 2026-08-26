@@ -296,7 +296,7 @@ export class RoomRegistry {
     }
     if (room.game === null) throw new RoomError("GAME_NOT_STARTED", "The game has not started");
     if (room.game.revision !== expectedRevision) {
-      throw new RoomError("STALE_REVISION", "Game state changed; refresh and try again");
+      throw new RoomError("STALE_REVISION", "游戏状态已更新，请重试");
     }
 
     const result = executeGameCommand(room.game, playerId, command);

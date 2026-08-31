@@ -49,6 +49,120 @@ async function openFixture(browser: Browser, width: number, height: number, room
   return { context, page, errors, push: (next: RoomView) => socket!.send(JSON.stringify({ type: "room_state", room: next })) };
 }
 
+async function measure(page: Page) {
+  return page.evaluate(() => {
+    const board = document.querySelector(".board-stage")!.getBoundingClientRect();
+    const fit = [...document.querySelectorAll(".hex-surface,.port-sign")].every((e) => {
+      const b = e.getBoundingClientRect();
+      return b.left >= board.left && b.right <= board.right && b.top >= board.top && b.bottom <= board.bottom;
+    });
+    const overlays = [...document.querySelectorAll('.board-zoom-controls,[data-resource-source="bank"],.phase-chip')].map((e) => e.getBoundingClientRect());
+    const hudClear = [...document.querySelectorAll(".hex-surface,.port-sign")].every((e) => {
+      const b = e.getBoundingClientRect();
+      return overlays.every((o) => b.right <= o.left || b.left >= o.right || b.bottom <= o.top || b.top >= o.bottom);
+    });
+    const font = (selector: string) => Number.parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
+    const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+    return {
+      fit, hudClear, rootFont: font("html"), nameFont: font(".opponent-strip strong"),
+      statFont: font('[data-opponent-summary] [title="资源卡"]'),
+      tile: rect(".hex-surface"), number: rect(".token-number"), dock: rect(".player-dock"),
+      overflow: document.documentElement.scrollWidth > innerWidth + 1 || document.documentElement.scrollHeight > innerHeight + 1,
+      sidebar: document.querySelector("[data-game-sidebar]")?.getBoundingClientRect().toJSON(),
+    };
+  });
+}
+
+for (const count of [4, 6] as const) {
+  for (const [width, height] of sizes) {
+    test(`${count} seats fit ${width}x${height} with readable controls and uncropped ports`, async ({ browser }) => {
+      const run = await openFixture(browser, width, height, fixture(count));
+      try {
+        await expect(run.page.getByRole("button", { name: "结束回合", exact: true })).toBeVisible();
+        await expect(run.page.locator("[data-player-target]")).toHaveCount(count);
+        await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
+        await expect(run.page.locator('[data-player-score]')).toHaveCount(count);
+        await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("0");
+        const bankHost = width >= 1024 ? '[data-game-sidebar]' : '.board-heading';
+        await expect(run.page.locator(`${bankHost} [data-resource-source="bank"]`)).toBeVisible();
+        const scoreBounds = await run.page.locator('.self-seat [data-player-score="p1"]').boundingBox();
+        const seatBounds = await run.page.locator('.self-seat').boundingBox();
+        expect(scoreBounds!.x + scoreBounds!.width).toBeLessThanOrEqual(seatBounds!.x + seatBounds!.width);
+        const metrics = await measure(run.page);
+        expect(metrics.overflow).toBe(false);
+        expect(metrics.fit).toBe(true);
+        expect(metrics.hudClear).toBe(true);
+        expect(metrics.dock.y + metrics.dock.height).toBeLessThanOrEqual(height + 1);
+        if (width === 960 && height === 540 && count === 6) expect(metrics.tile.width).toBeGreaterThan(30);
+        if (width >= 1024) {
+          const logViewport = run.page.getByRole("region", { name: "公开记录", exact: true }).locator('[data-slot="scroll-area-viewport"]');
+          const logBounds = await logViewport.boundingBox();
+          const footerBounds = await run.page.locator('aside[aria-label="房间状态"] [data-slot="card-footer"]').boundingBox();
+          expect(logBounds!.height).toBeGreaterThanOrEqual(80);
+          expect(logBounds!.y + logBounds!.height).toBeLessThanOrEqual(footerBounds!.y);
+          expect(metrics.nameFont).toBeGreaterThanOrEqual(16);
+          expect(metrics.statFont).toBeGreaterThanOrEqual(14);
+          expect(metrics.sidebar?.x).toBeGreaterThan(metrics.dock.x + metrics.dock.width - 1);
+          expect(metrics.sidebar?.y + metrics.sidebar?.height).toBeLessThanOrEqual(height + 1);
+          // Old six-player tile was 91.275 CSS px at this viewport. Keep >10%
+          // growth even with the full action controls and last-roll badge shown.
+          if (width === 1920 && height === 1021 && count === 6) expect(metrics.tile.width).toBeGreaterThan(91.275 * 1.1);
+        }
+        const dir = path.join(process.cwd(), "output/playwright");
+        await mkdir(dir, { recursive: true });
+        await run.page.screenshot({ path: path.join(dir, `adaptive-${count}-${width}x${height}.png`), fullPage: true });
+        expect(run.errors).toEqual([]);
+      } finally { await run.context.close(); }
+    });
+  }
+}
+
+test("large-screen type scales with CSS viewport, not Retina pixel density", async ({ browser }) => {
+  const results: Awaited<ReturnType<typeof measure>>[] = [];
+  for (const [width, height, dpr] of [[1920, 1021, 1], [1920, 1021, 2], [2560, 1440, 1], [3840, 2160, 1]]) {
+    const run = await openFixture(browser, width!, height!, fixture(6), dpr);
+    results.push(await measure(run.page));
+    await run.context.close();
+  }
+  expect(results[0]?.statFont).toBe(results[1]?.statFont);
+  expect(results[2]!.statFont).toBeGreaterThan(results[0]!.statFont * 1.3);
+  expect(results[3]!.statFont).toBeGreaterThan(results[0]!.statFont * 1.7);
+});
+
+test("opponent anchors survive breakpoints and room footer actions stay reachable", async ({ browser }) => {
+  const run = await openFixture(browser, 1920, 1021, fixture(6));
+  const anchor = await run.page.locator('[data-player-target="p2"]').elementHandle();
+  try {
+    const update = fixture(6, 41);
+    run.push({ ...update, game: {
+      ...update.game!,
+      you: { ...update.game!.you, visibleVictoryPoints: 6 },
+      players: update.game!.players.map((player) => player.id === "p1" ? { ...player, visibleVictoryPoints: 6 } : player),
+      bankResources: { ...update.game!.bankResources, brick: 7 },
+    } });
+    await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("6");
+    for (const [width, height] of [[390, 844], [1024, 768], [360, 640], [1920, 1021]]) {
+      await run.page.setViewportSize({ width: width!, height: height! });
+      await expect(run.page.locator('[data-player-target="p2"]')).toBeVisible();
+      await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
+      await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("6");
+      await expect(run.page.getByLabel("银行剩余砖 7 张", { exact: true })).toBeVisible();
+      await expect(run.page.locator(`${width! >= 1024 ? '[data-game-sidebar]' : '.board-heading'} [data-resource-source="bank"]`)).toBeVisible();
+      expect(await anchor!.evaluate((e) => e.isConnected)).toBe(true);
+      if (width! < 1024) await run.page.getByRole("button", { name: /打开公开记录与房间信息/ }).click();
+      const bounds = await run.page.locator('aside[aria-label="房间状态"] [data-slot="card-footer"]').boundingBox();
+      for (const label of ["退出座位", "在新标签页开一个座位"]) {
+        const action = run.page.getByRole("button", { name: label, exact: true });
+        await expect(action).toBeVisible();
+        const b = await action.boundingBox();
+        expect(b!.x).toBeGreaterThanOrEqual(bounds!.x);
+        expect(b!.x + b!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width);
+      }
+      if (width! < 1024) await run.page.keyboard.press("Escape");
+    }
+  } finally { await run.context.close(); }
+});
+
 test("history appends below, follows live updates, preserves reading and reopens at the latest", async ({ browser }) => {
   const run = await openFixture(browser, 1920, 1021, fixture(6));
   const log = run.page.getByRole("log");
@@ -95,5 +209,43 @@ test("history keeps the same visible entry when retention drops older rows", asy
       return row.getBoundingClientRect().top - e.getBoundingClientRect().top;
     }, reading.key);
     expect(Math.abs(offset - reading.offset)).toBeLessThan(2);
+  } finally { await run.context.close(); }
+});
+
+test("result tabs stay light in default, hover, selected and keyboard focus states", async ({ browser }) => {
+  const run = await openFixture(browser, 1920, 1021, fixture(4, 40, true));
+  try {
+    const overview = run.page.getByRole("tab", { name: "概览", exact: true });
+    const dice = run.page.getByRole("tab", { name: "骰子统计", exact: true });
+    await expect(overview).toHaveCSS("color", "rgb(255, 255, 255)");
+    // Normalize CSS Color 4 serialization (oklab/color-mix) to actual RGBA.
+    const inactiveColor = await dice.evaluate((e) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 1;
+      const context = canvas.getContext("2d")!;
+      context.fillStyle = getComputedStyle(e).color;
+      context.fillRect(0, 0, 1, 1);
+      return [...context.getImageData(0, 0, 1, 1).data];
+    });
+    expect(inactiveColor.slice(0, 3).every((channel) => channel >= 254)).toBe(true);
+    expect(inactiveColor[3]).toBeGreaterThanOrEqual(216);
+    await dice.hover();
+    await expect(dice).toHaveCSS("color", "rgb(255, 255, 255)");
+    await overview.focus();
+    await run.page.keyboard.press("ArrowRight");
+    await expect(dice).toBeFocused();
+    await expect(dice).toHaveAttribute("aria-selected", "true");
+    await expect(dice).not.toHaveCSS("box-shadow", "none");
+    expect(await dice.evaluate((e) => getComputedStyle(e, "::after").backgroundColor)).toBe("rgb(240, 197, 107)");
+    for (const name of ["资源卡统计", "活动统计", "资源统计"]) {
+      const tab = run.page.getByRole("tab", { name, exact: true });
+      await tab.click();
+      await expect(tab).toHaveCSS("color", "rgb(255, 255, 255)");
+      await expect(run.page.getByRole("tabpanel", { name, exact: true })).toBeVisible();
+    }
+    await run.page.screenshot({ path: path.join(process.cwd(), "output/playwright/adaptive-result-tabs.png"), fullPage: true });
+    await run.page.setViewportSize({ width: 390, height: 844 });
+    await expect(run.page.getByRole("tab", { name: "资源统计", exact: true })).toBeVisible();
+    expect(run.errors).toEqual([]);
   } finally { await run.context.close(); }
 });

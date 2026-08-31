@@ -23,9 +23,9 @@ export function DevelopmentControls({ game, busy, onCommand }: DevelopmentContro
   if (game.interaction.kind !== "turn-action" && game.interaction.kind !== "turn-roll") return null;
 
   return (
-    <details className="development-details" data-resource-sink="development">
-      <summary>发展卡（{game.you.developmentCards.length}）</summary>
-      <div className="development-stack">
+    <details className="min-w-0 rounded-md border border-[#4e3923]/18 bg-[#fffaf0]/70" data-resource-sink="development">
+      <summary className="h-8 cursor-pointer list-inside content-center px-2 text-sm font-bold whitespace-nowrap">发展卡（{game.you.developmentCards.length}）</summary>
+      <div className="development-stack p-2">
         {game.you.developmentCards.length === 0 ? <p>尚无发展卡</p> : null}
         {game.you.developmentCards.map((card) => {
           const playable =

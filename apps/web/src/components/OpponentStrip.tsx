@@ -2,6 +2,7 @@ import type { GameView } from "@catan/protocol";
 import { cn } from "@/lib/utils.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
 import { TurnTimerBadge } from "./TurnTimerBadge.js";
+import { PlayerScoreBadge } from "./PlayerScoreBadge.js";
 
 const MAX_VISIBLE_PLAYER_NAME_LENGTH = 6;
 
@@ -14,7 +15,10 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
   const opponents = game.players.filter((player) => player.id !== game.you.id);
 
   return (
-    <section className="opponent-strip grid min-w-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 lg:auto-cols-fr lg:gap-2 lg:overflow-visible lg:pb-0" aria-label="其他玩家">
+    <section className={cn(
+      "opponent-strip row-start-1 grid min-w-0 shrink-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 lg:min-h-0 lg:shrink lg:auto-rows-max lg:grid-flow-row lg:grid-cols-1 lg:auto-cols-auto lg:content-start lg:gap-1.5 lg:overflow-x-hidden lg:overflow-y-auto lg:pb-0",
+      game.turnTimer !== null && game.turnTimer.playerId !== game.you.id && "pb-8",
+    )} aria-label="其他玩家" tabIndex={0}>
       {opponents.map((player) => {
         const active = player.id === activePlayerId;
         const timer = game.turnTimer?.playerId === player.id ? game.turnTimer : null;
@@ -29,10 +33,10 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
             data-player-target={player.id}
             aria-label={`${player.name}，${player.visibleVictoryPoints} 分，${player.resourceCardCount} 张资源卡，${player.developmentCardCount} 张发展卡，已出 ${player.playedKnights} 张骑士，最长道路 ${player.longestRoadLength}${active ? "，当前行动" : ""}`}
           >
-            <div className="flex min-w-0 items-center gap-1" data-opponent-summary={player.id}>
+            <div className="flex min-w-0 items-center gap-1 lg:flex-wrap lg:gap-x-2" data-opponent-summary={player.id}>
               <PlayerColorDot color={player.color} className="size-2.5 rounded-sm lg:size-3" />
-              <strong className="min-w-0 flex-1 truncate text-[10px] lg:text-sm" title={player.name}>{truncatePlayerName(player.name)}</strong>
-              <span className="flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#d7e2da] lg:gap-2 lg:text-[11px]">
+              <strong className="min-w-0 flex-1 truncate text-[10px] lg:text-base" title={player.name}>{truncatePlayerName(player.name)}</strong>
+              <span className="flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#d7e2da] lg:order-3 lg:mt-1 lg:grid lg:w-full lg:grid-cols-4 lg:gap-2 lg:text-sm">
                 <span title="资源卡">资 {player.resourceCardCount}</span>
                 <span title="发展卡">发 {player.developmentCardCount}</span>
                 <span
@@ -46,15 +50,15 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
                   aria-label={`最长道路长度 ${player.longestRoadLength}`}
                 >长 {player.longestRoadLength}</span>
               </span>
-              <b className="grid size-5 shrink-0 place-items-center rounded-full bg-[#f4e4bd] text-[11px] text-[#28433e] lg:size-6 lg:text-xs">{player.visibleVictoryPoints}</b>
+              <PlayerScoreBadge player={player} />
             </div>
-            <div className="mt-1 grid grid-cols-3 gap-0.5 text-[8px] font-bold text-[#d7e2da] lg:text-[10px]" data-opponent-supply={player.id}>
+            <div className="mt-1 grid grid-cols-3 gap-0.5 text-[8px] font-bold text-[#d7e2da] lg:text-xs" data-opponent-supply={player.id}>
               <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余城市 ${player.remainingPieces.cities}`}>城市 <b className="text-[#fff4c9]">{player.remainingPieces.cities}</b></span>
               <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余村庄 ${player.remainingPieces.settlements}`}>村庄 <b className="text-[#fff4c9]">{player.remainingPieces.settlements}</b></span>
               <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余道路 ${player.remainingPieces.roads}`}>道路 <b className="text-[#fff4c9]">{player.remainingPieces.roads}</b></span>
             </div>
             {timer === null ? null : (
-              <span className="absolute top-[calc(100%+.25rem)] left-0 z-30" data-turn-timer-slot="opponent">
+              <span className="absolute top-[calc(100%+.25rem)] left-0 z-30 lg:static lg:mt-1 lg:block" data-turn-timer-slot="opponent">
                 <TurnTimerBadge timer={timer} className="px-2 py-1 text-xs" />
               </span>
             )}

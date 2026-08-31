@@ -59,7 +59,7 @@ export function GameResult({ game }: { readonly game: GameView }) {
           <span><Trophy />{scoreBreakdown(winnerSummary)}</span>
         </div>
 
-        <Tabs defaultValue="overview" className="game-result-tabs">
+        <Tabs defaultValue="overview" className="game-result-tabs [--foreground:#fff8df] [--ring:#f0c56b] [&_[data-slot=tabs-trigger]]:text-white/85 [&_[data-slot=tabs-trigger]:hover]:text-white [&_[data-slot=tabs-trigger][data-state=active]]:text-white [&_[data-slot=tabs-trigger]]:after:bg-[#f0c56b]">
           <div className="overflow-x-auto pb-1">
             <TabsList variant="line" className="min-w-max text-[#fff8df]">
               <TabsTrigger value="overview">概览</TabsTrigger>

@@ -149,6 +149,9 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     }
     expect(ownTimerBox.y + ownTimerBox.height).toBeLessThanOrEqual(ownDockBox.y);
     expect(observedTimerBox.y).toBeGreaterThanOrEqual(observedCardBox.y + observedCardBox.height);
+    const observedStripBox = await second.getByRole("region", { name: "其他玩家" }).boundingBox();
+    expect(observedStripBox).not.toBeNull();
+    expect(observedTimerBox.y + observedTimerBox.height).toBeLessThanOrEqual(observedStripBox!.y + observedStripBox!.height);
     await host.screenshot({ path: path.join(artifactDir, "mobile-roll-timer.png"), fullPage: true });
     await second.screenshot({ path: path.join(artifactDir, "mobile-opponent-roll-timer.png"), fullPage: true });
     await Promise.all([

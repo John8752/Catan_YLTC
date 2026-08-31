@@ -59,7 +59,7 @@ export function ResourceCard({
       >
         <ResourceIcon kind={resource} context="card" />
       </svg>
-      <span className={cn("mt-auto font-black tracking-wide", variant === "hand" ? "text-[11px]" : "text-[9px]")}>
+      <span className={cn("mt-auto font-black tracking-wide", variant === "hand" ? "text-[11px] lg:text-xs" : "text-[9px] lg:text-xs")}>
         {presentation.label}
       </span>
       {count === undefined ? null : (

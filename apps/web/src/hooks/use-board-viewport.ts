@@ -1,9 +1,7 @@
 import { useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type WheelEvent } from "react";
 
-// Below 1 so the whole board can always be pulled into view. The layout sizes the
-// board from an assumed chrome height, so on a short window it is laid out taller
-// than the space it actually gets and the bottom row is clipped; zooming out has to
-// be able to compensate, whatever the layout got wrong.
+// Scale 1 fits the complete island and ports into the available board stage.
+// Gestures may zoom out further for orientation after panning.
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.6;
 

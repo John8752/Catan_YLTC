@@ -27,7 +27,7 @@ export function PlayerPublicStats({ player, tone, density = "compact", className
           key={metric.shortLabel}
           className={cn(
             "flex min-w-0 items-baseline justify-center gap-px rounded leading-tight font-bold",
-            density === "compact" ? "px-0.5 py-px text-[8px] lg:text-[10px]" : "px-1 py-1 text-[9px] lg:text-[11px]",
+            density === "compact" ? "px-0.5 py-px text-[8px] lg:text-xs" : "px-1 py-1 text-[9px] lg:text-xs",
             tone === "dark" ? "bg-white/8 text-[#d7e2da]" : "bg-[#6d5434]/8 text-[#5e655e]",
           )}
           title={`${metric.label} ${metric.value}`}

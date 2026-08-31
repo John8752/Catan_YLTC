@@ -58,7 +58,7 @@ export function GameControls({
 
   if (game.interaction.kind === "turn-action") {
     return (
-      <div className="action-stack grid-cols-3 items-start">
+      <div className="grid grid-cols-3 items-start gap-1">
         <DevelopmentControls game={game} busy={busy} onCommand={onCommand} />
         <TradeControls
           game={game}
@@ -71,7 +71,7 @@ export function GameControls({
           onComposerOpenChange={onTradeComposerOpenChange}
           handPickerExternal={tradeGive !== undefined}
         />
-        <Button type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
+        <Button size="sm" type="button" disabled={busy} onClick={() => onCommand({ type: "EndTurn" })}>
           {busy ? "提交中…" : "结束回合"}
         </Button>
         <div className="build-buttons col-span-3" aria-label="建造选项">
@@ -96,7 +96,7 @@ export function GameControls({
             </Button>
           ))}
         </div>
-        <small className="col-span-3 max-lg:hidden">道路：砖+木　定居点：砖+木+羊+麦　城市：2麦+3矿</small>
+        <small className="col-span-3 text-xs leading-tight max-lg:hidden">道路：砖+木　定居点：砖+木+羊+麦　城市：2麦+3矿</small>
       </div>
     );
   }

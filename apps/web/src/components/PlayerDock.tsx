@@ -10,6 +10,7 @@ import { emptyResourceSelection, incrementResource } from "./ResourceCardPicker.
 import { TurnTimerBadge } from "./TurnTimerBadge.js";
 import { PlayerPublicStats } from "./PlayerPublicStats.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
+import { PlayerScoreBadge } from "./PlayerScoreBadge.js";
 
 export interface PlayerDockProps {
   readonly game: GameView;
@@ -45,27 +46,28 @@ export function PlayerDock({
   };
 
   return (
-    <Card className="player-dock relative gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-2 shadow-2xl backdrop-blur-sm lg:col-start-1 lg:row-start-4 lg:p-3">
+    <Card className="player-dock relative col-start-1 row-start-3 min-h-0 gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-2 shadow-2xl backdrop-blur-sm lg:row-start-2 lg:p-1.5">
       {ownTimer === null ? null : (
         <span className="absolute bottom-[calc(100%+.75rem)] left-5 z-30" data-turn-timer-slot="self">
           <TurnTimerBadge timer={ownTimer} className="px-2 py-1 text-xs" />
         </span>
       )}
-      <div className="grid grid-cols-[minmax(88px,.26fr)_minmax(0,1fr)] items-stretch gap-2 lg:gap-3 xl:grid-cols-[minmax(132px,auto)_minmax(270px,.75fr)_minmax(430px,1.25fr)]">
+      <div className="grid grid-cols-[minmax(112px,.26fr)_minmax(0,1fr)] items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:grid-cols-[minmax(10rem,.4fr)_minmax(14rem,.7fr)_minmax(19rem,1fr)] xl:gap-y-1">
         <div
-          className="self-seat flex min-w-0 items-center gap-1.5 rounded-xl border border-[#6d5434]/15 bg-white/35 px-2 py-1.5 lg:gap-2 lg:px-3 lg:py-2"
+          className="self-seat flex min-w-0 items-center gap-1.5 rounded-xl border border-[#6d5434]/15 bg-white/35 px-2 py-1.5 md:col-start-1 md:row-start-1 xl:py-1"
           data-player-id={game.you.id}
           data-player-target={game.you.id}
           data-current-player="true"
         >
           <PlayerColorDot color={game.you.color} className="size-2.5 ring-[#6d5434]/25 lg:size-3" />
-          <div className="min-w-0">
-            <strong className="block truncate text-xs text-[#243d39] lg:text-sm" title={game.you.name}>{game.you.name}</strong>
-            <span className="block text-[9px] font-bold text-[#6c6d62] lg:text-[10px]">资源总数 {game.you.resourceCardCount}</span>
+          <div className="min-w-0 flex-1">
+            <strong className="block truncate text-xs text-[#243d39] lg:text-base" title={game.you.name}>{game.you.name}</strong>
+            <span className="block text-[9px] font-bold text-[#6c6d62] lg:text-xs">资源总数 {game.you.resourceCardCount}</span>
           </div>
+          <PlayerScoreBadge player={game.you} className="ml-auto" />
         </div>
 
-        <section className="grid grid-cols-5 gap-1 lg:gap-2" aria-label="你的资源">
+        <section className="grid grid-cols-5 gap-1 md:col-start-1 md:row-start-2 xl:col-start-2 xl:row-span-2 xl:row-start-1" aria-label="你的资源">
           {RESOURCE_TYPES.map((resource) => {
             const count = game.you.resources[resource];
             const selected = activeSelection?.[resource] ?? 0;
@@ -91,13 +93,13 @@ export function PlayerDock({
         <PlayerPublicStats
           player={game.you}
           tone="light"
-          density="comfortable"
-          className="col-span-2 rounded-lg border border-[#6d5434]/10 bg-white/25 p-0.5 xl:col-start-1 xl:row-start-2"
+          density="compact"
+          className="col-span-2 rounded-lg border border-[#6d5434]/10 bg-white/25 p-0.5 md:col-span-1 md:col-start-1 md:row-start-3 xl:row-start-2"
         />
 
-        <section className="col-span-2 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1.5 lg:px-3 lg:py-2 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1" aria-label="本回合操作">
-          <div className="mb-1 flex items-center justify-between gap-2 lg:mb-1.5">
-            <span className="flex items-center gap-1.5 text-[10px] font-black tracking-[.12em] text-[#5d665f] uppercase"><Hammer className="size-3.5" />本回合操作</span>
+        <section className="col-span-2 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1.5 md:col-span-1 md:col-start-2 md:row-span-3 md:row-start-1 md:max-h-[min(28dvh,13rem)] md:overflow-y-auto lg:py-1 xl:col-start-3 xl:row-span-2" aria-label="本回合操作">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-[10px] font-black tracking-[.12em] text-[#5d665f] uppercase lg:text-xs"><Hammer className="size-3.5" />本回合操作</span>
             {game.lastRoll === null ? null : (
               <Badge
                 variant="secondary"

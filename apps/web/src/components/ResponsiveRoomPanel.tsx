@@ -17,7 +17,7 @@ export function ResponsiveRoomPanel(props: RoomPanelProps) {
           <Activity className="size-4" />记录 {historyCount}
         </Button>
       </DialogTrigger>
-      <DialogContent className="game-info-sheet max-h-[72dvh] max-w-none gap-0 overflow-y-auto border-[#f7e6bf]/30 bg-[#f8ecd2] p-0 text-[#263d39]">
+      <DialogContent className="game-info-sheet h-[72dvh] max-h-[72dvh] max-w-none gap-0 overflow-hidden border-[#f7e6bf]/30 bg-[#f8ecd2] p-0 text-[#263d39]">
         <DialogHeader className="sr-only">
           <DialogTitle>公开记录与房间信息</DialogTitle>
           <DialogDescription>查看本局公开事件、房间连接状态和离开操作。</DialogDescription>

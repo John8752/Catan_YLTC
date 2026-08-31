@@ -1,5 +1,5 @@
 import type { GameCommand, GameView } from "@catan/protocol";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
@@ -25,6 +25,7 @@ import { BankSupply } from "./BankSupply.js";
 
 export interface BoardProps {
   readonly game: GameView;
+  readonly bankSupply?: ReactNode;
   readonly busy?: boolean;
   readonly onCommand?: (command: GameCommand) => void;
   readonly buildMode?: "road" | "settlement" | "city" | null;
@@ -34,6 +35,7 @@ export interface BoardProps {
 
 export function Board({
   game,
+  bankSupply = <BankSupply resources={game.bankResources} />,
   busy = false,
   onCommand,
   buildMode = null,
@@ -58,7 +60,7 @@ export function Board({
     <section className="board-shell" data-board-root="true" aria-label="游戏棋盘">
       <div className="board-heading">
         <p className="eyebrow">种子 {game.seed}</p>
-        <BankSupply resources={game.bankResources} />
+        {bankSupply}
         <span className="phase-chip">{phaseLabel(game)}</span>
       </div>
 
@@ -235,13 +237,15 @@ export function Board({
           />
           </svg>
         </div>
+      </div>
+      <div className="board-footer relative flex shrink-0 items-center justify-between gap-2">
+        <p className="board-instruction flex-1" aria-live="polite">{boardInstruction(game, buildMode)}</p>
         <div className="board-zoom-controls" aria-label="地图缩放">
           <Button type="button" size="icon-sm" variant="secondary" aria-label="缩小地图" disabled={viewport.scale <= 1} onClick={viewport.zoomOut}><ZoomOut /></Button>
           <Button type="button" size="icon-sm" variant="secondary" aria-label="恢复地图大小" disabled={viewport.scale === 1} onClick={viewport.reset}><RotateCcw /></Button>
           <Button type="button" size="icon-sm" variant="secondary" aria-label="放大地图" disabled={viewport.scale >= 2.6} onClick={viewport.zoomIn}><ZoomIn /></Button>
         </div>
       </div>
-      <p className="board-instruction" aria-live="polite">{boardInstruction(game, buildMode)}</p>
       <Dialog open={pendingRoadCommand !== null} onOpenChange={(open) => !open && setPendingRoadCommand(null)}>
         <DialogContent className="border-2 border-[#d0a853] bg-[#fff0cd] text-[#263f3b] shadow-[0_20px_60px_rgba(4,24,25,.58)] sm:max-w-sm" showCloseButton={false}>
           <DialogHeader>

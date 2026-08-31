@@ -21,7 +21,27 @@ export interface BoardMapProps {
 }
 
 export function boardViewBox(map: GameMapView): string {
-  return map.hexes.length > 19 ? "-420 -340 840 680" : "-310 -260 620 520";
+  // Fit the actual renderer bounds, including signs and a safe margin for pieces
+  // and target rings. A fixed profile box wastes width and can crop outer ports.
+  const points = map.hexes.flatMap((hex) => {
+    const center = axialToPixel(hex.q, hex.r);
+    return [
+      { x: center.x - BOARD_HEX_SIZE * Math.sqrt(3) / 2, y: center.y - BOARD_HEX_SIZE },
+      { x: center.x + BOARD_HEX_SIZE * Math.sqrt(3) / 2, y: center.y + BOARD_HEX_SIZE },
+    ];
+  });
+  for (const port of map.ports) {
+    const first = map.vertices.find((vertex) => vertex.id === port.vertexIds[0]);
+    const second = map.vertices.find((vertex) => vertex.id === port.vertexIds[1]);
+    if (first === undefined || second === undefined) continue;
+    const { sign } = portGeometry(first, second, BOARD_HEX_SIZE);
+    points.push({ x: sign.x - 25, y: sign.y - 22 }, { x: sign.x + 25, y: sign.y + 15 });
+  }
+  const left = Math.min(...points.map((point) => point.x)) - 14;
+  const top = Math.min(...points.map((point) => point.y)) - 14;
+  const right = Math.max(...points.map((point) => point.x)) + 14;
+  const bottom = Math.max(...points.map((point) => point.y)) + 14;
+  return `${left} ${top} ${right - left} ${bottom - top}`;
 }
 
 export function BoardTerrain({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
@@ -48,19 +68,19 @@ export function BoardTerrain({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
                 kind={tile.terrain}
                 context="tile"
                 className="terrain-icon"
-                transform={tile.numberToken === null ? "translate(0 0) scale(1.12)" : "translate(0 -16)"}
+                transform={tile.numberToken === null ? "translate(0 0) scale(1.12)" : "translate(0 -23) scale(.86)"}
               />
               {tile.numberToken === null ? null : (
                 <g className={tile.numberToken === 6 || tile.numberToken === 8 ? "token hot" : "token"}>
-                  <circle cy="16" r="17" />
-                  <text className="token-number" y="16" textAnchor="middle">{tile.numberToken}</text>
+                  <circle cy="17" r="21" />
+                  <text className="token-number" y="23" textAnchor="middle">{tile.numberToken}</text>
                   <g
                     className="token-pips"
                     data-probability-pips={probabilityPips}
                     aria-hidden="true"
                   >
                     {Array.from({ length: probabilityPips }, (_, index) => (
-                      <circle key={index} cx={(index - (probabilityPips - 1) / 2) * 3.5} cy="25.5" r="1.15" />
+                      <circle key={index} cx={(index - (probabilityPips - 1) / 2) * 4} cy="31" r="1.3" />
                     ))}
                   </g>
                 </g>

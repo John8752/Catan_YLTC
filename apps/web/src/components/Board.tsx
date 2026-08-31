@@ -19,6 +19,7 @@ import {
   BoardTerrain,
   boardViewBox,
   terrainLabel,
+  ROBBER_OFFSET,
 } from "./BoardMap.js";
 import { ConstructionTargets } from "./ConstructionTargets.js";
 import { BankSupply } from "./BankSupply.js";
@@ -87,7 +88,7 @@ export function Board({
                 className="robber-piece"
                 data-robber-piece="true"
                 data-robber-hex-id={robberHex.id}
-                transform={`translate(${axialToPixel(robberHex.q, robberHex.r).x} ${axialToPixel(robberHex.q, robberHex.r).y})`}
+                transform={`translate(${axialToPixel(robberHex.q, robberHex.r).x + ROBBER_OFFSET.x} ${axialToPixel(robberHex.q, robberHex.r).y + ROBBER_OFFSET.y})`}
                 role="img"
                 aria-label={`强盗位于${terrainLabel(robberHex.terrain)}`}
               >

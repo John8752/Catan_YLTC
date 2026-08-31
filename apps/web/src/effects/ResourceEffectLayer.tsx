@@ -397,8 +397,8 @@ export function measureRobberMove(
   effect: Extract<PublicGameEffectView, { readonly kind: "robber-move" }>,
   root: ParentNode = document,
 ): RobberMotion | null {
-  const start = centerOf(findDataElement(root, "hex-id", effect.fromHexId));
-  const end = centerOf(findDataElement(root, "hex-id", effect.toHexId));
+  const start = centerOf(findDataElement(root, "robber-anchor", effect.fromHexId));
+  const end = centerOf(findDataElement(root, "robber-anchor", effect.toHexId));
   if (start === null || end === null) return null;
   return {
     startX: start.x,

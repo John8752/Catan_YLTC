@@ -2,6 +2,7 @@ import type { GameView } from "@catan/protocol";
 import { ResourceIcon } from "./ResourceIcon.js";
 
 export const BOARD_HEX_SIZE = 56;
+export const ROBBER_OFFSET = { x: -22, y: -26 } as const;
 
 type GameMapView = GameView["map"];
 type Terrain = GameMapView["hexes"][number]["terrain"];
@@ -61,6 +62,7 @@ export function BoardTerrain({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
             role="group"
             aria-label={`${terrainLabel(tile.terrain)}${tile.numberToken === null ? "" : `，点数 ${tile.numberToken}`}`}
           >
+            <circle data-robber-anchor={tile.id} cx={ROBBER_OFFSET.x} cy={ROBBER_OFFSET.y + 2.5} r="1" opacity="0" pointerEvents="none" aria-hidden="true" />
             <g className="hex-content">
               <polygon className="hex-surface" points={hexPoints(hexSize)} />
               <polygon className="hex-inset" points={hexPoints(hexSize - 5)} />

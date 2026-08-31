@@ -30,6 +30,8 @@ The same queue now projects three additional effect families:
 
 Resource travel also uses a two-second path. The canonical state still updates immediately; the effect is presentation feedback and never a lock on subsequent rule processing. Setup settlements intentionally do not emit score feedback, avoiding six repetitive score overlays before normal play begins.
 
+Robber travel resolves semantic `data-robber-anchor` points at the same upper-left offset as the settled pawn, keeping both the stationary piece and its arrival clear of the central number token.
+
 ## Boundaries
 
 - Effects never decide or delay canonical state. The server snapshot is immediately authoritative.

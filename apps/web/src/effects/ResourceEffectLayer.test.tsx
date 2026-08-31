@@ -101,8 +101,8 @@ describe("resource flight measurement", () => {
   it("measures a robber arc between the authoritative source and destination hexes", () => {
     const root = document.createElement("div");
     document.body.append(root);
-    addRect(root, "hex-id", "hex_old", 100, 200, 60, 60);
-    addRect(root, "hex-id", "hex_new", 400, 500, 60, 60);
+    addRect(root, "robber-anchor", "hex_old", 100, 200, 60, 60);
+    addRect(root, "robber-anchor", "hex_new", 400, 500, 60, 60);
 
     expect(measureRobberMove({
       id: "15:robber-move:player_1",
@@ -213,8 +213,8 @@ describe("resource flight measurement", () => {
       configurable: true,
       value: vi.fn(() => ({ matches: false })),
     });
-    addRect(document.body, "hex-id", "hex_old", 100, 200, 60, 60);
-    addRect(document.body, "hex-id", "hex_new", 400, 500, 60, 60);
+    addRect(document.body, "robber-anchor", "hex_old", 100, 200, 60, 60);
+    addRect(document.body, "robber-anchor", "hex_new", 400, 500, 60, 60);
     const robber = document.createElementNS("http://www.w3.org/2000/svg", "g");
     robber.setAttribute("data-robber-piece", "true");
     document.body.append(robber);

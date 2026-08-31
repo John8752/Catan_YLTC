@@ -15,6 +15,7 @@
     "test:replay": "pnpm --filter @catan/game-core exec vitest run src/engine/replay.test.ts -t \"replays a complete legal match\"",
     "test:boundaries": "pnpm --filter @catan/game-core exec vitest run src/architecture.test.ts",
     "test:e2e": "playwright test",
+    "test:e2e:mobile": "playwright test --grep @primary-phone",
     "validate": "pnpm check && pnpm test && pnpm build",
     "validate:full": "pnpm validate && pnpm test:replay && pnpm test:boundaries && pnpm test:e2e"
   },

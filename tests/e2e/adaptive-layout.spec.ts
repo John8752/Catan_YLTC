@@ -85,6 +85,22 @@ for (const count of [4, 6] as const) {
         await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("0");
         const bankHost = width >= 1024 ? '[data-game-sidebar]' : '.board-heading';
         await expect(run.page.locator(`${bankHost} [data-resource-source="bank"]`)).toBeVisible();
+        const bankCards = await run.page.locator('[data-resource-source="bank"] [data-resource-card]').evaluateAll((cards) => cards.map((card) => {
+          const count = card.querySelector('[data-resource-count]')!;
+          const illustration = card.querySelector('[data-resource-illustration]')!;
+          const b = card.getBoundingClientRect();
+          const c = count.getBoundingClientRect();
+          const i = illustration.getBoundingClientRect();
+          return { text: card.textContent, title: card.getAttribute('title'), countFont: Number.parseFloat(getComputedStyle(count).fontSize), portrait: b.height > b.width, fits: c.left >= b.left && c.right <= b.right && c.top >= b.top && c.bottom <= i.top && i.bottom <= b.bottom, iconHeight: i.height };
+        }));
+        for (const card of bankCards) {
+          expect(card.text).toMatch(/^\d+$/);
+          expect(card.title).toContain("银行剩余");
+          expect(card.countFont).toBeGreaterThanOrEqual(width >= 1024 ? 20 : 16);
+          expect(card.portrait).toBe(true);
+          expect(card.fits).toBe(true);
+          expect(card.iconHeight).toBeGreaterThanOrEqual(20);
+        }
         const scoreBounds = await run.page.locator('.self-seat [data-player-score="p1"]').boundingBox();
         const seatBounds = await run.page.locator('.self-seat').boundingBox();
         expect(scoreBounds!.x + scoreBounds!.width).toBeLessThanOrEqual(seatBounds!.x + seatBounds!.width);
@@ -111,6 +127,9 @@ for (const count of [4, 6] as const) {
         const dir = path.join(process.cwd(), "output/playwright");
         await mkdir(dir, { recursive: true });
         await run.page.screenshot({ path: path.join(dir, `adaptive-${count}-${width}x${height}.png`), fullPage: true });
+        if (count === 6 && (width === 1920 && height === 1021 || width === 390)) {
+          await run.page.getByRole("region", { name: "银行剩余资源", exact: true }).screenshot({ path: path.join(dir, `bank-cards-${width}.png`) });
+        }
         expect(run.errors).toEqual([]);
       } finally { await run.context.close(); }
     });

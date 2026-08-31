@@ -66,16 +66,30 @@ async function measure(page: Page) {
     const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
     const signs = [...document.querySelectorAll<SVGRectElement>(".port-sign > rect")].map((element) => element.getBoundingClientRect());
     const intersect = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
-    const portText = [...document.querySelectorAll<SVGTextElement>(".port-type,.port-ratio")].map((element) => {
+    const portText = [...document.querySelectorAll<SVGTextElement>(".port-ratio")].map((element) => {
       const matrix = element.getScreenCTM()!;
       const text = element.getBoundingClientRect();
       const card = element.closest(".port-sign")!.querySelector("rect")!.getBoundingClientRect();
       return { font: Number.parseFloat(getComputedStyle(element).fontSize) * Math.hypot(matrix.a, matrix.b),
-        type: element.classList.contains("port-type"), fits: text.left >= card.left && text.right <= card.right && text.top >= card.top && text.bottom <= card.bottom };
+        fits: text.left >= card.left && text.right <= card.right && text.top >= card.top && text.bottom <= card.bottom };
+    });
+    const portContents = [...document.querySelectorAll(".port-sign")].map((sign) => {
+      const card = sign.querySelector("rect")!.getBoundingClientRect();
+      const icon = sign.querySelector(".port-type-icon")?.getBoundingClientRect();
+      const ratio = sign.querySelector(".port-ratio")!.getBoundingClientRect();
+      const generic = sign.parentElement!.getAttribute("data-port-resource") === "generic";
+      const brickInk = sign.querySelector('[data-port-resource-icon="brick"] .resource-icon-primary');
+      return { text: sign.textContent, generic,
+        resource: sign.querySelector("[data-port-resource-icon]")?.getAttribute("data-port-resource-icon"),
+        expectedResource: sign.parentElement!.getAttribute("data-port-resource"),
+        bounds: { icon: icon?.toJSON(), card: card.toJSON(), ratio: ratio.toJSON() },
+        iconHasInk: brickInk === null || getComputedStyle(brickInk).fill !== getComputedStyle(sign.querySelector("rect")!).fill,
+        iconFits: icon !== undefined && icon.left >= card.left && icon.right <= card.right && icon.top >= card.top && icon.bottom <= ratio.top,
+      };
     });
     return {
       fit, hudClear, rootFont: font("html"), nameFont: font(".opponent-strip strong"),
-      portText, portsSeparated: signs.every((a, i) => signs.slice(i + 1).every((b) => !intersect(a, b))),
+      portText, portContents, portsSeparated: signs.every((a, i) => signs.slice(i + 1).every((b) => !intersect(a, b))),
       portTileRatio: signs[0]!.width / document.querySelector(".hex-surface")!.getBoundingClientRect().width,
       portNumberOverlaps: [...document.querySelectorAll(".token")].flatMap((e) => signs.flatMap((sign, index) => intersect(sign, e.getBoundingClientRect()) ? [{ hex: e.closest('[data-hex-id]')?.getAttribute('data-hex-id'), portIndex: index }] : [])),
       statFont: font('[data-opponent-summary] [title="资源卡"]'),
@@ -89,7 +103,8 @@ async function measure(page: Page) {
 for (const count of [4, 6] as const) {
   for (const { name, width, height, options } of sizes) {
     test(`${count} seats fit ${name} with readable controls and uncropped ports`, async ({ browser }) => {
-      const run = await openFixture(browser, width, height, fixture(count), options);
+      const room = fixture(count);
+      const run = await openFixture(browser, width, height, room, options);
       try {
         if (options.isMobile) {
           // Catch accidentally using physical pixels or dropping device emulation.
@@ -139,12 +154,20 @@ for (const count of [4, 6] as const) {
         expect(metrics.hudClear).toBe(true);
         expect(metrics.portsSeparated).toBe(true);
         expect(metrics.portNumberOverlaps).toEqual([]);
+        expect(metrics.portContents).toHaveLength(room.game!.map.ports.length);
+        expect(metrics.portText).toHaveLength(room.game!.map.ports.length);
+        for (const port of metrics.portContents) {
+          expect(port.text).toBe(port.generic ? "3:1" : "2:1");
+          expect(port.iconFits, `Port content overlap: ${port.expectedResource} ${JSON.stringify(port.bounds)}`).toBe(true);
+          expect(port.iconHasInk).toBe(true);
+          expect(port.resource).toBe(port.generic ? "unknown" : port.expectedResource);
+        }
         for (const text of metrics.portText) {
           expect(text.fits).toBe(true);
-          // The design is larger, but every board element scales together.
-          expect(text.font / metrics.tile.width).toBeCloseTo((text.type ? 28 : 36) / (56 * Math.sqrt(3)), 4);
+          // Narrow icon-only ports still share the map's fit and zoom transform.
+          expect(text.font / metrics.tile.width).toBeCloseTo(24 / (56 * Math.sqrt(3)), 4);
         }
-        expect(metrics.portTileRatio).toBeCloseTo(128 / (56 * Math.sqrt(3)), 4);
+        expect(metrics.portTileRatio).toBeCloseTo(54.4 / (56 * Math.sqrt(3)), 4);
         expect(metrics.dock.y + metrics.dock.height).toBeLessThanOrEqual(height + 1);
         if (width >= 1024) {
           const logViewport = run.page.getByRole("region", { name: "公开记录", exact: true }).locator('[data-slot="scroll-area-viewport"]');
@@ -156,7 +179,7 @@ for (const count of [4, 6] as const) {
           expect(metrics.statFont).toBeGreaterThanOrEqual(14);
           expect(metrics.sidebar?.x).toBeGreaterThan(metrics.dock.x + metrics.dock.width - 1);
           expect(metrics.sidebar?.y + metrics.sidebar?.height).toBeLessThanOrEqual(height + 1);
-          // Two-line, double-size ports now participate in fitting. Readability
+          // Two-line ports participate in fitting. Readability
           // and uncropped content replace the old one-line-port size benchmark.
         }
         const dir = path.join(process.cwd(), "output/playwright");

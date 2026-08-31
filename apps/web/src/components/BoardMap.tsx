@@ -1,6 +1,5 @@
 import type { GameView } from "@catan/protocol";
 import { ResourceIcon } from "./ResourceIcon.js";
-import { resourceLabel } from "./ResourceCard.js";
 
 export const BOARD_HEX_SIZE = 56;
 export const ROBBER_OFFSET = { x: -22, y: -26 } as const;
@@ -24,7 +23,8 @@ export interface BoardMapProps {
 
 // Design-space dimensions only. Ports, terrain and pieces share the SVG fit and
 // gesture transform; never compensate individual labels with inverse zoom.
-const PORT_METRICS = { width: 128, height: 80, typeFont: 28, ratioFont: 36 } as const;
+// A narrow icon-over-ratio badge: half the preceding 108.8-unit width.
+const PORT_METRICS = { width: 54.4, height: 68, iconSize: 30, ratioFont: 24, cornerRadius: 8 } as const;
 
 export function boardViewBox(map: GameMapView): string {
   const portMetrics = PORT_METRICS;
@@ -137,12 +137,11 @@ export function BoardPorts({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
               <circle className="port-endpoint-halo" data-port-endpoint={secondId} cx={geometry.second.x} cy={geometry.second.y} r="7" />
             </g>
             <g className="port-sign" transform={`translate(${geometry.sign.x} ${geometry.sign.y})`}>
-              <rect x={-portMetrics.width / 2} y={-portMetrics.height / 2} width={portMetrics.width} height={portMetrics.height} rx="12" />
-              <text className="port-type" x={port.kind === "generic" ? 0 : portMetrics.typeFont * .5} y={-portMetrics.height * .17} dominantBaseline="middle" textAnchor="middle" style={{ fontSize: portMetrics.typeFont }}>{port.kind === "generic" ? "通用" : resourceLabel(port.resource)}</text>
-              <text className="port-ratio" y={portMetrics.height * .24} dominantBaseline="middle" textAnchor="middle" style={{ fontSize: portMetrics.ratioFont }}>{label}</text>
-              {port.kind === "generic" ? null : (
-                <ResourceIcon kind={port.resource} context="port" className="port-resource-icon" transform={`translate(${-portMetrics.typeFont * .8} ${-portMetrics.height * .17}) scale(${portMetrics.typeFont / 38})`} />
-              )}
+              <rect x={-portMetrics.width / 2} y={-portMetrics.height / 2} width={portMetrics.width} height={portMetrics.height} rx={portMetrics.cornerRadius} />
+              <g className="port-type-icon" transform="translate(0 -17)" aria-hidden="true">
+                <ResourceIcon kind={port.kind === "generic" ? "unknown" : port.resource} context="port" className="port-resource-icon" transform={`scale(${portMetrics.iconSize / 38})`} />
+              </g>
+              <text className="port-ratio" y="18" dominantBaseline="middle" textAnchor="middle" style={{ fontSize: portMetrics.ratioFont }}>{label}</text>
             </g>
           </g>
         );

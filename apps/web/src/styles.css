@@ -367,11 +367,12 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .port-coast-deck { stroke-width: 6; stroke-dasharray: 4 3; }.port-pier-deck { stroke-width: 5; stroke-dasharray: 3 2; }
 .port-endpoint-halo { fill: rgba(255,226,150,.34); stroke: #f4cb78; stroke-width: 2; filter: drop-shadow(0 0 3px rgba(255,219,126,.72)); }
 .port-sign { filter: drop-shadow(0 4px 3px rgba(12,35,35,.32)); }
-.port-sign rect { fill: #efe1ba; stroke: rgba(63,81,83,.78); stroke-width: 2; }
+.port-sign > rect { fill: #efe1ba; stroke: rgba(63,81,83,.78); stroke-width: 2; }
 .port-sign-crown { fill: #d8a754; stroke: rgba(63,81,83,.72); stroke-width: 1.5; stroke-linejoin: round; }
 .board-ports text { fill: #354649; pointer-events: none; }
-.port-type,.port-ratio { font-weight: 900; }
+.port-ratio { font-weight: 900; }
 .port-resource-icon { pointer-events: none; --resource-icon-primary: #557168; --resource-icon-secondary: #8ba097; --resource-icon-outline: #2e4642; --resource-icon-highlight: #fffdf4; }
+.port-resource-icon.resource-icon-unknown .resource-icon-line { stroke-width: 3; }
 .resource-card-icon,.resource-analysis-icon { color: #fffdf0; --resource-icon-primary: rgba(255,253,240,.92); --resource-icon-secondary: rgba(255,253,240,.65); --resource-icon-outline: rgba(28,52,47,.5); --resource-icon-highlight: #fff; filter: drop-shadow(0 2px 1px rgba(20,35,31,.25)); }
 .placed-roads,.placed-buildings { pointer-events: none; }
 .piece-color-terracotta { --piece: #c85d42; --piece-dark: #7f3025; --piece-light: #ffd1bd; }

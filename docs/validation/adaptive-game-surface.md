@@ -11,7 +11,7 @@ Date: 2026-08-31
 - Required local actions keep the entire dock pale coral-red with a soft red border and dark red task-specific headings. A matching player-safe current-action effect produces one 1.5-second notice above the map; trade offers receive a quieter prompt. Initial/reconnect snapshots do not replay notices and reduced-motion disables the brief glow.
 - The local seat shows the same public-score badge as opponents; hidden victory-point cards are excluded.
 - Public near-victory progress starts three points below the room target and escalates at two and one. Amber trophy badges show public score/target; each seat receives at most one notice per tier and the same milestone is appended to public history. Action notices take priority over the three-second warning.
-- SVG fits terrain and port bounds into the remaining space. Port signs use a 128×80 design with type and ratio on separate lines (28/36-unit type). Every map element scales together, without independent port-size/font compensation. Number tokens use 24-unit type instead of 15-unit type.
+- SVG fits terrain and port bounds into the remaining space. Port signs use a 54.4×68 icon-over-ratio design, halving the preceding 108.8-unit width. Dedicated ports show only their resource icon; generic ports use the existing SVG question-mark icon. Ratios use 24-unit type, down from 30.6. Chinese port descriptions remain accessible but are not visible text. Every map element scales together, without independent port-size/font compensation. Number tokens use 24-unit type instead of 15-unit type.
 - Game controls use bounded viewport-responsive rem sizing. Compact bank details and map zoom tools open on demand; the repeated board footer is removed. Optional actions collapse while required roll/discard/victim controls remain accessible. Selecting a build returns space to the map. Short phone landscapes move the dock beside the map.
 - History retains the latest 30 projected entries, appends below, follows the bottom, pauses while reading older entries and offers a return-to-latest button.
 - Result tabs use light text in inactive, hover, selected and keyboard-focus states.
@@ -47,7 +47,7 @@ With a browser default font size of 16px, expected desktop sizing is:
 
 The same 1920×1021 CSS viewport at DPR 1 and DPR 2 produces identical type sizing. Monitor diagonal, viewing distance and OS scaling are not discoverable from viewport dimensions; physical-size equivalence across monitors is not guaranteed. Browser zoom remains available.
 
-The old one-line-port tile-width benchmark is superseded by the larger two-line design. Tests now assert constant port/hex and font/hex proportions at every viewport and during zoom, complete port bounds, no overlapping port cards and no number-token occlusion. Board size is limited by the tighter viewport axis, so enlarging ports does not imply an equal enlargement of terrain on every screen.
+The old one-line-port tile-width benchmark is superseded by the icon-over-ratio design. Tests assert constant port/hex and font/hex proportions at every viewport and during zoom, complete port bounds, no overlapping port cards and no number-token occlusion. Icon and ratio rows must remain separated, each port must show its correct resource/question-mark icon, and visible port text contains only its ratio. The bank-style background must not override brick-icon ink. Board size is limited by the tighter viewport axis, so changing design-space port dimensions also changes the full-map fit rather than imposing a fixed screen-pixel size.
 
 ## Additional regressions
 
@@ -70,14 +70,14 @@ The old one-line-port tile-width benchmark is superseded by the larger two-line 
 
 ## Commands
 
-- `pnpm validate` — Passed: TypeScript checks, 184 unit tests and production builds.
-- `pnpm test:e2e:mobile` — Passed: 40 primary-phone regressions (16 layout, eight disclosure, eight action-notice and eight near-victory cases).
-- `pnpm test:e2e` — Passed: all 87 Chromium viewport and multiplayer regressions, including the 40 primary-phone cases.
+- `pnpm validate` — Passed after removing the generic-port ring: TypeScript checks, 187 unit tests and production builds. The port question mark has no circle; unknown-card icons retain their existing ring.
+- `pnpm test:e2e:mobile` — Passed after removing the generic-port ring: 40 primary-phone regressions (16 layout, eight disclosure, eight action-notice and eight near-victory cases).
+- `pnpm test:e2e --grep-invert @primary-phone` — Passed: the other 47 Chromium viewport and multiplayer regressions after the narrow icon-only port change. Not rerun for the subsequent cosmetic ring removal; that follow-up reran the 40 primary-phone cases above.
 
 ## Primary-phone visual review
 
-All 16 four-/six-seat layout screenshots across the two models, both orientations and both canvas modes were inspected. Ports retain two lines, fit within the viewport and avoid number tokens; map and port proportions remain consistent. Screenshots use CSS-pixel output for comparison even though browser contexts render at DPR 3.
+All 16 four-/six-seat layout screenshots across the two models, both orientations and both canvas modes were inspected. Ports keep icons above ratios, fit within the viewport and avoid number tokens; map and port proportions remain consistent. Screenshots use CSS-pixel output for comparison even though browser contexts render at DPR 3.
 
-Remaining visual limitation: the six-player board and port text are still noticeably smaller in landscape, particularly the reduced browser-area cases. Automated containment and proportional-scaling checks pass, but do not certify comfortable human legibility. This test-policy change records that limitation; it does not enlarge ports independently or claim the landscape readability problem is solved.
+Remaining visual limitation: the six-player board and port details are still noticeably smaller in landscape, particularly the reduced browser-area cases. Automated containment and proportional-scaling checks do not certify comfortable human legibility. The narrow icon-only design does not change the uniform-scaling policy or claim to solve height-limited landscape readability.
 
 These checks use desktop Chromium and emulated CSS viewport/DPR sizes. Physical phones and Safari are not covered by this validation.

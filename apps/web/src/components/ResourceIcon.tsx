@@ -22,12 +22,12 @@ export function ResourceIcon({
       data-port-resource-icon={context === "port" ? kind : undefined}
       aria-hidden="true"
     >
-      {iconShape(kind)}
+      {iconShape(kind, context !== "port")}
     </g>
   );
 }
 
-function iconShape(kind: ResourceIconKind) {
+function iconShape(kind: ResourceIconKind, showUnknownRing: boolean) {
   switch (kind) {
     case "brick":
       return (
@@ -90,7 +90,7 @@ function iconShape(kind: ResourceIconKind) {
     case "unknown":
       return (
         <>
-          <circle className="resource-icon-primary" r="15" />
+          {showUnknownRing ? <circle className="resource-icon-primary" r="15" /> : null}
           <path className="resource-icon-line" d="M-5-5Q-5-12 2-12Q9-12 9-5Q9-1 3 2Q0 4 0 8M0 13V14" />
         </>
       );

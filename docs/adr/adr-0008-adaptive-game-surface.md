@@ -15,6 +15,7 @@ The live match uses one React game surface and one set of feature components. Re
 - The board, opponent overview, private hand and turn actions each have one component implementation.
 - The mobile match is a `100dvh` surface without document scrolling. Opponents occupy a compact top strip, the zoomable SVG board consumes the flexible center, and the local player dock occupies the bottom.
 - Secondary information such as public history and room controls is persistent on wide screens and opened through a Radix-managed dialog on phones.
+- Public history presents the newest 30 projected entries in chronological order, appending below and following the bottom. Scrolling up pauses following and exposes a return-to-latest button; retained visible entries keep their reading position as old entries leave the window. Reopening the mobile history sheet starts at the latest entry.
 - Trade composition and active negotiation use shared content. Their container adapts to a bottom sheet on phones and a floating panel on wider screens.
 - Board pan and zoom are renderer-only state. They never change commands, legality or serialized game state.
 - Responsive differences are limited to placement, density, disclosure and input affordances. A feature must not introduce parallel `Mobile*` and `Desktop*` business components.

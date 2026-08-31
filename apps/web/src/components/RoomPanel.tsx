@@ -1,6 +1,6 @@
 import type { RoomView } from "@catan/protocol";
 import type { ReactNode } from "react";
-import { Activity, Crown, LogOut, Route, Settings2, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Crown, LogOut, Route, Settings2, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card.js";
@@ -14,9 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog.js";
-import { ScrollArea } from "@/components/ui/scroll-area.js";
-import { Separator } from "@/components/ui/separator.js";
 import { cn } from "@/lib/utils.js";
+import { PublicHistory } from "./PublicHistory.js";
 
 export interface RoomPanelProps {
   readonly room: RoomView;
@@ -34,6 +33,7 @@ export interface RoomPanelProps {
   readonly onOpenExtraSeat: (() => void) | null;
   readonly embedded?: boolean;
   readonly showPlayers?: boolean;
+  readonly className?: string;
 }
 
 const PLAYER_COLORS = {
@@ -57,6 +57,7 @@ export function RoomPanel({
   onOpenExtraSeat,
   embedded = false,
   showPlayers = true,
+  className,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
   const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 3;
@@ -64,13 +65,13 @@ export function RoomPanel({
   const playerLimits = room.settings.ruleProfile === "extended-5-6" ? ([5, 6] as const) : ([3, 4] as const);
 
   return (
-    <aside className={cn("min-h-0", !embedded && "lg:col-start-2 lg:row-span-3 lg:row-start-1")} aria-label="房间状态">
-      <Card className={cn("min-h-0 gap-0 overflow-hidden border-white/20 bg-[#f3e6c8]/96 py-0 shadow-2xl backdrop-blur-sm", !embedded && "lg:h-full")}>
-        <CardHeader className="border-b border-[#5f4b31]/15 px-5 py-4" data-resource-source="bank">
+    <aside className={cn("flex min-h-0 flex-col", !embedded && "lg:col-start-2 lg:row-span-3 lg:row-start-1", className)} aria-label="房间状态">
+      <Card className={cn("min-h-0 flex-1 gap-0 overflow-hidden border-white/20 bg-[#f3e6c8]/96 py-0 shadow-2xl backdrop-blur-sm", !embedded && "lg:h-full")}>
+        <CardHeader className={cn("border-b border-[#5f4b31]/15 px-5 py-4", room.game !== null && "grid-rows-1 gap-0 px-3 py-2 [.border-b]:pb-2")}>
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="mb-1 text-[11px] font-black tracking-[.18em] text-[#aa543d] uppercase">房间码</p>
-              <strong className="room-code font-serif text-2xl tracking-[.16em] text-[#163c3a]">{room.id}</strong>
+            <div className={cn(room.game !== null && "flex items-baseline gap-2")}>
+              <p className={cn("mb-1 text-[11px] font-black tracking-[.18em] text-[#aa543d] uppercase", room.game !== null && "mb-0")}>房间码</p>
+              <strong className={cn("room-code font-serif text-2xl tracking-[.16em] text-[#163c3a]", room.game !== null && "text-lg")}>{room.id}</strong>
             </div>
             <Badge variant="outline" className="gap-1.5 border-[#386f62]/25 bg-white/35 text-[#37685d]">
               <span className={cn(
@@ -82,32 +83,8 @@ export function RoomPanel({
           </div>
         </CardHeader>
 
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-3">
-          {room.game === null ? null : (
-            <section className="flex min-h-0 flex-col lg:flex-1" aria-label="公开记录">
-              <div className="mb-2 flex items-center justify-between text-xs font-black tracking-[.12em] text-[#5d665f] uppercase">
-                <span className="flex items-center gap-2"><Activity className="size-4 text-[#b45c42]" />公开记录</span>
-                <span>{room.game.history.length}</span>
-              </div>
-              <ScrollArea className="h-72 rounded-xl border border-[#6d5434]/15 bg-white/35 lg:h-auto lg:min-h-36 lg:flex-1">
-                <ol className="space-y-0 px-3 py-2 text-sm" aria-live="polite">
-                  {[...room.game.history].slice(-30).reverse().map((entry, index) => (
-                    <li
-                      className="border-b border-[#6d5434]/10 py-2.5 leading-relaxed text-[#47534e] last:border-0"
-                      key={`${entry.revision}-${entry.type}-${index}`}
-                    >
-                      {entry.message}
-                      {entry.privateDetail === null ? null : (
-                        <span className="mt-1 block text-xs font-bold text-[#a34e39]">{entry.privateDetail}</span>
-                      )}
-                    </li>
-                  ))}
-                  {room.game.history.length === 0 ? <li className="py-8 text-center text-[#7c817a]">对局记录会显示在这里</li> : null}
-                </ol>
-              </ScrollArea>
-              <Separator className="mt-4 bg-[#6d5434]/15" />
-            </section>
-          )}
+        <CardContent className={cn("flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-3", room.game !== null && "overflow-hidden px-3 py-2")}>
+          {room.game === null ? null : <PublicHistory key={room.game.id} history={room.game.history} />}
 
           {room.game === null ? (
             <section aria-label="房间设置">
@@ -248,7 +225,7 @@ export function RoomPanel({
         </CardContent>
 
         {room.game !== null ? (
-          <CardFooter className="flex-col gap-1 border-t border-[#5f4b31]/15 px-5 py-3">
+          <CardFooter className={cn("shrink-0 gap-1 border-t border-[#5f4b31]/15 px-3 py-1.5 [.border-t]:pt-1.5", onOpenExtraSeat !== null && "grid grid-cols-2")}>
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="ghost" className="w-full text-[#3f5b55] hover:bg-white/45">
@@ -285,10 +262,12 @@ export function RoomPanel({
               <Button
                 type="button"
                 variant="ghost"
-                className="w-full text-[#66716b] hover:bg-white/45"
+                className="w-full min-w-0 text-xs text-[#66716b] hover:bg-white/45"
+                aria-label="在新标签页开一个座位"
+                title="在新标签页开一个座位"
                 onClick={onOpenExtraSeat}
               >
-                在新标签页开一个座位
+                再开座位
               </Button>
             )}
           </CardFooter>

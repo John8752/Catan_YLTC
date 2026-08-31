@@ -10,11 +10,12 @@ Date: 2026-08-31
 - The robber and its animated destination sit at the tile's upper-left, clear of the number token.
 - Required local actions keep the entire dock pale coral-red with a soft red border and dark red task-specific headings. A matching player-safe current-action effect produces one 1.5-second notice above the map; trade offers receive a quieter prompt. Initial/reconnect snapshots do not replay notices and reduced-motion disables the brief glow.
 - The local seat shows the same public-score badge as opponents; hidden victory-point cards are excluded.
+- Public near-victory progress starts three points below the room target and escalates at two and one. Amber trophy badges show public score/target; each seat receives at most one notice per tier and the same milestone is appended to public history. Action notices take priority over the three-second warning.
 - SVG fits terrain and port bounds into the remaining space. Number tokens use 24-unit type instead of 15-unit type.
 - Game controls use bounded viewport-responsive rem sizing. Phone zoom buttons no longer cover ports.
 - History retains the latest 30 projected entries, appends below, follows the bottom, pauses while reading older entries and offers a return-to-latest button.
 - Result tabs use light text in inactive, hover, selected and keyboard-focus states.
-- No game legality, canonical game state, server authority or proprietary artwork changed. Protocol changes are limited to bank-count visibility and player-safe current-action cues.
+- No game legality, canonical game state, server authority or proprietary artwork changed. Protocol changes are limited to bank-count visibility, player-safe current-action cues and public near-victory milestones.
 
 ## Viewport matrix
 
@@ -53,10 +54,13 @@ At 1920×1021 the six-player action fixture still exceeds the previous 91.28px t
 - Mobile opponent timers fit within the horizontally scrollable strip instead of being clipped below it.
 - Result tab colors are checked as rendered RGBA, including CSS Color 4 serialization, hover, active indicator and keyboard focus.
 - Existing multiplayer setup, resource effects, development feedback, trade, seat lifecycle and reconnect tests remain part of the gate.
+- Near-victory protocol tests cover 5/10/12/15-point targets, three/two/one-point thresholds, multi-tier jumps, public-only totals, simultaneous affected players, history ordering/retention, award loss/recovery and suppression during setup or victory. Milestone records remain bounded in the room even after dropping out of the projected history window.
+- A seeded real-engine server test plays through setup and a scoring build, verifies the same milestone for all three subscriptions and reads, and checks command retries and resubscription without duplicate history.
+- Near-victory browser tests use 360×640, 390×844, 960×540, 1920×1021 and 3840×2160. They check badge containment, compact self-seat resource text, no document overflow or map overlap, retained keyboard focus, exact badge color and timed queuing. A separate flow checks action priority, all three tiers, public history, reload suppression, score loss/recovery and cancellation on victory. Screenshots are written to ignored `output/playwright/victory-warning-*.png` files; desktop and 360px screenshots were visually inspected.
 
 ## Commands
 
-- `pnpm validate` — Passed: TypeScript checks, 159 unit tests and production builds.
-- `pnpm test:e2e` — Passed: 35 Chromium viewport and multiplayer regressions.
+- `pnpm validate` — Passed: TypeScript checks, 178 unit tests and production builds.
+- `pnpm test:e2e` — Passed: 41 Chromium viewport and multiplayer regressions.
 
 These checks use desktop Chromium and emulated CSS viewport/DPR sizes. Physical phones and Safari are not covered by this validation.

@@ -36,6 +36,12 @@ Robber travel resolves semantic `data-robber-anchor` points at the same upper-le
 
 Resource travel also uses a two-second path. The canonical state still updates immediately; the effect is presentation feedback and never a lock on subsequent rule processing. Setup settlements intentionally do not emit score feedback, avoiding six repetitive score overlays before normal play begins.
 
+## Near-victory warnings
+
+Near-victory warnings compare finalized public totals across accepted server transitions, starting three points below the room target and escalating at two and one. The room retains at most three player-safe milestone records per seat, separately from canonical rule state; protocol helpers project the same records into public history and `GameView.effects`. No private cards or reconstructed scoring rules participate. A multi-tier jump emits only its closest tier and consumes weaker tiers. Setup and winning transitions emit no warning. Lost/reacquired awards do not repeat milestones, while persistent badge styling always follows the current public score. Initial/reconnect snapshots establish a quiet baseline. These derived room records share the existing in-memory room lifetime and would need to be restored alongside rooms in any future persistence adapter.
+
+Warnings share the board's reserved notice strip with action attention. Action notices have priority; a warning gets three visible seconds after them. Stronger pending warnings replace weaker ones for the same player, stale warnings are dropped after score loss, and all pending warnings are cancelled on victory. The amber score badge and trophy remain visible on compact and desktop surfaces without flashing or audio.
+
 ## Boundaries
 
 - Effects never decide or delay canonical state. The server snapshot is immediately authoritative.

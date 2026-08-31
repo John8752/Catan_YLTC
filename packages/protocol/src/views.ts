@@ -31,6 +31,7 @@ import { projectPlayerSafeEffect, type PublicGameEffectView } from "./game-effec
 import { projectGameSummary, type GameSummaryView } from "./game-summary.js";
 import type { TurnTimerView } from "./turn-timer.js";
 import { projectActionAttention } from "./action-attention.js";
+import { victoryWarningHistory, type VictoryWarningEffectView } from "./victory-warning.js";
 
 export interface PublicPlayerView {
   readonly id: string;
@@ -196,6 +197,7 @@ export function projectGameForPlayer(
   eventRecords: readonly GameEventRecord[] = [],
   turnTimer: TurnTimerView | null = null,
   visibility: Pick<RoomSettingsView, "bankCountsPublic"> = { bankCountsPublic: true },
+  victoryWarnings: readonly VictoryWarningEffectView[] = [],
 ): GameView {
   const viewer = state.players.find((player) => player.id === viewerId);
 
@@ -226,6 +228,7 @@ export function projectGameForPlayer(
       ? eventRecords.slice(-MAX_PROJECTED_EVENT_RECORDS)
       : eventRecords;
   const interaction = projectInteraction(state, viewerId);
+  const recentWarnings = victoryWarnings.filter((warning) => warning.revision >= (recentRecords[0]?.revision ?? state.revision) && warning.revision <= state.revision);
 
   return {
     id: state.id,
@@ -253,8 +256,8 @@ export function projectGameForPlayer(
     developmentDeckCount: state.developmentDeck.length,
     developmentCardPlayedThisTurn: state.developmentCardPlayedThisTurn,
     awards: state.awards,
-    history: recentRecords.flatMap((record) => projectHistoryRecord(state, viewerId, record)),
-    effects: [...recentRecords.flatMap((record) => projectPlayerSafeEffect(record, viewerId)), ...projectActionAttention(state, viewerId, interaction, eventRecords)],
+    history: [...recentRecords.flatMap((record) => projectHistoryRecord(state, viewerId, record)), ...recentWarnings.map(victoryWarningHistory)].sort((a, b) => a.revision - b.revision),
+    effects: [...recentRecords.flatMap((record) => projectPlayerSafeEffect(record, viewerId)), ...projectActionAttention(state, viewerId, interaction, eventRecords), ...(state.phase.kind === "turn" ? recentWarnings : [])],
     summary: projectGameSummary(state, eventRecords),
     turnTimer,
   };

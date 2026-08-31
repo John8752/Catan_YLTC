@@ -1,4 +1,4 @@
-import type { GameView } from "@catan/protocol";
+import { victoryWarningTier, type GameView } from "@catan/protocol";
 import { cn } from "@/lib/utils.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
 import { TurnTimerBadge } from "./TurnTimerBadge.js";
@@ -22,6 +22,7 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
       {opponents.map((player) => {
         const active = player.id === activePlayerId;
         const timer = game.turnTimer?.playerId === player.id ? game.turnTimer : null;
+        const nearVictory = game.phase.kind === "turn" && victoryWarningTier(player.visibleVictoryPoints, game.victoryPointsToWin) !== null;
         return (
           <article
             className={cn(
@@ -33,10 +34,10 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
             data-player-target={player.id}
             aria-label={`${player.name}，${player.visibleVictoryPoints} 分，${player.resourceCardCount} 张资源卡，${player.developmentCardCount} 张发展卡，已出 ${player.playedKnights} 张骑士，最长道路 ${player.longestRoadLength}${active ? "，当前行动" : ""}`}
           >
-            <div className="flex min-w-0 items-center gap-1 lg:flex-wrap lg:gap-x-2" data-opponent-summary={player.id}>
+            <div className={cn("flex min-w-0 items-center gap-1 lg:flex-wrap lg:gap-x-2", nearVictory && "flex-wrap")} data-opponent-summary={player.id}>
               <PlayerColorDot color={player.color} className="size-2.5 rounded-sm lg:size-3" />
               <strong className="min-w-0 flex-1 truncate text-[10px] lg:text-base" title={player.name}>{truncatePlayerName(player.name)}</strong>
-              <span className="flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#d7e2da] lg:order-3 lg:mt-1 lg:grid lg:w-full lg:grid-cols-4 lg:gap-2 lg:text-sm">
+              <span className={cn("flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#d7e2da] lg:order-3 lg:mt-1 lg:grid lg:w-full lg:grid-cols-4 lg:gap-2 lg:text-sm", nearVictory && "order-3 grid w-full grid-cols-4")}>
                 <span title="资源卡">资 {player.resourceCardCount}</span>
                 <span title="发展卡">发 {player.developmentCardCount}</span>
                 <span
@@ -50,7 +51,7 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
                   aria-label={`最长道路长度 ${player.longestRoadLength}`}
                 >长 {player.longestRoadLength}</span>
               </span>
-              <PlayerScoreBadge player={player} />
+              <PlayerScoreBadge player={player} victoryPointsToWin={game.victoryPointsToWin} active={game.phase.kind === "turn"} />
             </div>
             <div className="mt-1 grid grid-cols-3 gap-0.5 text-[8px] font-bold text-[#d7e2da] lg:text-xs" data-opponent-supply={player.id}>
               <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余城市 ${player.remainingPieces.cities}`}>城市 <b className="text-[#fff4c9]">{player.remainingPieces.cities}</b></span>

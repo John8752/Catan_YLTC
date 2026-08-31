@@ -17,6 +17,8 @@ import {
   type GameCommandResponse,
   type LeaveRoomResponse,
   projectGameForPlayer,
+  collectVictoryWarnings,
+  type VictoryWarningEffectView,
   type PlayerSessionResponse,
   type RoomView,
   type RoomSettingsInput,
@@ -42,6 +44,8 @@ interface RoomRecord {
   /** Keys of commands already applied, so a client retry is not replayed. */
   readonly appliedCommands: Set<string>;
   readonly history: GameEventRecord[];
+  /** Derived public milestones, bounded to three per seat; never game legality. */
+  readonly victoryWarnings: VictoryWarningEffectView[];
   lastActiveAt: number;
 }
 
@@ -82,6 +86,7 @@ export class RoomRegistry {
       game: null,
       appliedCommands: new Set(),
       history: [],
+      victoryWarnings: [],
       lastActiveAt: this.now(),
     };
 
@@ -301,6 +306,7 @@ export class RoomRegistry {
     const result = executeGameCommand(room.game, playerId, command);
     if (!result.accepted) throw new RoomError(result.error.code, result.error.message);
 
+    room.victoryWarnings.push(...collectVictoryWarnings(room.game, result.state, room.victoryWarnings));
     room.game = result.state;
     room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
     room.revision += 1;
@@ -427,7 +433,7 @@ export class RoomRegistry {
         : null,
       game: room.game === null
         ? null
-        : projectGameForPlayer(room.game, viewerId, room.history, this.turnTimers.view(room.id), room.settings),
+        : projectGameForPlayer(room.game, viewerId, room.history, this.turnTimers.view(room.id), room.settings, room.victoryWarnings),
     };
   }
 
@@ -448,6 +454,7 @@ export class RoomRegistry {
       return;
     }
 
+    room.victoryWarnings.push(...collectVictoryWarnings(room.game, result.state, room.victoryWarnings));
     room.game = result.state;
     room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
     room.revision += 1;

@@ -26,7 +26,7 @@ export function useGameEffectQueue(game: GameView | null): {
 
     // Current-action notices are immediate and independently deduplicated; a
     // production/trade animation must not delay a five-second roll prompt.
-    const unseen = game.effects.filter((effect) => effect.kind !== "action-attention" && effect.revision > seenRevisionRef.current);
+    const unseen = game.effects.filter((effect) => effect.kind !== "action-attention" && effect.kind !== "victory-warning" && effect.revision > seenRevisionRef.current);
     seenRevisionRef.current = Math.max(seenRevisionRef.current, game.revision);
     if (unseen.length === 0) return;
 

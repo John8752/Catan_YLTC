@@ -1,6 +1,7 @@
 import type { GameView } from "@catan/protocol";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Activity, ArrowDown } from "lucide-react";
+import { Activity, ArrowDown, Trophy } from "lucide-react";
+import { cn } from "@/lib/utils.js";
 import { Button } from "@/components/ui/button.js";
 import { ScrollArea } from "@/components/ui/scroll-area.js";
 
@@ -88,7 +89,8 @@ export function PublicHistory({ history }: { readonly history: GameView["history
       >
         <ol ref={contentRef} className="px-3 py-2 text-sm [overflow-anchor:none]" role="log" aria-label="操作记录，按时间从旧到新" aria-live="polite" aria-relevant="additions" aria-atomic="false">
           {entries.map((entry) => (
-            <li key={entry.key} data-history-key={entry.key} className="border-b border-[#6d5434]/10 py-2 leading-relaxed break-words text-[#47534e] last:border-0">
+            <li key={entry.key} data-history-key={entry.key} data-history-type={entry.type} className={cn("border-b border-[#6d5434]/10 py-2 leading-relaxed break-words text-[#47534e] last:border-0", entry.type === "victory-warning" && "font-bold text-[#805418]")}>
+              {entry.type === "victory-warning" ? <Trophy className="mr-1 inline size-3.5 align-text-bottom" aria-hidden="true" /> : null}
               {entry.message}
               {entry.privateDetail === null ? null : <span className="mt-1 block text-sm font-bold text-[#a34e39]">{entry.privateDetail}</span>}
             </li>

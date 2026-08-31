@@ -7,9 +7,11 @@ import {
   type ResourceType,
 } from "@catan/game-core";
 import type { ActionAttentionEffectView } from "./action-attention.js";
+import type { VictoryWarningEffectView } from "./victory-warning.js";
 
 export type PublicGameEffectView =
   | ActionAttentionEffectView
+  | VictoryWarningEffectView
   | PublicResourceGrantEffectView
   | PrivateResourceTransferEffectView
   | PublicResourceSpendEffectView

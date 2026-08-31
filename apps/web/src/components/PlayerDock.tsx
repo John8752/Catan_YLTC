@@ -1,5 +1,5 @@
 import { RESOURCE_TYPES, type ResourceHand, type ResourceType } from "@catan/game-core";
-import { describeAction, type GameCommand, type GameView } from "@catan/protocol";
+import { describeAction, victoryWarningTier, type GameCommand, type GameView } from "@catan/protocol";
 import { Dices, Hammer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge.js";
@@ -40,6 +40,7 @@ export function PlayerDock({
   const activeSelectionLabel = "准备弃掉";
   const ownTimer = game.turnTimer?.playerId === game.you.id ? game.turnTimer : null;
   const prompt = describeAction(game.interaction);
+  const nearVictory = game.phase.kind === "turn" && victoryWarningTier(game.you.visibleVictoryPoints, game.victoryPointsToWin) !== null;
 
   const addFromHand = (resource: ResourceType) => {
     if (activeSelection === null) return;
@@ -58,19 +59,19 @@ export function PlayerDock({
           <TurnTimerBadge timer={ownTimer} className="px-2 py-1 text-xs" />
         </span>
       )}
-      <div className="grid grid-cols-[minmax(112px,.26fr)_minmax(0,1fr)] items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:grid-cols-[minmax(10rem,.4fr)_minmax(14rem,.7fr)_minmax(19rem,1fr)] xl:gap-y-1">
+      <div className={cn("grid grid-cols-[minmax(112px,.26fr)_minmax(0,1fr)] items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:grid-cols-[minmax(10rem,.4fr)_minmax(14rem,.7fr)_minmax(19rem,1fr)] xl:gap-y-1", nearVictory && "max-md:grid-cols-[minmax(128px,.32fr)_minmax(0,1fr)]")}>
         <div
-          className="self-seat flex min-w-0 items-center gap-1.5 rounded-xl border border-[#6d5434]/15 bg-white/35 px-2 py-1.5 md:col-start-1 md:row-start-1 xl:py-1"
+          className={cn("self-seat flex min-w-0 items-center gap-1.5 rounded-xl border border-[#6d5434]/15 bg-white/35 px-2 py-1.5 md:col-start-1 md:row-start-1 xl:py-1", nearVictory && "max-md:grid max-md:grid-cols-[.625rem_minmax(0,1fr)_auto] max-md:gap-x-1 max-md:gap-y-0")}
           data-player-id={game.you.id}
           data-player-target={game.you.id}
           data-current-player="true"
         >
           <PlayerColorDot color={game.you.color} className="size-2.5 ring-[#6d5434]/25 lg:size-3" />
-          <div className="min-w-0 flex-1">
-            <strong className="block truncate text-xs text-[#243d39] lg:text-base" title={game.you.name}>{game.you.name}</strong>
-            <span className="block text-[9px] font-bold text-[#6c6d62] lg:text-xs">资源总数 {game.you.resourceCardCount}</span>
+          <div className={cn("min-w-0 flex-1", nearVictory && "max-md:contents")}>
+            <strong className={cn("block truncate text-xs text-[#243d39] lg:text-base", nearVictory && "max-md:col-span-2")} title={game.you.name}>{game.you.name}</strong>
+            <span data-self-resource-total="true" className={cn("block text-[9px] font-bold text-[#6c6d62] lg:text-xs", nearVictory && "max-md:col-span-2 max-md:whitespace-nowrap")}>资源总数 {game.you.resourceCardCount}</span>
           </div>
-          <PlayerScoreBadge player={game.you} className="ml-auto" />
+          <PlayerScoreBadge player={game.you} victoryPointsToWin={game.victoryPointsToWin} active={game.phase.kind === "turn"} className="ml-auto" />
         </div>
 
         <section className="grid grid-cols-5 gap-1 md:col-start-1 md:row-start-2 xl:col-start-2 xl:row-span-2 xl:row-start-1" aria-label="你的资源">

@@ -1,4 +1,4 @@
-import type { ActionAttentionEffectView, GameCommand, GameView } from "@catan/protocol";
+import type { ActionAttentionEffectView, GameCommand, GameView, VictoryWarningEffectView } from "@catan/protocol";
 import type { KeyboardEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
@@ -29,6 +29,7 @@ export interface BoardProps {
   readonly game: GameView;
   readonly bankSupply?: ReactNode;
   readonly actionNotice?: ActionAttentionEffectView | null;
+  readonly victoryNotice?: VictoryWarningEffectView | null;
   readonly busy?: boolean;
   readonly onCommand?: (command: GameCommand) => void;
   readonly buildMode?: "road" | "settlement" | "city" | null;
@@ -40,6 +41,7 @@ export function Board({
   game,
   bankSupply = <BankSupply resources={game.bankResources} />,
   actionNotice = null,
+  victoryNotice = null,
   busy = false,
   onCommand,
   buildMode = null,
@@ -67,7 +69,7 @@ export function Board({
         {bankSupply}
         <span className="phase-chip">{phaseLabel(game)}</span>
       </div>
-      <ActionAttentionBanner notice={actionNotice} />
+      <ActionAttentionBanner notice={actionNotice} victoryNotice={victoryNotice} />
       <div className="board-stage" {...viewport.viewportProps}>
         <div className="board-transform" style={viewport.transformStyle}>
           <svg

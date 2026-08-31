@@ -82,6 +82,7 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await proposerPage.keyboard.press("Escape");
     await expect(proposerPage.getByRole("dialog", { name: "交易桌" })).toBeHidden();
     await proposerPage.setViewportSize({ width: 390, height: 844 });
+    await proposerPage.getByRole("button", { name: "展开本回合操作" }).click();
     await proposerPage.getByRole("button", { name: "发起交易" }).click();
     await expect(proposerPage.getByRole("dialog", { name: "交易桌" })).toBeVisible();
     await expect.poll(() => proposerPage.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);

@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { createGame, resourceAmounts, type GameState } from "../../packages/game-core/src/index.js";
 import { projectGameForPlayer, type RoomView } from "../../packages/protocol/src/index.js";
-import { expect, test, type Browser, type WebSocketRoute } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContextOptions, type WebSocketRoute } from "@playwright/test";
+import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";
 
 const base = createGame({ id: "attention_e2e", seed: 42, ruleProfile: "extended-5-6", players: [
   { id: "p1", name: "自己", color: "terracotta" }, { id: "p2", name: "对手", color: "ocean" },
@@ -21,9 +22,9 @@ function scenario(revision: number, phase: GameState["phase"], extra: Partial<Ga
 const turn = (step: Extract<GameState["phase"], { kind: "turn" }>["step"], activePlayerId = "p1", turnNumber = 1): GameState["phase"] => ({
   kind: "turn", step, activePlayerId, turnNumber, primaryPlayerId: step === "paired-action" ? "p2" : activePlayerId,
 });
-async function openScenario(browser: Browser, width: number, height: number, reducedMotion: "reduce" | "no-preference" = "no-preference") {
+async function openScenario(browser: Browser, width: number, height: number, reducedMotion: "reduce" | "no-preference" = "no-preference", options: BrowserContextOptions = {}) {
   let room = scenario(1, turn("action", "p2"));
-  const context = await browser.newContext({ viewport: { width, height }, reducedMotion });
+  const context = await browser.newContext({ viewport: { width, height }, reducedMotion, ...options });
   await context.addInitScript(() => localStorage.setItem("catan-yltc-seat", JSON.stringify({ roomId: "NOTICE", playerId: "p1", seatToken: "fixture" })));
   const page = await context.newPage();
   const errors: string[] = [];
@@ -37,15 +38,20 @@ async function openScenario(browser: Browser, width: number, height: number, red
   return { context, page, errors, push: (next: RoomView) => { room = next; socket!.send(JSON.stringify({ type: "room_state", room })); } };
 }
 
-for (const [width, height] of [[360, 640], [390, 844], [960, 540], [1920, 1021]] as const) {
-  test(`turn attention stays clear of the board at ${width}x${height}`, async ({ browser }) => {
-    const run = await openScenario(browser, width, height);
+for (const { name, width, height, options } of [...primaryPhoneCases, ...([
+  [360, 640], [390, 844], [960, 540], [1920, 1021],
+] as const).map(([width, height]) => viewportCase(width, height))]) {
+  test(`turn attention stays clear of the board at ${name}`, async ({ browser }) => {
+    const run = await openScenario(browser, width, height, "no-preference", options);
     const { page } = run;
     try {
       await expect(page.locator('[data-action-attention="none"]')).toHaveCount(1);
       await expect(page.locator('[data-resource-source="bank"] [data-resource-count]')).toHaveCount(0);
-      await expect(page.locator('[data-resource-source="bank"] [data-resource-card]')).toHaveCount(5);
-      const zoom = page.getByRole("button", { name: "放大地图", exact: true });
+      if (width < 1024) await page.getByRole("button", { name: "查看银行库存" }).click();
+      await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-card]')).toHaveCount(5);
+      await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-count]')).toHaveCount(0);
+      if (width < 1024) await page.keyboard.press("Escape");
+      const zoom = page.getByRole("button", { name: width < 1024 ? "地图工具" : "放大地图", exact: true });
       await zoom.focus();
       run.push(scenario(2, turn("roll")));
       await expect(page.locator('[data-action-title]')).toHaveText("轮到你了 · 请掷骰子");
@@ -60,7 +66,7 @@ for (const [width, height] of [[360, 640], [390, 844], [960, 540], [1920, 1021]]
       });
       expect(bounds).toEqual({ clear: true, overflow: false, pointer: "none" });
       await mkdir("output/playwright", { recursive: true });
-      await page.screenshot({ path: `output/playwright/turn-attention-${width}.png`, fullPage: true });
+      await page.screenshot({ path: `output/playwright/turn-attention-${width}x${height}.png`, fullPage: true, scale: "css" });
       run.push(scenario(2, turn("roll")));
       run.push(scenario(3, turn("action")));
       await expect(page.locator('[data-action-notice]')).toHaveCount(0, { timeout: 2_500 });

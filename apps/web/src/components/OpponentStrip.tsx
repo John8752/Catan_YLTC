@@ -16,7 +16,7 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
 
   return (
     <section className={cn(
-      "opponent-strip row-start-1 grid min-w-0 shrink-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 lg:min-h-0 lg:shrink lg:auto-rows-max lg:grid-flow-row lg:grid-cols-1 lg:auto-cols-auto lg:content-start lg:gap-1.5 lg:overflow-x-hidden lg:overflow-y-auto lg:pb-0",
+      "opponent-strip row-start-1 grid min-w-0 shrink-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 phone-landscape:col-span-2 lg:min-h-0 lg:shrink lg:auto-rows-max lg:grid-flow-row lg:grid-cols-1 lg:auto-cols-auto lg:content-start lg:gap-1.5 lg:overflow-x-hidden lg:overflow-y-auto lg:pb-0",
       game.turnTimer !== null && game.turnTimer.playerId !== game.you.id && "pb-8",
     )} aria-label="其他玩家" tabIndex={0}>
       {opponents.map((player) => {

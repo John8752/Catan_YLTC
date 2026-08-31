@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant phone-landscape (@media (min-width: 600px) and (max-width: 1023px) and (max-height: 500px));
 
 @theme inline {
   --color-background: var(--background);
@@ -225,16 +226,6 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   backdrop-filter: blur(8px);
 }
 
-.mobile-room-trigger {
-  position: fixed;
-  top: calc(max(.35rem, env(safe-area-inset-top)) + 3.65rem);
-  right: max(.5rem, env(safe-area-inset-right));
-  z-index: 30;
-  border: 1px solid rgba(255,255,255,.25);
-  background: rgba(242,229,200,.92);
-  box-shadow: 0 6px 18px rgba(8,31,30,.28);
-}
-
 .game-info-sheet,
 .trade-composer-sheet {
   top: auto;
@@ -379,7 +370,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .port-sign rect { fill: #efe1ba; stroke: rgba(63,81,83,.78); stroke-width: 2; }
 .port-sign-crown { fill: #d8a754; stroke: rgba(63,81,83,.72); stroke-width: 1.5; stroke-linejoin: round; }
 .board-ports text { fill: #354649; pointer-events: none; }
-.port-ratio { font-size: 10px; font-weight: 900; }
+.port-type,.port-ratio { font-weight: 900; }
 .port-resource-icon { pointer-events: none; --resource-icon-primary: #557168; --resource-icon-secondary: #8ba097; --resource-icon-outline: #2e4642; --resource-icon-highlight: #fffdf4; }
 .resource-card-icon,.resource-analysis-icon { color: #fffdf0; --resource-icon-primary: rgba(255,253,240,.92); --resource-icon-secondary: rgba(255,253,240,.65); --resource-icon-outline: rgba(28,52,47,.5); --resource-icon-highlight: #fff; filter: drop-shadow(0 2px 1px rgba(20,35,31,.25)); }
 .placed-roads,.placed-buildings { pointer-events: none; }
@@ -618,7 +609,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 
 /* Wide/short-landscape boards have spare ocean in the corners. HUD floats there
    instead of reserving a full-width row. Narrow portrait screens keep that row. */
-@media (min-width: 1280px), (min-width: 768px) and (max-width: 1023px) and (max-height: 600px) {
+@media (min-width: 1280px) {
   .live-playfield .board-shell { position: relative; }
   .live-playfield .board-heading { position: absolute; z-index: 10; inset: 0 0 auto; }
 }
@@ -655,8 +646,6 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   .entry-panel { padding: 1.25rem; }
   .phase-chip { font-size: .66rem; }
   .waiting-island { padding: 2rem 1rem; }
-  .live-game-layout .player-dock [aria-label="本回合操作"] { max-height: 29dvh; overflow-y: auto; }
-  .board-zoom-controls [data-slot="button"] { width: 1.75rem; height: 1.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

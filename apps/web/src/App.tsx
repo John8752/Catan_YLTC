@@ -15,6 +15,8 @@ import {
 } from "./api.js";
 import { Board } from "./components/Board.js";
 import { BankSupply } from "./components/BankSupply.js";
+import { BankSupplyButton } from "./components/BankSupplyButton.js";
+import { ResponsiveRoomPanel } from "./components/ResponsiveRoomPanel.js";
 import { useMediaQuery } from "./hooks/use-media-query.js";
 import { GameResult } from "./components/GameResult.js";
 import { LobbySetup } from "./components/LobbySetup.js";
@@ -257,12 +259,20 @@ export function App() {
 
   const liveGame = room.game;
   // Route one bank/effect anchor to its current surface; do not mount hidden copies.
-  const bankSupply = liveGame === null ? null : <BankSupply resources={liveGame.bankResources} className={bankInSidebar ? "mr-0 w-full shrink-0 justify-center" : ""} />;
+  const bankSupply = liveGame === null ? null : bankInSidebar
+    ? <BankSupply resources={liveGame.bankResources} className="mr-0 w-full shrink-0 justify-center" />
+    : <BankSupplyButton resources={liveGame.bankResources} />;
+  const roomControls = <ResponsiveRoomPanel
+    room={room} playerId={session.playerId} connectionState={connectionState} busy={busy}
+    onStart={handleStart} onSettingsChange={handleRoomSettingsChange} onLeave={handleLeave}
+    onAbandonSeat={handleAbandonSeat} onOpenExtraSeat={isLocalHost ? handleOpenExtraSeat : null}
+    embedded showPlayers={false} className="min-h-0 flex-1 lg:min-h-60"
+  />;
 
   return (
     <main className={liveGame === null
       ? "game-layout grid min-h-svh grid-cols-1 gap-3 p-3 lg:h-svh lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:overflow-hidden"
-      : "game-layout live-game-layout grid h-dvh min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-1.5 overflow-hidden p-[max(.35rem,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] lg:grid-cols-[minmax(0,1fr)_var(--game-rail-width)] lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-3 lg:p-3"}>
+      : "game-layout live-game-layout grid h-dvh min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-1.5 overflow-hidden p-[max(.35rem,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] phone-landscape:grid-cols-[minmax(0,1fr)_14rem] phone-landscape:grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_var(--game-rail-width)] lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-3 lg:p-3"}>
       {liveGame === null ? <div className="game-brand lg:col-start-1 lg:row-start-1" aria-label="Catan YLTC">
         <span aria-hidden="true">⬡</span>
         <strong>Catan YLTC</strong>
@@ -279,6 +289,8 @@ export function App() {
           <>
             <Board
               game={room.game}
+              compact={!bankInSidebar}
+              roomControls={bankInSidebar ? null : roomControls}
               actionNotice={actionNotice}
               victoryNotice={victoryNotice}
               bankSupply={bankInSidebar ? null : bankSupply}
@@ -301,6 +313,7 @@ export function App() {
       {room.game === null ? null : (
         <PlayerDock
           game={room.game}
+          compact={!bankInSidebar}
           busy={busy}
           onCommand={handleGameCommand}
           buildMode={buildMode}
@@ -321,15 +334,7 @@ export function App() {
       /> : <GameSidebar
         game={liveGame}
         bankSupply={bankInSidebar ? bankSupply : null}
-        room={room}
-        playerId={session.playerId}
-        connectionState={connectionState}
-        busy={busy}
-        onStart={handleStart}
-        onSettingsChange={handleRoomSettingsChange}
-        onLeave={handleLeave}
-        onAbandonSeat={handleAbandonSeat}
-        onOpenExtraSeat={isLocalHost ? handleOpenExtraSeat : null}
+        roomControls={bankInSidebar ? roomControls : null}
       />}
       {liveGame?.openTrade === null || liveGame === null ? null : (
         <div className="active-trade-surface">

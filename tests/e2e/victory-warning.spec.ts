@@ -1,9 +1,10 @@
 import { mkdir } from "node:fs/promises";
 import { createGame, type GameState } from "../../packages/game-core/src/index.js";
 import { collectVictoryWarnings, projectGameForPlayer, type RoomView, type VictoryWarningEffectView } from "../../packages/protocol/src/index.js";
-import { expect, test, type Browser, type WebSocketRoute } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContextOptions, type WebSocketRoute } from "@playwright/test";
+import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";
 
-async function openGame(browser: Browser, width: number, height: number) {
+async function openGame(browser: Browser, width: number, height: number, options: BrowserContextOptions = {}) {
   const base = createGame({ id: "victory-ui", seed: 42, ruleProfile: "extended-5-6", players: [
     { id: "p1", name: "自己的长名字", color: "terracotta" }, { id: "p2", name: "领先玩家的长名字", color: "ocean" },
     { id: "p3", name: "丙", color: "pine" }, { id: "p4", name: "丁", color: "wheat" },
@@ -19,7 +20,7 @@ async function openGame(browser: Browser, width: number, height: number) {
     settings: { ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: state.victoryPointsToWin, mapSeed: 42, bankCountsPublic: true },
     game: projectGameForPlayer(state, "p1", warnings.map((warning) => ({ revision: warning.revision, event: { type: "piece_built", playerId: warning.playerId, piece: "city", locationId: "fixture" } })), null, { bankCountsPublic: true }, warnings),
   });
-  const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" });
+  const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce", ...options });
   await context.addInitScript(() => localStorage.setItem("catan-yltc-seat", JSON.stringify({ roomId: "VICTORY", playerId: "p1", seatToken: "fixture" })));
   const page = await context.newPage();
   await page.clock.install();
@@ -43,12 +44,14 @@ async function openGame(browser: Browser, width: number, height: number) {
   };
 }
 
-for (const [width, height] of [[360, 640], [390, 844], [960, 540], [1920, 1021], [3840, 2160]] as const) {
-  test(`near-victory badges and notices fit ${width}x${height}`, async ({ browser }) => {
-    const run = await openGame(browser, width, height);
+for (const { name, width, height, options } of [...primaryPhoneCases, ...([
+  [360, 640], [390, 844], [960, 540], [1920, 1021], [3840, 2160],
+] as const).map(([width, height]) => viewportCase(width, height))]) {
+  test(`near-victory badges and notices fit ${name}`, async ({ browser }) => {
+    const run = await openGame(browser, width, height, options);
     try {
       const { page } = run;
-      const zoom = page.getByRole("button", { name: "放大地图", exact: true });
+      const zoom = page.getByRole("button", { name: width < 1024 ? "地图工具" : "放大地图", exact: true });
       await zoom.focus();
       run.push(7);
       await expect(page.locator('[data-player-score="p2"]')).toHaveText("7/10");
@@ -74,7 +77,7 @@ for (const [width, height] of [[360, 640], [390, 844], [960, 540], [1920, 1021],
       });
       expect(metrics).toEqual({ fits: true, resourceClear: true, overflow: false, bannerClear: true, dockFits: true, pointer: "none" });
       await mkdir("output/playwright", { recursive: true });
-      await page.screenshot({ path: `output/playwright/victory-warning-${width}.png`, fullPage: true });
+      await page.screenshot({ path: `output/playwright/victory-warning-${width}x${height}.png`, fullPage: true, scale: "css" });
       run.duplicate();
       await page.clock.runFor(3_001);
       await expect(page.locator('[data-victory-notice]')).toContainText("9/10");

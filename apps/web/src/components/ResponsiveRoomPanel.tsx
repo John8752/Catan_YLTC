@@ -13,8 +13,8 @@ export function ResponsiveRoomPanel(props: RoomPanelProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="mobile-room-trigger" size="sm" variant="secondary" aria-label={`打开公开记录与房间信息，共 ${historyCount} 条记录`}>
-          <Activity className="size-4" />记录 {historyCount}
+        <Button className="mobile-room-trigger shrink-0" size="sm" variant="secondary" aria-label={`打开公开记录与房间信息，共 ${historyCount} 条记录`}>
+          <Activity className="size-4" />记录
         </Button>
       </DialogTrigger>
       <DialogContent className="game-info-sheet h-[72dvh] max-h-[72dvh] max-w-none gap-0 overflow-hidden border-[#f7e6bf]/30 bg-[#f8ecd2] p-0 text-[#263d39]">

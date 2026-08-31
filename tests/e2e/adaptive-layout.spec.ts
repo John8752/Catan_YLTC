@@ -2,7 +2,8 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { createGame, resourceAmounts, type GameState, type PlayerSeed, type GameEventRecord } from "../../packages/game-core/src/index.js";
 import { projectGameForPlayer, type RoomView } from "../../packages/protocol/src/index.js";
-import { expect, test, type Browser, type Page, type WebSocketRoute } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContextOptions, type Page, type WebSocketRoute } from "@playwright/test";
+import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";
 
 const players: PlayerSeed[] = [
   { id: "p1", name: "布局验收", color: "terracotta" },
@@ -12,10 +13,10 @@ const players: PlayerSeed[] = [
   { id: "p5", name: "玩家丁", color: "plum" },
   { id: "p6", name: "玩家戊", color: "charcoal" },
 ];
-const sizes = [
+const sizes = [...primaryPhoneCases, ...([
   [1024, 768], [1366, 768], [1920, 1021], [2560, 1440], [3840, 2160],
-  [3440, 1440], [1920, 720], [960, 540], [390, 844], [360, 640],
-] as const;
+  [3440, 1440], [1920, 720], [960, 540], [844, 390], [640, 360], [390, 844], [360, 640],
+] as const).map(([width, height]) => viewportCase(width, height))];
 
 function fixture(count: 4 | 6, revision = 40, finished = false): RoomView {
   const base = createGame({ id: "layout_game", seed: 93357307, players: players.slice(0, count), ruleProfile: count === 6 ? "extended-5-6" : "base-3-4" });
@@ -34,8 +35,8 @@ function fixture(count: 4 | 6, revision = 40, finished = false): RoomView {
   };
 }
 
-async function openFixture(browser: Browser, width: number, height: number, room: RoomView, deviceScaleFactor = 1) {
-  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor });
+async function openFixture(browser: Browser, width: number, height: number, room: RoomView, options: BrowserContextOptions = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, ...options });
   await context.addInitScript(() => localStorage.setItem("catan-yltc-seat", JSON.stringify({ roomId: "LAYOUT", playerId: "p1", seatToken: "test" })));
   const page = await context.newPage();
   const errors: string[] = [];
@@ -63,8 +64,20 @@ async function measure(page: Page) {
     });
     const font = (selector: string) => Number.parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
     const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+    const signs = [...document.querySelectorAll<SVGRectElement>(".port-sign > rect")].map((element) => element.getBoundingClientRect());
+    const intersect = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+    const portText = [...document.querySelectorAll<SVGTextElement>(".port-type,.port-ratio")].map((element) => {
+      const matrix = element.getScreenCTM()!;
+      const text = element.getBoundingClientRect();
+      const card = element.closest(".port-sign")!.querySelector("rect")!.getBoundingClientRect();
+      return { font: Number.parseFloat(getComputedStyle(element).fontSize) * Math.hypot(matrix.a, matrix.b),
+        type: element.classList.contains("port-type"), fits: text.left >= card.left && text.right <= card.right && text.top >= card.top && text.bottom <= card.bottom };
+    });
     return {
       fit, hudClear, rootFont: font("html"), nameFont: font(".opponent-strip strong"),
+      portText, portsSeparated: signs.every((a, i) => signs.slice(i + 1).every((b) => !intersect(a, b))),
+      portTileRatio: signs[0]!.width / document.querySelector(".hex-surface")!.getBoundingClientRect().width,
+      portNumberOverlaps: [...document.querySelectorAll(".token")].flatMap((e) => signs.flatMap((sign, index) => intersect(sign, e.getBoundingClientRect()) ? [{ hex: e.closest('[data-hex-id]')?.getAttribute('data-hex-id'), portIndex: index }] : [])),
       statFont: font('[data-opponent-summary] [title="资源卡"]'),
       tile: rect(".hex-surface"), number: rect(".token-number"), dock: rect(".player-dock"),
       overflow: document.documentElement.scrollWidth > innerWidth + 1 || document.documentElement.scrollHeight > innerHeight + 1,
@@ -74,18 +87,29 @@ async function measure(page: Page) {
 }
 
 for (const count of [4, 6] as const) {
-  for (const [width, height] of sizes) {
-    test(`${count} seats fit ${width}x${height} with readable controls and uncropped ports`, async ({ browser }) => {
-      const run = await openFixture(browser, width, height, fixture(count));
+  for (const { name, width, height, options } of sizes) {
+    test(`${count} seats fit ${name} with readable controls and uncropped ports`, async ({ browser }) => {
+      const run = await openFixture(browser, width, height, fixture(count), options);
       try {
+        if (options.isMobile) {
+          // Catch accidentally using physical pixels or dropping device emulation.
+          expect(await run.page.evaluate(() => ({ width: innerWidth, height: innerHeight, dpr: devicePixelRatio, touch: navigator.maxTouchPoints > 0 })))
+            .toEqual({ width, height, dpr: 3, touch: true });
+        }
+        if (width < 1024) {
+          await expect(run.page.getByRole("button", { name: "结束回合", exact: true })).toBeHidden();
+          await run.page.getByRole("button", { name: "展开本回合操作" }).click();
+        }
         await expect(run.page.getByRole("button", { name: "结束回合", exact: true })).toBeVisible();
+        if (width < 1024) await run.page.getByRole("button", { name: "收起本回合操作" }).click();
         await expect(run.page.locator("[data-player-target]")).toHaveCount(count);
         await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
         await expect(run.page.locator('[data-player-score]')).toHaveCount(count);
         await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("0");
         const bankHost = width >= 1024 ? '[data-game-sidebar]' : '.board-heading';
         await expect(run.page.locator(`${bankHost} [data-resource-source="bank"]`)).toBeVisible();
-        const bankCards = await run.page.locator('[data-resource-source="bank"] [data-resource-card]').evaluateAll((cards) => cards.map((card) => {
+        if (width < 1024) await run.page.getByRole("button", { name: "查看银行库存" }).click();
+        const bankCards = await run.page.locator('[aria-label="银行剩余资源"] [data-resource-card]').evaluateAll((cards) => cards.map((card) => {
           const count = card.querySelector('[data-resource-count]')!;
           const illustration = card.querySelector('[data-resource-illustration]')!;
           const b = card.getBoundingClientRect();
@@ -93,6 +117,7 @@ for (const count of [4, 6] as const) {
           const i = illustration.getBoundingClientRect();
           return { text: card.textContent, title: card.getAttribute('title'), countFont: Number.parseFloat(getComputedStyle(count).fontSize), portrait: b.height > b.width, fits: c.left >= b.left && c.right <= b.right && c.top >= b.top && c.bottom <= i.top && i.bottom <= b.bottom, iconHeight: i.height };
         }));
+        expect(bankCards).toHaveLength(5);
         for (const card of bankCards) {
           expect(card.text).toMatch(/^\d+$/);
           expect(card.title).toContain("银行剩余");
@@ -101,6 +126,10 @@ for (const count of [4, 6] as const) {
           expect(card.fits).toBe(true);
           expect(card.iconHeight).toBeGreaterThanOrEqual(20);
         }
+        if (width < 1024) {
+          await run.page.keyboard.press("Escape");
+          await expect(run.page.getByRole("dialog")).toHaveCount(0);
+        }
         const scoreBounds = await run.page.locator('.self-seat [data-player-score="p1"]').boundingBox();
         const seatBounds = await run.page.locator('.self-seat').boundingBox();
         expect(scoreBounds!.x + scoreBounds!.width).toBeLessThanOrEqual(seatBounds!.x + seatBounds!.width);
@@ -108,8 +137,15 @@ for (const count of [4, 6] as const) {
         expect(metrics.overflow).toBe(false);
         expect(metrics.fit).toBe(true);
         expect(metrics.hudClear).toBe(true);
+        expect(metrics.portsSeparated).toBe(true);
+        expect(metrics.portNumberOverlaps).toEqual([]);
+        for (const text of metrics.portText) {
+          expect(text.fits).toBe(true);
+          // The design is larger, but every board element scales together.
+          expect(text.font / metrics.tile.width).toBeCloseTo((text.type ? 28 : 36) / (56 * Math.sqrt(3)), 4);
+        }
+        expect(metrics.portTileRatio).toBeCloseTo(128 / (56 * Math.sqrt(3)), 4);
         expect(metrics.dock.y + metrics.dock.height).toBeLessThanOrEqual(height + 1);
-        if (width === 960 && height === 540 && count === 6) expect(metrics.tile.width).toBeGreaterThan(30);
         if (width >= 1024) {
           const logViewport = run.page.getByRole("region", { name: "公开记录", exact: true }).locator('[data-slot="scroll-area-viewport"]');
           const logBounds = await logViewport.boundingBox();
@@ -120,14 +156,14 @@ for (const count of [4, 6] as const) {
           expect(metrics.statFont).toBeGreaterThanOrEqual(14);
           expect(metrics.sidebar?.x).toBeGreaterThan(metrics.dock.x + metrics.dock.width - 1);
           expect(metrics.sidebar?.y + metrics.sidebar?.height).toBeLessThanOrEqual(height + 1);
-          // Old six-player tile was 91.275 CSS px at this viewport. Keep >10%
-          // growth even with the full action controls and last-roll badge shown.
-          if (width === 1920 && height === 1021 && count === 6) expect(metrics.tile.width).toBeGreaterThan(91.275 * 1.1);
+          // Two-line, double-size ports now participate in fitting. Readability
+          // and uncropped content replace the old one-line-port size benchmark.
         }
         const dir = path.join(process.cwd(), "output/playwright");
         await mkdir(dir, { recursive: true });
-        await run.page.screenshot({ path: path.join(dir, `adaptive-${count}-${width}x${height}.png`), fullPage: true });
+        await run.page.screenshot({ path: path.join(dir, `adaptive-${count}-${width}x${height}.png`), fullPage: true, scale: "css" });
         if (count === 6 && (width === 1920 && height === 1021 || width === 390)) {
+          if (width < 1024) await run.page.getByRole("button", { name: "查看银行库存" }).click();
           await run.page.getByRole("region", { name: "银行剩余资源", exact: true }).screenshot({ path: path.join(dir, `bank-cards-${width}.png`) });
         }
         expect(run.errors).toEqual([]);
@@ -139,7 +175,7 @@ for (const count of [4, 6] as const) {
 test("large-screen type scales with CSS viewport, not Retina pixel density", async ({ browser }) => {
   const results: Awaited<ReturnType<typeof measure>>[] = [];
   for (const [width, height, dpr] of [[1920, 1021, 1], [1920, 1021, 2], [2560, 1440, 1], [3840, 2160, 1]]) {
-    const run = await openFixture(browser, width!, height!, fixture(6), dpr);
+    const run = await openFixture(browser, width!, height!, fixture(6), { deviceScaleFactor: dpr });
     results.push(await measure(run.page));
     await run.context.close();
   }
@@ -147,6 +183,52 @@ test("large-screen type scales with CSS viewport, not Retina pixel density", asy
   expect(results[2]!.statFont).toBeGreaterThan(results[0]!.statFont * 1.3);
   expect(results[3]!.statFont).toBeGreaterThan(results[0]!.statFont * 1.7);
 });
+
+for (const { name, width, height, options } of [...primaryPhoneCases, viewportCase(360, 640), viewportCase(640, 360)]) {
+  test(`compact disclosure keeps live stock, zoom and required actions usable at ${name}`, async ({ browser }) => {
+    let room = fixture(6);
+    if (room.game?.interaction.kind !== "turn-action") throw new Error("Expected action fixture");
+    room = { ...room, game: { ...room.game, interaction: { ...room.game.interaction, roadEdgeIds: [room.game.map.edges[0]!.id] } } };
+    const run = await openFixture(browser, width, height, room, options);
+    const { page } = run;
+    try {
+      const bank = page.getByRole("button", { name: "查看银行库存" });
+      await bank.click();
+      room = { ...room, revision: 41, game: { ...room.game!, revision: 41, bankResources: resourceAmounts({ brick: 7 }) } };
+      run.push(room);
+      await expect(page.getByLabel("银行剩余砖 7 张", { exact: true })).toBeVisible();
+      await expect(page.locator('[data-resource-source="bank"]')).toHaveCount(1);
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(bank).toBeFocused();
+
+      const fitted = await measure(page);
+      const mapTools = page.getByRole("button", { name: "地图工具", exact: true });
+      await expect(page.getByRole("button", { name: "放大地图", exact: true })).toBeHidden();
+      await mapTools.click();
+      await page.getByRole("button", { name: "放大地图", exact: true }).click();
+      await expect.poll(async () => (await measure(page)).tile.width).toBeGreaterThan(fitted.tile.width * 1.1);
+      expect((await measure(page)).portTileRatio).toBeCloseTo(fitted.portTileRatio, 4);
+      await page.getByRole("button", { name: "恢复地图大小", exact: true }).click();
+      await page.keyboard.press("Escape");
+      await expect(mapTools).toBeFocused();
+
+      await page.getByRole("button", { name: "展开本回合操作" }).click();
+      await expect(page.getByRole("button", { name: "结束回合", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "道路", exact: true }).click();
+      await expect(page.getByRole("button", { name: "结束回合", exact: true })).toBeHidden();
+      await expect(page.locator('[data-action-title]')).toHaveText("请在地图选择道路位置");
+      await expect(page.getByRole("button", { name: "在这里建造道路", exact: true })).toHaveCount(1);
+      room = { ...room, revision: 42, game: { ...room.game!, revision: 42,
+        interaction: { kind: "turn-roll", instruction: "轮到你了，请掷骰子", vertexIds: [], edgeIds: [] },
+      } };
+      run.push(room);
+      await expect(page.getByRole("button", { name: "掷骰子", exact: true })).toBeVisible();
+      expect((await measure(page)).overflow).toBe(false);
+      expect(run.errors).toEqual([]);
+    } finally { await run.context.close(); }
+  });
+}
 
 test("opponent anchors survive breakpoints and room footer actions stay reachable", async ({ browser }) => {
   const run = await openFixture(browser, 1920, 1021, fixture(6));
@@ -165,7 +247,9 @@ test("opponent anchors survive breakpoints and room footer actions stay reachabl
       await expect(run.page.locator('[data-player-target="p2"]')).toBeVisible();
       await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
       await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("6");
+      if (width! < 1024) await run.page.getByRole("button", { name: "查看银行库存" }).click();
       await expect(run.page.getByLabel("银行剩余砖 7 张", { exact: true })).toBeVisible();
+      if (width! < 1024) await run.page.keyboard.press("Escape");
       await expect(run.page.locator(`${width! >= 1024 ? '[data-game-sidebar]' : '.board-heading'} [data-resource-source="bank"]`)).toBeVisible();
       expect(await anchor!.evaluate((e) => e.isConnected)).toBe(true);
       if (width! < 1024) await run.page.getByRole("button", { name: /打开公开记录与房间信息/ }).click();

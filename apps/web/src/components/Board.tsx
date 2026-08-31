@@ -1,7 +1,6 @@
 import type { ActionAttentionEffectView, GameCommand, GameView, VictoryWarningEffectView } from "@catan/protocol";
 import type { KeyboardEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
 import {
   Dialog,
@@ -23,10 +22,13 @@ import {
 } from "./BoardMap.js";
 import { ConstructionTargets } from "./ConstructionTargets.js";
 import { BankSupply } from "./BankSupply.js";
+import { BoardZoomControls } from "./BoardZoomControls.js";
 import { ActionAttentionBanner } from "@/effects/ActionAttentionBanner.js";
 
 export interface BoardProps {
   readonly game: GameView;
+  readonly compact?: boolean;
+  readonly roomControls?: ReactNode;
   readonly bankSupply?: ReactNode;
   readonly actionNotice?: ActionAttentionEffectView | null;
   readonly victoryNotice?: VictoryWarningEffectView | null;
@@ -39,6 +41,8 @@ export interface BoardProps {
 
 export function Board({
   game,
+  compact = false,
+  roomControls,
   bankSupply = <BankSupply resources={game.bankResources} />,
   actionNotice = null,
   victoryNotice = null,
@@ -64,10 +68,12 @@ export function Board({
 
   return (
     <section className="board-shell" data-board-root="true" aria-label="游戏棋盘">
-      <div className="board-heading">
+      <div className="board-heading gap-1">
         <p className="eyebrow">种子 {game.seed}</p>
         {bankSupply}
-        <span className="phase-chip">{phaseLabel(game)}</span>
+        {compact ? <BoardZoomControls compact {...viewport} /> : null}
+        <span className="phase-chip ml-auto whitespace-nowrap">{phaseLabel(game)}</span>
+        {roomControls}
       </div>
       <ActionAttentionBanner notice={actionNotice} victoryNotice={victoryNotice} />
       <div className="board-stage" {...viewport.viewportProps}>
@@ -244,14 +250,10 @@ export function Board({
           </svg>
         </div>
       </div>
-      <div className="board-footer relative flex shrink-0 items-center justify-between gap-2">
+      {compact ? null : <div className="board-footer relative flex shrink-0 items-center justify-between gap-2">
         <p className="board-instruction flex-1" aria-live="polite">{boardInstruction(game, buildMode)}</p>
-        <div className="board-zoom-controls" aria-label="地图缩放">
-          <Button type="button" size="icon-sm" variant="secondary" aria-label="缩小地图" disabled={viewport.scale <= 1} onClick={viewport.zoomOut}><ZoomOut /></Button>
-          <Button type="button" size="icon-sm" variant="secondary" aria-label="恢复地图大小" disabled={viewport.scale === 1} onClick={viewport.reset}><RotateCcw /></Button>
-          <Button type="button" size="icon-sm" variant="secondary" aria-label="放大地图" disabled={viewport.scale >= 2.6} onClick={viewport.zoomIn}><ZoomIn /></Button>
-        </div>
-      </div>
+        <BoardZoomControls compact={false} {...viewport} />
+      </div>}
       <Dialog open={pendingRoadCommand !== null} onOpenChange={(open) => !open && setPendingRoadCommand(null)}>
         <DialogContent className="border-2 border-[#d0a853] bg-[#fff0cd] text-[#263f3b] shadow-[0_20px_60px_rgba(4,24,25,.58)] sm:max-w-sm" showCloseButton={false}>
           <DialogHeader>

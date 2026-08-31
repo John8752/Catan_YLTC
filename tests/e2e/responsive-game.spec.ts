@@ -61,7 +61,7 @@ test("six-player board keeps five opponents, the map and the private dock in one
       horizontal: document.documentElement.scrollWidth <= window.innerWidth,
       vertical: document.documentElement.scrollHeight <= window.innerHeight + 1,
     }))).toEqual({ horizontal: true, vertical: true });
-    await expect(page.getByRole("button", { name: "放大地图" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "地图工具", exact: true })).toBeVisible();
     await expect(page.locator(".player-dock")).toBeVisible();
     await page.screenshot({ path: path.join(artifactDir, "extended-six-player-small-phone.png"), fullPage: true });
   } finally {

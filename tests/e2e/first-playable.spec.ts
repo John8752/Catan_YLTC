@@ -207,9 +207,11 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     }).toBe(true);
     const boardTransform = host.locator(".board-transform");
     const fittedTransform = await boardTransform.evaluate((element) => getComputedStyle(element).transform);
+    await host.getByRole("button", { name: "地图工具", exact: true }).click();
     await host.getByRole("button", { name: "放大地图" }).click();
     await expect.poll(() => boardTransform.evaluate((element) => getComputedStyle(element).transform)).not.toBe(fittedTransform);
     await host.getByRole("button", { name: "恢复地图大小" }).click();
+    await host.keyboard.press("Escape");
     const gameInfoTrigger = host.getByRole("button", { name: /打开公开记录与房间信息/ });
     await expect(gameInfoTrigger).toBeVisible();
     await gameInfoTrigger.click();

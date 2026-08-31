@@ -1,5 +1,6 @@
 import type { GameView } from "@catan/protocol";
 import { ResourceIcon } from "./ResourceIcon.js";
+import { resourceLabel } from "./ResourceCard.js";
 
 export const BOARD_HEX_SIZE = 56;
 export const ROBBER_OFFSET = { x: -22, y: -26 } as const;
@@ -21,7 +22,12 @@ export interface BoardMapProps {
   readonly hexSize?: number;
 }
 
+// Design-space dimensions only. Ports, terrain and pieces share the SVG fit and
+// gesture transform; never compensate individual labels with inverse zoom.
+const PORT_METRICS = { width: 128, height: 80, typeFont: 28, ratioFont: 36 } as const;
+
 export function boardViewBox(map: GameMapView): string {
+  const portMetrics = PORT_METRICS;
   // Fit the actual renderer bounds, including signs and a safe margin for pieces
   // and target rings. A fixed profile box wastes width and can crop outer ports.
   const points = map.hexes.flatMap((hex) => {
@@ -36,7 +42,7 @@ export function boardViewBox(map: GameMapView): string {
     const second = map.vertices.find((vertex) => vertex.id === port.vertexIds[1]);
     if (first === undefined || second === undefined) continue;
     const { sign } = portGeometry(first, second, BOARD_HEX_SIZE);
-    points.push({ x: sign.x - 25, y: sign.y - 22 }, { x: sign.x + 25, y: sign.y + 15 });
+    points.push({ x: sign.x - portMetrics.width / 2 - 2, y: sign.y - portMetrics.height / 2 - 2 }, { x: sign.x + portMetrics.width / 2 + 2, y: sign.y + portMetrics.height / 2 + 2 });
   }
   const left = Math.min(...points.map((point) => point.x)) - 14;
   const top = Math.min(...points.map((point) => point.y)) - 14;
@@ -96,6 +102,7 @@ export function BoardTerrain({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
 }
 
 export function BoardPorts({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
+  const portMetrics = PORT_METRICS;
   return (
     <g className="board-ports" aria-label="港口">
       {map.ports.map((port) => {
@@ -130,11 +137,11 @@ export function BoardPorts({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
               <circle className="port-endpoint-halo" data-port-endpoint={secondId} cx={geometry.second.x} cy={geometry.second.y} r="7" />
             </g>
             <g className="port-sign" transform={`translate(${geometry.sign.x} ${geometry.sign.y})`}>
-              <path className="port-sign-crown" d="M-9-13Q0-22 9-13Z" />
-              <rect x="-24" y="-13" width="48" height="26" rx="8" />
-              <text className="port-ratio" x={port.kind === "generic" ? 0 : -7} y="4" textAnchor="middle">{label}</text>
+              <rect x={-portMetrics.width / 2} y={-portMetrics.height / 2} width={portMetrics.width} height={portMetrics.height} rx="12" />
+              <text className="port-type" x={port.kind === "generic" ? 0 : portMetrics.typeFont * .5} y={-portMetrics.height * .17} dominantBaseline="middle" textAnchor="middle" style={{ fontSize: portMetrics.typeFont }}>{port.kind === "generic" ? "通用" : resourceLabel(port.resource)}</text>
+              <text className="port-ratio" y={portMetrics.height * .24} dominantBaseline="middle" textAnchor="middle" style={{ fontSize: portMetrics.ratioFont }}>{label}</text>
               {port.kind === "generic" ? null : (
-                <ResourceIcon kind={port.resource} context="port" className="port-resource-icon" transform="translate(13 0) scale(.43)" />
+                <ResourceIcon kind={port.resource} context="port" className="port-resource-icon" transform={`translate(${-portMetrics.typeFont * .8} ${-portMetrics.height * .17}) scale(${portMetrics.typeFont / 38})`} />
               )}
             </g>
           </g>
@@ -177,6 +184,7 @@ function portGeometry(
   secondVertex: { readonly x: number; readonly y: number },
   hexSize: number,
 ) {
+  const metrics = PORT_METRICS;
   const first = { x: firstVertex.x * hexSize, y: firstVertex.y * hexSize };
   const second = { x: secondVertex.x * hexSize, y: secondVertex.y * hexSize };
   const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
@@ -184,8 +192,10 @@ function portGeometry(
   const outward = { x: midpoint.x / radius, y: midpoint.y / radius };
   const edgeLength = Math.hypot(second.x - first.x, second.y - first.y) || 1;
   const tangent = { x: (second.x - first.x) / edgeLength, y: (second.y - first.y) / edgeLength };
-  const sign = { x: midpoint.x + outward.x * 39, y: midpoint.y + outward.y * 39 };
-  const attachBase = { x: sign.x - outward.x * 13, y: sign.y - outward.y * 13 };
+  const clearance = Math.abs(outward.x) * metrics.width / 2 + Math.abs(outward.y) * metrics.height / 2;
+  const distance = clearance + 34;
+  const sign = { x: midpoint.x + outward.x * distance, y: midpoint.y + outward.y * distance };
+  const attachBase = { x: sign.x - outward.x * clearance, y: sign.y - outward.y * clearance };
 
   return {
     first,

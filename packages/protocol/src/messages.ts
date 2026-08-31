@@ -1,4 +1,4 @@
-import type { RoomView } from "./views.js";
+import type { RoomSettingsInput, RoomView } from "./views.js";
 
 export interface CreateRoomRequest {
   readonly playerName: string;
@@ -19,11 +19,9 @@ export interface StartRoomRequest {
   readonly seatToken: string;
 }
 
-export interface UpdateRoomSettingsRequest {
+export interface UpdateRoomSettingsRequest extends RoomSettingsInput {
   readonly seatToken: string;
   readonly expectedRevision: number;
-  readonly playerLimit: number;
-  readonly victoryPointsToWin: number;
 }
 
 export interface RerollRoomMapRequest {

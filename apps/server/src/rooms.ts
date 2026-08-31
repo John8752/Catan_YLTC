@@ -19,6 +19,7 @@ import {
   projectGameForPlayer,
   type PlayerSessionResponse,
   type RoomView,
+  type RoomSettingsInput,
 } from "@catan/protocol";
 import { normalizePlayerName, RoomError } from "./room-errors.js";
 import { TurnTimerManager, type TurnTimerExpiry } from "./turn-timer.js";
@@ -36,11 +37,7 @@ interface RoomRecord {
   seed: number;
   revision: number;
   readonly members: RoomMember[];
-  settings: {
-    readonly ruleProfile: PlayableRuleProfile;
-    readonly playerLimit: 3 | 4 | 5 | 6;
-    readonly victoryPointsToWin: number;
-  };
+  settings: RoomSettingsInput;
   game: GameState | null;
   /** Keys of commands already applied, so a client retry is not replayed. */
   readonly appliedCommands: Set<string>;
@@ -81,7 +78,7 @@ export class RoomRegistry {
       seed: this.createSeed(),
       revision: 1,
       members: [{ id: playerId, seatToken, name, color: PLAYER_COLORS[0] }],
-      settings: { ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN },
+      settings: { ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN, bankCountsPublic: true },
       game: null,
       appliedCommands: new Set(),
       history: [],
@@ -140,6 +137,7 @@ export class RoomRegistry {
       readonly ruleProfile: PlayableRuleProfile;
       readonly playerLimit: 3 | 4 | 5 | 6;
       readonly victoryPointsToWin: number;
+      readonly bankCountsPublic?: boolean | undefined;
     },
   ): RoomView {
     const room = this.requireConfigurableRoom(roomId, seatToken, expectedRevision);
@@ -168,6 +166,7 @@ export class RoomRegistry {
       ruleProfile: settings.ruleProfile,
       playerLimit: settings.playerLimit,
       victoryPointsToWin: settings.victoryPointsToWin,
+      bankCountsPublic: settings.bankCountsPublic ?? room.settings.bankCountsPublic,
     };
     room.revision += 1;
     this.notify(room);
@@ -421,13 +420,14 @@ export class RoomRegistry {
         playerLimit: room.settings.playerLimit,
         victoryPointsToWin: room.settings.victoryPointsToWin,
         mapSeed: room.seed,
+        bankCountsPublic: room.settings.bankCountsPublic,
       },
       previewMap: room.game === null
         ? getRuleProfileDefinition(room.settings.ruleProfile).createMap(room.seed)
         : null,
       game: room.game === null
         ? null
-        : projectGameForPlayer(room.game, viewerId, room.history, this.turnTimers.view(room.id)),
+        : projectGameForPlayer(room.game, viewerId, room.history, this.turnTimers.view(room.id), room.settings),
     };
   }
 

@@ -91,6 +91,7 @@ describe("room API", () => {
       playerLimit: 4,
       victoryPointsToWin: 10,
       mapSeed: 111,
+      bankCountsPublic: true,
     });
     expect(host.room.previewMap?.hexes).toHaveLength(19);
 

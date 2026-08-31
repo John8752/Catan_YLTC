@@ -5,7 +5,7 @@ import type {
   LeaveRoomResponse,
   PlayerSessionResponse,
   RoomServerMessage,
-  RoomSettingsView,
+  RoomSettingsInput,
   RoomView,
 } from "@catan/protocol";
 import { randomId } from "./lib/random-id.js";
@@ -48,7 +48,7 @@ export async function startRoom(session: PlayerSession): Promise<RoomView> {
 export async function updateRoomSettings(
   session: PlayerSession,
   expectedRevision: number,
-  settings: Pick<RoomSettingsView, "ruleProfile" | "playerLimit" | "victoryPointsToWin">,
+  settings: RoomSettingsInput,
 ): Promise<RoomView> {
   return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}/settings`, {
     method: "PATCH",

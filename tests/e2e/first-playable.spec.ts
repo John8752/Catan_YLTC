@@ -60,17 +60,26 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await expect(host.getByRole("button", { name: "3 人", exact: true })).toHaveAttribute("aria-pressed", "true");
     await host.getByRole("combobox", { name: "获胜分数" }).selectOption("12");
     await expect(host.getByRole("combobox", { name: "获胜分数" })).toHaveValue("12");
+    await expect(host.getByRole("combobox", { name: "银行剩余数量" })).toHaveValue("public");
+    await host.getByRole("combobox", { name: "银行剩余数量" }).selectOption("hidden");
+    await expect(host.getByRole("combobox", { name: "银行剩余数量" })).toHaveValue("hidden");
 
     await joinRoom(second, "岚", roomCode ?? "");
     await joinRoom(third, "舟", roomCode ?? "");
     await expect(host.getByText("3/3")).toBeVisible();
     await expect(second.getByRole("combobox", { name: "获胜分数" })).toHaveValue("12");
     await expect(second.getByRole("combobox", { name: "获胜分数" })).toBeDisabled();
+    await expect(second.getByRole("combobox", { name: "银行剩余数量" })).toHaveValue("hidden");
+    await expect(second.getByRole("combobox", { name: "银行剩余数量" })).toBeDisabled();
     const artifactDir = path.join(process.cwd(), "output", "playwright");
     await mkdir(artifactDir, { recursive: true });
     await host.screenshot({ path: path.join(artifactDir, "e2e-lobby-settings.png"), fullPage: true });
     await host.getByRole("button", { name: "使用当前地图开局" }).click();
     await expect(host.getByRole("button", { name: "在这里放置定居点" }).first()).toBeVisible();
+    for (const page of pages) {
+      await expect(page.locator('[data-resource-source="bank"] [data-resource-card]')).toHaveCount(5);
+      await expect(page.locator('[data-resource-source="bank"] [data-resource-count]')).toHaveCount(0);
+    }
     await host.screenshot({ path: path.join(artifactDir, "e2e-setup-targets.png"), fullPage: true });
     let capturedResourceEffect = false;
 

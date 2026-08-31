@@ -1,4 +1,4 @@
-import type { RoomView } from "@catan/protocol";
+import type { RoomSettingsInput, RoomView } from "@catan/protocol";
 import type { ReactNode } from "react";
 import { Crown, LogOut, Route, Settings2, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge.js";
@@ -23,11 +23,7 @@ export interface RoomPanelProps {
   readonly connectionState: "connecting" | "live" | "offline";
   readonly busy: boolean;
   readonly onStart: () => void;
-  readonly onSettingsChange: (settings: {
-    ruleProfile: "base-3-4" | "extended-5-6";
-    playerLimit: 3 | 4 | 5 | 6;
-    victoryPointsToWin: number;
-  }) => void;
+  readonly onSettingsChange: (settings: RoomSettingsInput) => void;
   readonly onLeave: () => void | Promise<void>;
   readonly onAbandonSeat: () => void;
   readonly onOpenExtraSeat: (() => void) | null;
@@ -63,6 +59,12 @@ export function RoomPanel({
   const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 3;
   const canStart = isHost && room.members.length >= minimumPlayers && room.game === null;
   const playerLimits = room.settings.ruleProfile === "extended-5-6" ? ([5, 6] as const) : ([3, 4] as const);
+  const settings: RoomSettingsInput = {
+    ruleProfile: room.settings.ruleProfile,
+    playerLimit: room.settings.playerLimit,
+    victoryPointsToWin: room.settings.victoryPointsToWin,
+    bankCountsPublic: room.settings.bankCountsPublic,
+  };
 
   return (
     <aside className={cn("flex min-h-0 flex-col", !embedded && "lg:col-start-2 lg:row-span-3 lg:row-start-1", className)} aria-label="房间状态">
@@ -113,6 +115,7 @@ export function RoomPanel({
                         aria-pressed={room.settings.ruleProfile === ruleProfile}
                         disabled={!isHost || busy || (ruleProfile === "base-3-4" && room.members.length > 4)}
                         onClick={() => onSettingsChange({
+                          ...settings,
                           ruleProfile,
                           playerLimit,
                           victoryPointsToWin: room.settings.victoryPointsToWin,
@@ -140,6 +143,7 @@ export function RoomPanel({
                         aria-pressed={room.settings.playerLimit === playerLimit}
                         disabled={!isHost || busy || room.members.length > playerLimit}
                         onClick={() => onSettingsChange({
+                          ...settings,
                           ruleProfile: room.settings.ruleProfile,
                           playerLimit,
                           victoryPointsToWin: room.settings.victoryPointsToWin,
@@ -157,6 +161,7 @@ export function RoomPanel({
                     value={room.settings.victoryPointsToWin}
                     disabled={!isHost || busy}
                     onChange={(event) => onSettingsChange({
+                      ...settings,
                       ruleProfile: room.settings.ruleProfile,
                       playerLimit: room.settings.playerLimit,
                       victoryPointsToWin: Number(event.target.value),
@@ -165,6 +170,18 @@ export function RoomPanel({
                     {Array.from({ length: 11 }, (_, index) => index + 5).map((score) => (
                       <option key={score} value={score}>{score} 分</option>
                     ))}
+                  </select>
+                </SettingRow>
+                <SettingRow label="银行剩余数量">
+                  <select
+                    className="h-8 rounded-lg border border-[#695237]/20 bg-[#fffaf0]/80 px-2 text-sm font-bold text-[#29433d] focus-visible:ring-2 focus-visible:ring-[#37685d]/45 disabled:opacity-65"
+                    aria-label="银行剩余数量"
+                    value={room.settings.bankCountsPublic ? "public" : "hidden"}
+                    disabled={!isHost || busy}
+                    onChange={(event) => onSettingsChange({ ...settings, bankCountsPublic: event.target.value === "public" })}
+                  >
+                    <option value="public">公开</option>
+                    <option value="hidden">不公开</option>
                   </select>
                 </SettingRow>
               </div>

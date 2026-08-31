@@ -50,12 +50,14 @@ describe("lobby setup", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "3 人" }));
-    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 3, victoryPointsToWin: 10 });
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 3, victoryPointsToWin: 10, bankCountsPublic: true });
 
     fireEvent.change(screen.getByRole("combobox", { name: "获胜分数" }), { target: { value: "12" } });
-    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: 12 });
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: 12, bankCountsPublic: true });
     fireEvent.click(screen.getByRole("button", { name: "扩展 5–6" }));
-    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: 10 });
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: 10, bankCountsPublic: true });
+    fireEvent.change(screen.getByRole("combobox", { name: "银行剩余数量" }), { target: { value: "hidden" } });
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: 10, bankCountsPublic: false });
 
     fireEvent.click(screen.getByRole("button", { name: "离开房间" }));
     expect(screen.getByRole("dialog", { name: "确认离开房间？" }).textContent).toContain("房主将自动转交给 周");
@@ -80,6 +82,7 @@ describe("lobby setup", () => {
 
     expect((screen.getByRole("button", { name: "3 人" }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("combobox", { name: "获胜分数" }) as HTMLSelectElement).disabled).toBe(true);
+    expect((screen.getByRole("combobox", { name: "银行剩余数量" }) as HTMLSelectElement).disabled).toBe(true);
     expect(screen.getByText("由房主设置")).toBeTruthy();
   });
 });
@@ -98,6 +101,7 @@ function lobbyRoom(): RoomView {
       playerLimit: 4,
       victoryPointsToWin: 10,
       mapSeed: 77,
+      bankCountsPublic: true,
     },
     previewMap: createStandardMap(77),
     game: null,

@@ -7,6 +7,18 @@ import { ResourceCard, resourceLabel } from "./ResourceCard.js";
 
 afterEach(cleanup);
 
+it("keeps resource icons but exposes no stock when bank counts are hidden", () => {
+  const { container } = render(<BankSupply resources={null} />);
+  expect(container.querySelector('[data-resource-source="bank"]')).not.toBeNull();
+  expect(container.querySelectorAll('[data-resource-card]')).toHaveLength(5);
+  expect(container.querySelector('[data-resource-count]')).toBeNull();
+  for (const resource of RESOURCE_TYPES) {
+    const card = screen.getByLabelText(`银行${resourceLabel(resource)}，数量不公开`);
+    expect(card.textContent).toBe("");
+    expect(card.getAttribute("title")).toContain("数量不公开");
+  }
+});
+
 it.each([19, 24])("shows icon-only bank cards with accessible names and %i-stock counts", (stock) => {
   const resources = resourceAmounts({ brick: 0, lumber: stock, wool: stock, grain: stock, ore: stock });
   const { container } = render(<BankSupply resources={resources} />);

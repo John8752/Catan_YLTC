@@ -142,6 +142,7 @@ function roomView(state: GameState, viewerId: string, records: readonly GameEven
       playerLimit: 3,
       victoryPointsToWin: 10,
       mapSeed: state.seed,
+      bankCountsPublic: true,
     },
     previewMap: null,
     game: projectGameForPlayer(state, viewerId, records),

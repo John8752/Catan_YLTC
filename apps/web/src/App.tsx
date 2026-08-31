@@ -1,4 +1,4 @@
-import type { GameCommand, RoomView } from "@catan/protocol";
+import type { GameCommand, RoomSettingsInput, RoomView } from "@catan/protocol";
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -130,11 +130,7 @@ export function App() {
     await runBusy(async () => setRoom(await startRoom(session)));
   }
 
-  async function handleRoomSettingsChange(settings: {
-    ruleProfile: "base-3-4" | "extended-5-6";
-    playerLimit: 3 | 4 | 5 | 6;
-    victoryPointsToWin: number;
-  }) {
+  async function handleRoomSettingsChange(settings: RoomSettingsInput) {
     if (session === null || room === null || room.game !== null) return;
     await runBusy(async () => {
       try {

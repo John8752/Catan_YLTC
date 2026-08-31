@@ -65,7 +65,7 @@ export interface GameView {
   readonly players: readonly PublicPlayerView[];
   readonly phase: GamePhase;
   readonly lastRoll: readonly [number, number] | null;
-  readonly bankResources: ResourceHand;
+  readonly bankResources: ResourceHand | null;
   readonly you: PrivatePlayerView;
   readonly interaction: GameInteractionView;
   readonly openTrade: TradeOfferState | null;
@@ -163,7 +163,10 @@ export interface RoomSettingsView {
   readonly playerLimit: 3 | 4 | 5 | 6;
   readonly victoryPointsToWin: number;
   readonly mapSeed: number;
+  readonly bankCountsPublic: boolean;
 }
+
+export type RoomSettingsInput = Omit<RoomSettingsView, "mapSeed">;
 
 export interface RoomView {
   readonly id: string;
@@ -191,6 +194,7 @@ export function projectGameForPlayer(
   viewerId: string,
   eventRecords: readonly GameEventRecord[] = [],
   turnTimer: TurnTimerView | null = null,
+  visibility: Pick<RoomSettingsView, "bankCountsPublic"> = { bankCountsPublic: true },
 ): GameView {
   const viewer = state.players.find((player) => player.id === viewerId);
 
@@ -233,7 +237,7 @@ export function projectGameForPlayer(
     players,
     phase: state.phase,
     lastRoll: state.lastRoll,
-    bankResources: { ...state.bank },
+    bankResources: visibility.bankCountsPublic ? { ...state.bank } : null,
     you: {
       ...publicViewer,
       resources: { ...viewer.resources },

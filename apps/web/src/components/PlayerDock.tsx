@@ -1,5 +1,5 @@
 import { RESOURCE_TYPES, type ResourceHand, type ResourceType } from "@catan/game-core";
-import type { GameCommand, GameView } from "@catan/protocol";
+import { describeAction, type GameCommand, type GameView } from "@catan/protocol";
 import { Dices, Hammer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge.js";
@@ -11,6 +11,7 @@ import { TurnTimerBadge } from "./TurnTimerBadge.js";
 import { PlayerPublicStats } from "./PlayerPublicStats.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
 import { PlayerScoreBadge } from "./PlayerScoreBadge.js";
+import { cn } from "@/lib/utils.js";
 
 export interface PlayerDockProps {
   readonly game: GameView;
@@ -38,6 +39,7 @@ export function PlayerDock({
   const activeSelection = game.interaction.kind === "discard" ? discardSelection : null;
   const activeSelectionLabel = "准备弃掉";
   const ownTimer = game.turnTimer?.playerId === game.you.id ? game.turnTimer : null;
+  const prompt = describeAction(game.interaction);
 
   const addFromHand = (resource: ResourceType) => {
     if (activeSelection === null) return;
@@ -46,7 +48,11 @@ export function PlayerDock({
   };
 
   return (
-    <Card className="player-dock relative col-start-1 row-start-3 min-h-0 gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-2 shadow-2xl backdrop-blur-sm lg:row-start-2 lg:p-1.5">
+    <Card data-player-dock="true" data-action-attention={prompt?.tone ?? "none"} className={cn(
+      "player-dock relative col-start-1 row-start-3 min-h-0 gap-0 overflow-visible border-white/20 bg-[#f3e6c8]/96 p-2 shadow-2xl backdrop-blur-sm lg:row-start-2 lg:p-1.5",
+      prompt?.tone === "required" && "border-[#e49c96] bg-[#fce5e3] ring-2 ring-[#e49c96]/65",
+      prompt?.tone === "trade" && "border-[#a9c7c0] ring-1 ring-[#a9c7c0]/40",
+    )}>
       {ownTimer === null ? null : (
         <span className="absolute bottom-[calc(100%+.75rem)] left-5 z-30" data-turn-timer-slot="self">
           <TurnTimerBadge timer={ownTimer} className="px-2 py-1 text-xs" />
@@ -99,7 +105,9 @@ export function PlayerDock({
 
         <section className="col-span-2 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1.5 md:col-span-1 md:col-start-2 md:row-span-3 md:row-start-1 md:max-h-[min(28dvh,13rem)] md:overflow-y-auto lg:py-1 xl:col-start-3 xl:row-span-2" aria-label="本回合操作">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-[10px] font-black tracking-[.12em] text-[#5d665f] uppercase lg:text-xs"><Hammer className="size-3.5" />本回合操作</span>
+            <span data-action-title="true" className={cn("flex min-w-0 items-center gap-1.5 text-xs font-black text-[#5d665f] lg:text-sm", prompt?.tone === "required" && "text-[#8c3f3a]")}>
+              <Hammer className="size-3.5 shrink-0" aria-hidden="true" />{prompt?.title ?? "本回合操作"}
+            </span>
             {game.lastRoll === null ? null : (
               <Badge
                 variant="secondary"

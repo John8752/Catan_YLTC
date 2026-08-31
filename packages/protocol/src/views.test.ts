@@ -57,7 +57,7 @@ describe("player-safe game projections", () => {
     // The tail is what players and the effect queue need; the oldest entries go.
     expect(view.history.at(-1)?.revision).toBe(overflow);
     expect(view.history.at(0)?.revision).toBe(oldestKept);
-    expect(view.effects).toHaveLength(MAX_PROJECTED_EVENT_RECORDS);
+    expect(view.effects.filter((effect) => effect.kind !== "action-attention")).toHaveLength(MAX_PROJECTED_EVENT_RECORDS);
     expect(view.effects.at(0)?.revision).toBe(oldestKept);
   });
 
@@ -472,7 +472,7 @@ describe("player-safe game projections", () => {
       },
     }] satisfies GameEventRecord[];
 
-    expect(projectGameForPlayer(game, "player_1", records).effects).toEqual([
+    expect(projectGameForPlayer(game, "player_1", records).effects.filter((effect) => effect.kind !== "action-attention")).toEqual([
       expect.objectContaining({ triggeredHexIds: ["hex_unclaimed"], grants: [] }),
     ]);
   });

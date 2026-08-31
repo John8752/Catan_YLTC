@@ -1,4 +1,4 @@
-import type { GameCommand, GameView } from "@catan/protocol";
+import type { ActionAttentionEffectView, GameCommand, GameView } from "@catan/protocol";
 import type { KeyboardEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
@@ -23,10 +23,12 @@ import {
 } from "./BoardMap.js";
 import { ConstructionTargets } from "./ConstructionTargets.js";
 import { BankSupply } from "./BankSupply.js";
+import { ActionAttentionBanner } from "@/effects/ActionAttentionBanner.js";
 
 export interface BoardProps {
   readonly game: GameView;
   readonly bankSupply?: ReactNode;
+  readonly actionNotice?: ActionAttentionEffectView | null;
   readonly busy?: boolean;
   readonly onCommand?: (command: GameCommand) => void;
   readonly buildMode?: "road" | "settlement" | "city" | null;
@@ -37,6 +39,7 @@ export interface BoardProps {
 export function Board({
   game,
   bankSupply = <BankSupply resources={game.bankResources} />,
+  actionNotice = null,
   busy = false,
   onCommand,
   buildMode = null,
@@ -64,7 +67,7 @@ export function Board({
         {bankSupply}
         <span className="phase-chip">{phaseLabel(game)}</span>
       </div>
-
+      <ActionAttentionBanner notice={actionNotice} />
       <div className="board-stage" {...viewport.viewportProps}>
         <div className="board-transform" style={viewport.transformStyle}>
           <svg

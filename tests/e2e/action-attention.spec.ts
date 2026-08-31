@@ -38,10 +38,38 @@ async function openScenario(browser: Browser, width: number, height: number, red
 }
 
 for (const [width, height] of [[360, 640], [390, 844], [960, 540], [1920, 1021]] as const) {
-  test(`robber remains clear of number tokens at ${width}x${height}`, async ({ browser }) => {
+  test(`turn attention stays clear of the board at ${width}x${height}`, async ({ browser }) => {
     const run = await openScenario(browser, width, height);
     const { page } = run;
     try {
+      await expect(page.locator('[data-action-attention="none"]')).toHaveCount(1);
+      await expect(page.locator('[data-resource-source="bank"] [data-resource-count]')).toHaveCount(0);
+      await expect(page.locator('[data-resource-source="bank"] [data-resource-card]')).toHaveCount(5);
+      const zoom = page.getByRole("button", { name: "放大地图", exact: true });
+      await zoom.focus();
+      run.push(scenario(2, turn("roll")));
+      await expect(page.locator('[data-action-title]')).toHaveText("轮到你了 · 请掷骰子");
+      await expect(page.locator('[data-action-attention="required"]')).toHaveCount(1);
+      await expect(page.locator('[data-action-notice]')).toHaveText("轮到你了");
+      await expect(zoom).toBeFocused();
+      const bounds = await page.evaluate(() => {
+        const stage = document.querySelector('.board-stage')!.getBoundingClientRect();
+        const banner = document.querySelector('[data-action-notice]')!.getBoundingClientRect();
+        return { clear: banner.bottom <= stage.top, overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
+          pointer: getComputedStyle(document.querySelector('[data-attention-slot]')!).pointerEvents };
+      });
+      expect(bounds).toEqual({ clear: true, overflow: false, pointer: "none" });
+      await mkdir("output/playwright", { recursive: true });
+      await page.screenshot({ path: `output/playwright/turn-attention-${width}.png`, fullPage: true });
+      run.push(scenario(2, turn("roll")));
+      run.push(scenario(3, turn("action")));
+      await expect(page.locator('[data-action-notice]')).toHaveCount(0, { timeout: 2_500 });
+      await expect(page.locator('[data-action-attention="required"]')).toHaveCount(1);
+      run.push(scenario(4, turn("action")));
+      await expect(page.locator('[data-action-notice]')).toHaveCount(0);
+      run.push(scenario(5, turn("action", "p2")));
+      await expect(page.locator('[data-action-attention="none"]')).toHaveCount(1);
+
       const robberBounds = await page.evaluate((hexId) => {
         const pawn = document.querySelector('[data-robber-piece]')!.getBoundingClientRect();
         const tile = document.querySelector(`[data-hex-id="${hexId}"] .hex-surface`)!.getBoundingClientRect();
@@ -59,3 +87,39 @@ for (const [width, height] of [[360, 640], [390, 844], [960, 540], [1920, 1021]]
     } finally { await run.context.close(); }
   });
 }
+
+test("mandatory actions, paired actions and incoming trades have distinct prompts without replay on reload", async ({ browser }) => {
+  const run = await openScenario(browser, 390, 844, "reduce");
+  const { page } = run;
+  try {
+    const setupPhase = base.phase;
+    if (setupPhase.kind !== "setup") throw new Error("Expected setup");
+    run.push(scenario(2, setupPhase));
+    await expect(page.locator('[data-action-title]')).toContainText("初始摆放 · 请放置定居点");
+    await expect(page.locator('[data-action-notice]')).toHaveText("轮到你摆放了");
+    expect(await page.locator('[data-action-notice]').evaluate((element) => element.getAnimations().length)).toBe(0);
+    run.push(scenario(3, { ...setupPhase, step: "road", settlementVertexId: base.map.vertices[0]!.id }));
+    await expect(page.locator('[data-action-title]')).toContainText("初始摆放 · 请放置道路");
+    await expect(page.locator('[data-action-notice]')).toHaveCount(0, { timeout: 2_500 });
+    run.push(scenario(4, turn("discard", "p2"), { pendingDiscards: [{ playerId: "p1", count: 2 }] }));
+    await expect(page.locator('[data-action-title]')).toHaveText("需要你弃牌 · 请选择 2 张");
+    await expect(page.locator('[data-action-notice]')).toHaveText("请弃掉 2 张资源");
+    run.push(scenario(5, turn("discard", "p2")));
+    await expect(page.locator('[data-action-attention="none"]')).toHaveCount(1);
+    await expect(page.locator('[data-action-notice]')).toHaveCount(0);
+    run.push(scenario(6, turn("robber")));
+    await expect(page.locator('[data-action-title]')).toHaveText("需要你操作 · 请移动强盗");
+    run.push(scenario(7, turn("paired-action")));
+    await expect(page.locator('[data-action-notice]')).toHaveText("轮到你进行搭档行动");
+    await expect(page.locator('[data-action-title]')).toContainText("搭档行动");
+    run.push(scenario(8, turn("action", "p2"), { openTrade: {
+      offerId: "offer", proposerId: "p2", give: resourceAmounts({ brick: 1 }), receive: resourceAmounts({ wool: 1 }), responses: [],
+    } }));
+    await expect(page.locator('[data-action-attention="trade"]')).toHaveCount(1);
+    await expect(page.locator('[data-action-notice]')).toHaveText("收到一份交易报价");
+    await page.reload();
+    await expect(page.locator('[data-action-attention="trade"]')).toHaveCount(1);
+    await expect(page.locator('[data-action-notice]')).toHaveCount(0);
+    expect(run.errors).toEqual([]);
+  } finally { await run.context.close(); }
+});

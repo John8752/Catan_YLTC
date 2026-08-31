@@ -28,9 +28,13 @@ The same queue now projects three additional effect families:
 - score gains after setup carry only the public reason and delta, except that a newly bought hidden victory-point card is projected only to its owner;
 - robber movement records both the authoritative source and destination hex so the pawn can travel for two seconds without the browser reconstructing the prior snapshot.
 
-Resource travel also uses a two-second path. The canonical state still updates immediately; the effect is presentation feedback and never a lock on subsequent rule processing. Setup settlements intentionally do not emit score feedback, avoiding six repetitive score overlays before normal play begins.
+Current-action attention is a separate, player-safe effect in `GameView.effects`. It describes only the viewer's current authoritative interaction, not historical rewards. The protocol supplies a stable opportunity ID across roll/action and settlement/road transitions. Mandatory resolutions and incoming offers have their own IDs and copy. A dedicated immediate lane deduplicates these IDs so a queued resource animation cannot delay a roll reminder; historical reward effects continue through the existing queue. Initial loads and the first socket snapshot after reconnect establish a baseline without replaying notices.
+
+Persistent dock emphasis follows the projected interaction. The one-time notice lasts 1.5 seconds in a reserved strip above the map, with no pointer interception or focus change. Required actions use a pale coral-red surface, soft red border, dark red heading and a single brief brightness cue; incoming trades use a quieter treatment. Reduced-motion users retain the static text without the brightness animation. No audio is added.
 
 Robber travel resolves semantic `data-robber-anchor` points at the same upper-left offset as the settled pawn, keeping both the stationary piece and its arrival clear of the central number token.
+
+Resource travel also uses a two-second path. The canonical state still updates immediately; the effect is presentation feedback and never a lock on subsequent rule processing. Setup settlements intentionally do not emit score feedback, avoiding six repetitive score overlays before normal play begins.
 
 ## Boundaries
 

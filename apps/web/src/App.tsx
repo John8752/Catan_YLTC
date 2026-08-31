@@ -26,6 +26,7 @@ import { Welcome } from "./components/Welcome.js";
 import { ResourceEffectLayer } from "./effects/ResourceEffectLayer.js";
 import { DevelopmentEffectLayer, isDevelopmentEffect } from "./effects/DevelopmentEffectLayer.js";
 import { useGameEffectQueue } from "./effects/use-game-effect-queue.js";
+import { useActionAttention } from "./effects/use-action-attention.js";
 import {
   adoptLegacyTabSession,
   createPlayerSessionStore,
@@ -51,7 +52,9 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [buildMode, setBuildMode] = useState<"road" | "settlement" | "city" | null>(null);
   const [selectedRobberHexId, setSelectedRobberHexId] = useState<string | null>(null);
+  const [snapshotEpoch, setSnapshotEpoch] = useState(0);
   const { activeEffect, completeActiveEffect } = useGameEffectQueue(room?.game ?? null);
+  const actionNotice = useActionAttention(room?.game ?? null, snapshotEpoch, connectionState === "live");
 
   useEffect(() => {
     if (session === null) {
@@ -74,10 +77,15 @@ export function App() {
     const openSocket = () => {
       if (!active) return;
       setConnectionState("connecting");
+      let initialSnapshot = true;
       socket = connectToRoom(session, (message) => {
         if (!active) return;
 
         if (message.type === "room_state") {
+          if (initialSnapshot) {
+            setSnapshotEpoch((epoch) => epoch + 1);
+            initialSnapshot = false;
+          }
           setRoom(message.room);
           setError(null);
         } else {
@@ -269,6 +277,7 @@ export function App() {
           <>
             <Board
               game={room.game}
+              actionNotice={actionNotice}
               bankSupply={bankInSidebar ? null : bankSupply}
               busy={busy}
               buildMode={buildMode}

@@ -30,6 +30,7 @@ import {
 import { projectPlayerSafeEffect, type PublicGameEffectView } from "./game-effects.js";
 import { projectGameSummary, type GameSummaryView } from "./game-summary.js";
 import type { TurnTimerView } from "./turn-timer.js";
+import { projectActionAttention } from "./action-attention.js";
 
 export interface PublicPlayerView {
   readonly id: string;
@@ -224,6 +225,7 @@ export function projectGameForPlayer(
     eventRecords.length > MAX_PROJECTED_EVENT_RECORDS
       ? eventRecords.slice(-MAX_PROJECTED_EVENT_RECORDS)
       : eventRecords;
+  const interaction = projectInteraction(state, viewerId);
 
   return {
     id: state.id,
@@ -246,13 +248,13 @@ export function projectGameForPlayer(
       ) as Record<ResourceType, 2 | 3 | 4>,
       developmentCards: viewer.developmentCards.map((card) => ({ ...card })),
     },
-    interaction: projectInteraction(state, viewerId),
+    interaction,
     openTrade: state.openTrade,
     developmentDeckCount: state.developmentDeck.length,
     developmentCardPlayedThisTurn: state.developmentCardPlayedThisTurn,
     awards: state.awards,
     history: recentRecords.flatMap((record) => projectHistoryRecord(state, viewerId, record)),
-    effects: recentRecords.flatMap((record) => projectPlayerSafeEffect(record, viewerId)),
+    effects: [...recentRecords.flatMap((record) => projectPlayerSafeEffect(record, viewerId)), ...projectActionAttention(state, viewerId, interaction, eventRecords)],
     summary: projectGameSummary(state, eventRecords),
     turnTimer,
   };

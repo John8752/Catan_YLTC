@@ -6,8 +6,10 @@ import {
   type ResourceHand,
   type ResourceType,
 } from "@catan/game-core";
+import type { ActionAttentionEffectView } from "./action-attention.js";
 
 export type PublicGameEffectView =
+  | ActionAttentionEffectView
   | PublicResourceGrantEffectView
   | PrivateResourceTransferEffectView
   | PublicResourceSpendEffectView

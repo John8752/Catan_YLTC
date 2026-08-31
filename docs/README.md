@@ -13,5 +13,6 @@ Read documents in this order:
 9. [Development workflow](./development-workflow.md)
 10. [Architecture decisions](./adr/README.md)
 11. [Deployment manual](./deployment.md)
+12. [Adaptive game surface validation](./validation/adaptive-game-surface.md)
 
 Rule behavior belongs in `docs/rules`. Long-lived technical decisions belong in `docs/adr`. A feature that changes both should update both in the same change.

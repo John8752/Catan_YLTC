@@ -52,6 +52,20 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     expect(roomCode).toMatch(/^[A-Z0-9]{6}$/);
 
     await expect(host.getByRole("img", { name: "由十九块六边形地形组成的开局地图预览" })).toBeVisible();
+    // The lobby sits in a slot that clips instead of scrolling, so the map has to
+    // fit what it is given. When it sized itself instead, everything under it --
+    // the production read and the zoom controls -- was pushed out of reach.
+    expect(await host.evaluate(() => {
+      const within = (element: Element | null) => {
+        if (element === null) return "missing";
+        const bounds = element.getBoundingClientRect();
+        return bounds.top >= 0 && bounds.bottom <= innerHeight + 1;
+      };
+      return {
+        analysis: within(document.querySelector('[aria-label="地图产能分析"]')),
+        zoom: within(document.querySelector(".board-zoom-controls")),
+      };
+    })).toEqual({ analysis: true, zoom: true });
     const seedLabel = host.locator(".lobby-setup .eyebrow");
     const initialSeedLabel = await seedLabel.textContent();
     await host.getByRole("button", { name: "再次随机" }).click();

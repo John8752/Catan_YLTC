@@ -252,6 +252,19 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
    over the panel below it. */
 .lobby-setup .board-stage { overflow: hidden; border-radius: 1rem; }
 
+/* Bound the lobby's grid row.
+ *
+ * The row was auto-sized, so it grew to the height the board's aspect ratio
+ * asked for at full width, and the shell's `height: 100%` then resolved against
+ * that grown row -- the map pushed the fairness read and the zoom controls below
+ * a viewport that does not scroll, because `.game-layout` clips instead. Capping
+ * the row at the slot lets the stage's `flex: 1` actually shrink. The live
+ * playfield gets the same bound from its own `overflow-hidden`.
+ */
+@media (min-width: 1024px) {
+  .playfield:not(.live-playfield) { min-height: 0; overflow: hidden; grid-template-rows: minmax(0, 1fr); }
+}
+
 @media (max-width: 640px) {
   .board-zoom-controls { right: .35rem; bottom: .35rem; gap: .15rem; }
   .board-zoom-level { display: none; }

@@ -72,9 +72,22 @@ for (const viewport of [
       });
 
       await run.page.getByRole("button", { name: "AI 解说" }).click();
+      // Opening costs nothing; every paid call is one explicit press of 生成.
+      expect(requests).toEqual([]);
+      await run.page.getByRole("button", { name: "生成", exact: true }).click();
       await expect(run.page.getByText("布局验收手里的资源很热闹，桌上的道路却还在等第一铲土。")).toBeVisible();
-      await run.page.getByRole("button", { name: "预测走势" }).click();
+
+      await run.page.getByRole("radio", { name: "预测走势" }).click();
+      await run.page.getByRole("button", { name: "生成", exact: true }).click();
       await expect(run.page.getByText("下一轮最长道路会成为争夺焦点，但骰子仍然有自己的想法。")).toBeVisible();
+
+      // Appended, not replaced: the earlier read is still on screen, and above the new one.
+      await expect(run.page.getByRole("log", { name: "AI 解说记录" }).getByRole("listitem")).toHaveCount(2);
+      expect(await run.page.getByRole("log", { name: "AI 解说记录" }).getByRole("listitem").allInnerTexts())
+        .toEqual([
+          expect.stringContaining("布局验收手里的资源很热闹"),
+          expect.stringContaining("下一轮最长道路会成为争夺焦点"),
+        ]);
 
       expect(requests).toEqual([
         { seatToken: "test", expectedRevision: 40, mode: "commentary" },

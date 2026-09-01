@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { requestAiCommentary, type PlayerSession } from "@/api.js";
 import { AiCommentaryControl } from "./AiCommentaryControl.js";
@@ -18,34 +18,80 @@ const players = [
 
 beforeEach(() => {
   vi.mocked(requestAiCommentary).mockReset();
+  // jsdom has no layout, so the log's scroll-to-newest call needs a stub.
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
 afterEach(() => cleanup());
 
-it("generates a commentary on the first click and lets the player switch modes", async () => {
-  vi.mocked(requestAiCommentary)
-    .mockResolvedValueOnce({ mode: "commentary", revision: 12, content: "港口已经闻到矿石的味道了。" })
-    .mockResolvedValueOnce({ mode: "prediction", revision: 12, content: "下一轮大概率会围绕最长道路较劲。" });
+it("waits for the generate button instead of spending a call on open", async () => {
+  vi.mocked(requestAiCommentary).mockResolvedValue({ mode: "commentary", revision: 12, content: "港口已经闻到矿石的味道了。" });
   render(<AiCommentaryControl session={session} revision={12} setupAnalysis={null} players={players} />);
 
   fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
-  expect(await screen.findByText("港口已经闻到矿石的味道了。")).toBeTruthy();
-  expect(requestAiCommentary).toHaveBeenNthCalledWith(1, session, 12, "commentary");
+  expect(await screen.findByRole("dialog")).toBeTruthy();
+  expect(requestAiCommentary).not.toHaveBeenCalled();
 
-  fireEvent.click(screen.getByRole("button", { name: "预测走势" }));
-  expect(await screen.findByText("下一轮大概率会围绕最长道路较劲。")).toBeTruthy();
-  expect(requestAiCommentary).toHaveBeenNthCalledWith(2, session, 12, "prediction");
+  fireEvent.click(screen.getByRole("button", { name: /生成/ }));
+  expect(await screen.findByText("港口已经闻到矿石的味道了。")).toBeTruthy();
+  expect(requestAiCommentary).toHaveBeenCalledWith(session, 12, "commentary");
 });
 
-it("marks a completed result when the board has moved on", async () => {
+it("appends each result under the last one and keeps them when the dialog is reopened", async () => {
+  vi.mocked(requestAiCommentary)
+    .mockResolvedValueOnce({ mode: "commentary", revision: 12, content: "第一条解说。" })
+    .mockResolvedValueOnce({ mode: "prediction", revision: 12, content: "第二条解说。" });
+  render(<AiCommentaryControl session={session} revision={12} setupAnalysis={null} players={players} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
+  fireEvent.click(screen.getByRole("button", { name: /生成/ }));
+  expect(await screen.findByText("第一条解说。")).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("radio", { name: "预测走势" }));
+  fireEvent.click(screen.getByRole("button", { name: /生成/ }));
+  expect(await screen.findByText("第二条解说。")).toBeTruthy();
+  expect(requestAiCommentary).toHaveBeenNthCalledWith(2, session, 12, "prediction");
+
+  // Newest last, matching the public history's reading order.
+  const rows = within(screen.getByRole("log")).getAllByRole("listitem");
+  expect(rows.map((row) => row.textContent)).toEqual([
+    expect.stringContaining("第一条解说。"),
+    expect.stringContaining("第二条解说。"),
+  ]);
+
+  fireEvent.keyDown(document, { key: "Escape" });
+  fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
+  expect(await screen.findByText("第一条解说。")).toBeTruthy();
+  expect(screen.getByText("第二条解说。")).toBeTruthy();
+});
+
+it("breaks a result into one line per sentence", async () => {
+  vi.mocked(requestAiCommentary).mockResolvedValue({
+    mode: "summary",
+    revision: 12,
+    content: "林手里没砖。周已经修到第三条路了！陈还在等六点吗？",
+  });
+  render(<AiCommentaryControl session={session} revision={12} setupAnalysis={null} players={players} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
+  fireEvent.click(screen.getByRole("button", { name: /生成/ }));
+
+  expect(await screen.findByText("林手里没砖。")).toBeTruthy();
+  expect(screen.getByText("周已经修到第三条路了！")).toBeTruthy();
+  expect(screen.getByText("陈还在等六点吗？")).toBeTruthy();
+});
+
+it("marks only the entries the board has moved past", async () => {
   vi.mocked(requestAiCommentary).mockResolvedValue({ mode: "commentary", revision: 12, content: "刚才还是这个局面。" });
   const view = render(<AiCommentaryControl session={session} revision={12} setupAnalysis={null} players={players} />);
 
   fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
+  fireEvent.click(screen.getByRole("button", { name: /生成/ }));
   expect(await screen.findByText("刚才还是这个局面。")).toBeTruthy();
-  view.rerender(<AiCommentaryControl session={session} revision={13} setupAnalysis={null} players={players} />);
+  expect(screen.queryByText("棋局已推进，这段基于较早的局势")).toBeNull();
 
-  expect(screen.getByText("棋局已经继续推进，这段解说基于较早的局势。")).toBeTruthy();
+  view.rerender(<AiCommentaryControl session={session} revision={13} setupAnalysis={null} players={players} />);
+  expect(screen.getByText("棋局已推进，这段基于较早的局势")).toBeTruthy();
 });
 
 it("automatically opens one public comment per player when setup analysis finishes", async () => {

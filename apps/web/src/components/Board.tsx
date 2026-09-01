@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog.js";
-import { useBoardViewport } from "@/hooks/use-board-viewport.js";
+import { DEFAULT_BOARD_SCALE, useBoardViewport } from "@/hooks/use-board-viewport.js";
 import {
   axialToPixel,
   BOARD_HEX_SIZE,
@@ -23,10 +23,9 @@ import {
 } from "./BoardMap.js";
 import { ConstructionTargets } from "./ConstructionTargets.js";
 import { BankSupply } from "./BankSupply.js";
+import { BoardZoomControls } from "./BoardZoomControls.js";
 import { ActionAttentionBanner } from "@/effects/ActionAttentionBanner.js";
 import { TurnForecastBar } from "./TurnForecastBar.js";
-
-const DEFAULT_BOARD_SCALE = 1.08;
 
 export interface BoardProps {
   readonly game: GameView;
@@ -261,6 +260,7 @@ export function Board({
           />
           </svg>
         </div>
+        <BoardZoomControls {...viewport.zoom} />
       </div>
       {compact || infoHost !== null ? null : <div className="board-footer relative flex shrink-0 items-center justify-between gap-2">
         <p className="board-instruction flex-1" aria-live="polite">{boardInstruction(game, buildMode)}</p>

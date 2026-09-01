@@ -1,7 +1,9 @@
 import type { RoomView } from "@catan/protocol";
 import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
+import { DEFAULT_BOARD_SCALE, useBoardViewport } from "@/hooks/use-board-viewport.js";
 import { boardViewBox, BoardPorts, BoardTerrain } from "./BoardMap.js";
+import { BoardZoomControls } from "./BoardZoomControls.js";
 import { MapAnalysisPanel } from "./MapAnalysisPanel.js";
 
 export interface LobbySetupProps {
@@ -12,6 +14,10 @@ export interface LobbySetupProps {
 }
 
 export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
+  // Hooks run before the guard below: the preview map is absent for exactly the
+  // renders where the game has started, and bailing out first would change the
+  // hook order between those two states.
+  const viewport = useBoardViewport(DEFAULT_BOARD_SCALE);
   if (room.previewMap === null) return null;
 
   return (
@@ -35,23 +41,26 @@ export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
         ) : <span className="phase-chip">等待房主确认</span>}
       </div>
 
-      <div className="board-stage">
-        <svg
-          className="board-svg"
-          viewBox={boardViewBox(room.previewMap)}
-          role="img"
-          aria-label={room.previewMap.hexes.length === 19
-            ? "由十九块六边形地形组成的开局地图预览"
-            : "由三十块六边形地形组成的开局地图预览"}
-        >
-          <defs>
-            <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">
-              <feDropShadow dx="0" dy="5" stdDeviation="4" floodOpacity="0.22" />
-            </filter>
-          </defs>
-          <BoardTerrain map={room.previewMap} />
-          <BoardPorts map={room.previewMap} />
-        </svg>
+      <div className="board-stage" {...viewport.viewportProps}>
+        <div className="board-transform" style={viewport.transformStyle}>
+          <svg
+            className="board-svg"
+            viewBox={boardViewBox(room.previewMap)}
+            role="img"
+            aria-label={room.previewMap.hexes.length === 19
+              ? "由十九块六边形地形组成的开局地图预览"
+              : "由三十块六边形地形组成的开局地图预览"}
+          >
+            <defs>
+              <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">
+                <feDropShadow dx="0" dy="5" stdDeviation="4" floodOpacity="0.22" />
+              </filter>
+            </defs>
+            <BoardTerrain map={room.previewMap} />
+            <BoardPorts map={room.previewMap} />
+          </svg>
+        </div>
+        <BoardZoomControls {...viewport.zoom} />
       </div>
       <MapAnalysisPanel map={room.previewMap} />
       <p className="board-instruction">

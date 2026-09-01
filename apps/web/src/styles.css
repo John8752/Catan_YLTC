@@ -223,6 +223,39 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   will-change: transform;
 }
 .board-stage:active .board-transform { transition: none; }
+
+/* Bottom-right of the stage, above the board and outside the pan transform so it
+   stays put while the map moves under it. */
+.board-zoom-controls {
+  position: absolute;
+  right: .5rem;
+  bottom: .5rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .25rem;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  background: rgba(11,42,44,.62);
+  backdrop-filter: blur(6px);
+  cursor: default;
+}
+.board-zoom-level {
+  min-width: 2.9rem;
+  text-align: center;
+  font-size: .68rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255,249,232,.78);
+}
+/* The lobby stage has no clipping of its own, so a zoomed preview would spill
+   over the panel below it. */
+.lobby-setup .board-stage { overflow: hidden; border-radius: 1rem; }
+
+@media (max-width: 640px) {
+  .board-zoom-controls { right: .35rem; bottom: .35rem; gap: .15rem; }
+  .board-zoom-level { display: none; }
+}
 .game-info-sheet,
 .trade-composer-sheet {
   top: auto;

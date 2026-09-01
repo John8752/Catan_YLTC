@@ -2,6 +2,12 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, ty
 
 const PAN_LIMIT = 160;
 const KEYBOARD_PAN_STEP = 32;
+const MIN_SCALE = 1;
+const MAX_SCALE = 2.6;
+const SCALE_STEP = 0.2;
+
+/** Resting zoom: slightly past fit, so the board owns its stage instead of floating in it. */
+export const DEFAULT_BOARD_SCALE = 1.08;
 
 interface Point {
   readonly x: number;
@@ -15,15 +21,26 @@ interface GestureStart {
 
 const CENTER: Point = { x: 0, y: 0 };
 
-export function useBoardViewport(scale = 1) {
+export function useBoardViewport(defaultScale = 1) {
+  const [scale, setScale] = useState(defaultScale);
   const [view, setView] = useState<Point>(CENTER);
   const pointers = useRef(new Map<number, Point>());
   const gesture = useRef<GestureStart | null>(null);
   const suppressClick = useRef(false);
 
-  useEffect(() => setView(CENTER), [scale]);
+  useEffect(() => {
+    setScale(defaultScale);
+    setView(CENTER);
+  }, [defaultScale]);
 
-  const reset = () => setView(CENTER);
+  // Zooming out shrinks the room a pan can use, so clamp rather than recenter:
+  // yanking the board back to the middle on every zoom step loses the player's place.
+  useEffect(() => setView((current) => boundedPoint(current, scale)), [scale]);
+
+  const reset = () => {
+    setScale(defaultScale);
+    setView(CENTER);
+  };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 && event.pointerType === "mouse") return;
@@ -78,7 +95,18 @@ export function useBoardViewport(scale = 1) {
     }
   };
 
+  const zoomTo = (next: number) => setScale(Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(next.toFixed(2)))));
+
   return {
+    zoom: {
+      scale,
+      zoomIn: () => zoomTo(scale + SCALE_STEP),
+      zoomOut: () => zoomTo(scale - SCALE_STEP),
+      reset,
+      canZoomIn: scale < MAX_SCALE,
+      canZoomOut: scale > MIN_SCALE,
+      isDefault: scale === defaultScale && view.x === 0 && view.y === 0,
+    },
     transformStyle: {
       "--board-pan-x": `${view.x}px`,
       "--board-pan-y": `${view.y}px`,
@@ -108,7 +136,10 @@ function gestureFromPointers(pointers: ReadonlyMap<number, Point>, view: Point):
 }
 
 function boundedPoint(view: Point, scale: number): Point {
-  const maxOffset = scale > 1 ? PAN_LIMIT : 0;
+  // At scale 1 the whole board already fits, so panning would only push it off
+  // screen. Past that the slack grows with the zoom, or the far corners of a
+  // magnified board stay out of reach.
+  const maxOffset = scale > 1 ? PAN_LIMIT * scale : 0;
   return {
     x: maxOffset === 0 ? 0 : Math.min(maxOffset, Math.max(-maxOffset, view.x)),
     y: maxOffset === 0 ? 0 : Math.min(maxOffset, Math.max(-maxOffset, view.y)),

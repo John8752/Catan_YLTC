@@ -62,11 +62,9 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
       await expect(page.locator('[data-turn-queue-self="true"]')).toHaveAttribute("data-turn-queue-player", "p1");
       const forecastArtifact = name.includes("iPhone 16 portrait browser-area")
         ? "iphone-16-portrait"
-        : name.includes("iPhone 16 landscape browser-area")
-          ? "iphone-16-landscape"
-          : width === 1920
-            ? "desktop"
-            : null;
+        : width === 1920
+          ? "desktop"
+          : null;
       if (forecastArtifact !== null) {
         await mkdir("output/playwright", { recursive: true });
         await page.screenshot({

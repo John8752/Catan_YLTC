@@ -5,7 +5,6 @@ import { primaryPhoneCases } from "./viewport-cases.js";
 
 const focusedSetupTipViewports = [
   "iPhone 16 portrait browser-area @primary-phone",
-  "iPhone 16 landscape browser-area @primary-phone",
 ] as const;
 
 for (const viewportName of focusedSetupTipViewports) {

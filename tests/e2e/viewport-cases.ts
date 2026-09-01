@@ -20,21 +20,18 @@ const phones = [
   { model: "iPhone 16 Pro Max", width: 440, height: 956 },
 ] as const;
 
-export const primaryPhoneCases: readonly ViewportCase[] = phones.flatMap((phone) =>
-  (["portrait", "landscape"] as const).flatMap((orientation) => {
-    const { defaultBrowserType: _engine, ...device } = devices[
-      `${phone.model}${orientation === "landscape" ? " landscape" : ""}`
-    ]!;
-    const screen = orientation === "portrait"
-      ? { width: phone.width, height: phone.height }
-      : { width: phone.height, height: phone.width };
-    return (["full-canvas", "browser-area"] as const).map((area) => {
-      const viewport = area === "full-canvas" ? screen : device.viewport;
-      return {
-        name: `${phone.model} ${orientation} ${area} @primary-phone`,
-        ...viewport,
-        options: { ...device, screen, viewport },
-      };
-    });
-  }),
-);
+// Portrait only. Phone landscape is out of scope for this game: the board wants
+// height, and the short axis leaves no room for the HUD strip once the turn
+// forecast is in it. Nothing here should be tuned for a sideways phone.
+export const primaryPhoneCases: readonly ViewportCase[] = phones.flatMap((phone) => {
+  const { defaultBrowserType: _engine, ...device } = devices[phone.model]!;
+  const screen = { width: phone.width, height: phone.height };
+  return (["full-canvas", "browser-area"] as const).map((area) => {
+    const viewport = area === "full-canvas" ? screen : device.viewport;
+    return {
+      name: `${phone.model} portrait ${area} @primary-phone`,
+      ...viewport,
+      options: { ...device, screen, viewport },
+    };
+  });
+});

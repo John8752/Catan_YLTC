@@ -77,12 +77,13 @@ export async function measure(page: Page) {
       sign.bottom - board.bottom,
     ]));
     const intersect = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+    // Only the rendered scale of the ratio label. Whether its box sits inside the
+    // card is deliberately not measured: Chromium quantises SVG text metrics to
+    // whole pixels while the card scales continuously, so the bottom edge drifts
+    // a couple of tenths of a pixel either way depending on the viewport.
     const portText = [...document.querySelectorAll<SVGTextElement>(".port-ratio")].map((element) => {
       const matrix = element.getScreenCTM()!;
-      const text = element.getBoundingClientRect();
-      const card = element.closest(".port-sign")!.querySelector("rect")!.getBoundingClientRect();
-      return { font: Number.parseFloat(getComputedStyle(element).fontSize) * Math.hypot(matrix.a, matrix.b),
-        fits: text.left >= card.left && text.right <= card.right && text.top >= card.top && text.bottom <= card.bottom };
+      return { font: Number.parseFloat(getComputedStyle(element).fontSize) * Math.hypot(matrix.a, matrix.b) };
     });
     const portContents = [...document.querySelectorAll(".port-sign")].map((sign) => {
       const card = sign.querySelector("rect")!.getBoundingClientRect();

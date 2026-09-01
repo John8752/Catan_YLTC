@@ -94,7 +94,7 @@ it("marks only the entries the board has moved past", async () => {
   expect(screen.getByText("棋局已推进，这段基于较早的局势")).toBeTruthy();
 });
 
-it("automatically opens one public comment per player when setup analysis finishes", async () => {
+it("flags the finished setup read on the button instead of opening over the board", async () => {
   const view = render(<AiCommentaryControl
     session={session}
     revision={12}
@@ -120,11 +120,20 @@ it("automatically opens one public comment per player when setup analysis finish
     }}
   />);
 
+  // Nothing steals the screen: the board is still there for whoever is mid-turn.
+  expect(screen.queryByRole("dialog")).toBeNull();
+  const trigger = await screen.findByRole("button", { name: "AI 解说，开局点评已就绪" });
+
+  fireEvent.click(trigger);
   expect(await screen.findByRole("dialog")).toBeTruthy();
   expect(screen.getByText("点数扎实，资源面也很均衡。")).toBeTruthy();
   expect(screen.getByText("港口路线清晰，但前期需要耐心。")).toBeTruthy();
   expect(screen.getByText("娱乐性胜者预测 · 周")).toBeTruthy();
   expect(requestAiCommentary).not.toHaveBeenCalled();
+  // Reading it clears the flag. Checked after closing, because an open dialog
+  // hides the rest of the page from the accessibility tree.
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(await screen.findByRole("button", { name: "AI 解说" })).toBeTruthy();
 });
 
 it("reads the table's intent per player and sends a target to the board", async () => {

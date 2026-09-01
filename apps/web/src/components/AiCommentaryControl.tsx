@@ -63,11 +63,18 @@ export function AiCommentaryControl({ session, revision, turnNumber, setupAnalys
   const logEndRef = useRef<HTMLDivElement>(null);
   const previousSetupStatus = useRef<PublicSetupAnalysisView["status"] | null>(setupAnalysis?.status ?? null);
 
+  // The opening read lands the moment setup finishes, which is exactly when the
+  // first player is reaching for the dice. Opening the dialog for them put a
+  // modal over the board at that moment -- and, because a modal hides the rest
+  // of the page from assistive tech, over anything else reading the screen too.
+  // Flag it on the button instead and let whoever wants it open it.
+  const [unreadSetup, setUnreadSetup] = useState(false);
+
   useEffect(() => {
     const status = setupAnalysis?.status ?? null;
     if (previousSetupStatus.current === "loading" && status === "ready") {
       setActiveView("setup");
-      setOpen(true);
+      setUnreadSetup(true);
     }
     previousSetupStatus.current = status;
   }, [setupAnalysis]);
@@ -104,13 +111,24 @@ export function AiCommentaryControl({ session, revision, turnNumber, setupAnalys
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className="shrink-0"
+          className="relative shrink-0"
           size="sm"
           variant="secondary"
           disabled={loading}
-          onClick={() => setActiveView(setupAnalysis === null ? "log" : "setup")}
+          aria-label={unreadSetup ? "AI 解说，开局点评已就绪" : undefined}
+          onClick={() => {
+            setActiveView(setupAnalysis === null ? "log" : "setup");
+            setUnreadSetup(false);
+          }}
         >
           <Sparkles className="size-4" />AI 解说
+          {unreadSetup ? (
+            <span
+              className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[#c2553c] ring-2 ring-[#f8ecd2]"
+              data-ai-unread="true"
+              aria-hidden="true"
+            />
+          ) : null}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[calc(100dvh-1rem)] grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden border-[#f7e6bf]/30 bg-[#f8ecd2] p-4 text-[#263d39] sm:max-w-3xl sm:p-6">

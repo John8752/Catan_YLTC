@@ -29,6 +29,12 @@ for (const viewportName of focusedSetupTipViewports) {
         prediction: `${predictedWinner.name} 的公开选点组合略占优势，不过这只是娱乐性预测，骰子和交易仍会改变局面。`,
       } });
 
+      // The finished read is flagged on the button, not thrown over the board.
+      const trigger = run.page.getByRole("button", { name: "AI 解说，开局点评已就绪" });
+      await expect(trigger).toBeVisible();
+      await expect(run.page.getByRole("dialog")).toHaveCount(0);
+      await trigger.click();
+
       const dialog = run.page.getByRole("dialog");
       const tips = run.page.getByRole("region", { name: "公开开局点评" });
       await expect(dialog).toBeVisible();

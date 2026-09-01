@@ -19,6 +19,7 @@ async function openGame(browser: Browser, width: number, height: number, options
     members: state.players.map((player) => ({ id: player.id, name: player.name, color: player.color, isHost: player.id === "p1" })),
     settings: { ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: state.victoryPointsToWin, mapSeed: 42, bankCountsPublic: true },
     game: projectGameForPlayer(state, "p1", warnings.map((warning) => ({ revision: warning.revision, event: { type: "piece_built", playerId: warning.playerId, piece: "city", locationId: "fixture" } })), null, { bankCountsPublic: true }, warnings),
+    setupAnalysis: null,
   });
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce", ...options });
   await context.addInitScript(() => localStorage.setItem("catan-yltc-seat", JSON.stringify({ roomId: "VICTORY", playerId: "p1", seatToken: "fixture" })));

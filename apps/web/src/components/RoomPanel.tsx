@@ -28,6 +28,7 @@ export interface RoomPanelProps {
   readonly embedded?: boolean;
   readonly showPlayers?: boolean;
   readonly className?: string;
+  readonly headerAction?: ReactNode;
 }
 
 const PLAYER_COLORS = {
@@ -50,6 +51,7 @@ export function RoomPanel({
   embedded = false,
   showPlayers = true,
   className,
+  headerAction,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
   const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 3;
@@ -71,13 +73,16 @@ export function RoomPanel({
               <p className={cn("mb-1 text-[11px] font-black tracking-[.18em] text-[var(--sidebar-muted,#aa543d)] uppercase", room.game !== null && "mb-0")}>房间码</p>
               <strong className={cn("room-code font-serif text-2xl tracking-[.16em] text-[var(--sidebar-ink,#163c3a)]", room.game !== null && "text-lg")}>{room.id}</strong>
             </div>
-            <Badge variant="outline" className="gap-1.5 border-[var(--sidebar-line,#386f6240)] bg-[var(--sidebar-soft,#ffffff59)] text-[var(--sidebar-muted,#37685d)]">
-              <span className={cn(
-                "size-2 rounded-full",
-                connectionState === "live" ? "bg-emerald-600" : connectionState === "connecting" ? "bg-amber-500" : "bg-stone-400",
-              )} />
-              {connectionState === "live" ? "实时" : connectionState === "connecting" ? "连接中" : "离线"}
-            </Badge>
+            <div className="flex items-center gap-1">
+              {headerAction}
+              <Badge variant="outline" className="gap-1.5 border-[var(--sidebar-line,#386f6240)] bg-[var(--sidebar-soft,#ffffff59)] text-[var(--sidebar-muted,#37685d)]">
+                <span className={cn(
+                  "size-2 rounded-full",
+                  connectionState === "live" ? "bg-emerald-600" : connectionState === "connecting" ? "bg-amber-500" : "bg-stone-400",
+                )} />
+                {connectionState === "live" ? "实时" : connectionState === "connecting" ? "连接中" : "离线"}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
 

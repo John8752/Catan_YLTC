@@ -38,6 +38,21 @@ export interface LeaveRoomResponse {
   readonly newHostPlayerId: string | null;
 }
 
+export const AI_COMMENTARY_MODES = ["commentary", "summary", "prediction"] as const;
+export type AiCommentaryMode = (typeof AI_COMMENTARY_MODES)[number];
+
+export interface AiCommentaryRequest {
+  readonly seatToken: string;
+  readonly expectedRevision: number;
+  readonly mode: AiCommentaryMode;
+}
+
+export interface AiCommentaryResponse {
+  readonly mode: AiCommentaryMode;
+  readonly revision: number;
+  readonly content: string;
+}
+
 export type RoomServerMessage =
   | {
       readonly type: "room_state";

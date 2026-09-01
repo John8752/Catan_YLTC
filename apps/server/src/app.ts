@@ -7,6 +7,8 @@ import Fastify, {
   type FastifyServerOptions,
 } from "fastify";
 import { z } from "zod";
+import { AI_COMMENTARY_MODES } from "@catan/protocol";
+import { AiCommentaryUpstreamError, type AiCommentator } from "./ai-commentary.js";
 import { RoomError } from "./room-errors.js";
 import { RoomRegistry } from "./rooms.js";
 
@@ -15,6 +17,7 @@ export const DEFAULT_IDLE_ROOM_TTL_MS = 60 * 60 * 1000;
 export const DEFAULT_ROOM_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
 /** Room creation is the only unbounded allocation a stranger can trigger. */
 export const DEFAULT_ROOM_CREATIONS_PER_MINUTE = 10;
+export const DEFAULT_AI_REQUESTS_PER_MINUTE = 6;
 
 export interface AppOptions {
   readonly logger?: FastifyServerOptions["logger"];
@@ -22,6 +25,8 @@ export interface AppOptions {
   readonly idleRoomTtlMs?: number;
   readonly roomSweepIntervalMs?: number;
   readonly roomCreationsPerMinute?: number;
+  readonly aiRequestsPerMinute?: number;
+  readonly aiCommentator?: AiCommentator | null;
 }
 
 const playerNameSchema = z.object({
@@ -118,7 +123,15 @@ const gameCommandSchema = z.object({
   ]),
 });
 
-export async function buildApp(registry = new RoomRegistry(), options: AppOptions = {}) {
+const aiCommentarySchema = z.object({
+  seatToken: z.string().min(1),
+  expectedRevision: z.number().int().positive(),
+  mode: z.enum(AI_COMMENTARY_MODES),
+});
+
+export async function buildApp(registry: RoomRegistry | undefined = undefined, options: AppOptions = {}) {
+  registry ??= new RoomRegistry();
+  if (options.aiCommentator !== undefined) registry.configureAiCommentator(options.aiCommentator);
   const idleRoomTtlMs = options.idleRoomTtlMs ?? DEFAULT_IDLE_ROOM_TTL_MS;
   const roomSweepIntervalMs = options.roomSweepIntervalMs ?? DEFAULT_ROOM_SWEEP_INTERVAL_MS;
   const app = Fastify({
@@ -303,6 +316,41 @@ export async function buildApp(registry = new RoomRegistry(), options: AppOption
     }
   });
 
+  app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/ai-commentary", {
+    config: {
+      rateLimit: {
+        max: options.aiRequestsPerMinute ?? DEFAULT_AI_REQUESTS_PER_MINUTE,
+        timeWindow: "1 minute",
+        groupId: "ai-commentary",
+        errorResponseBuilder: () =>
+          Object.assign(new Error("AI 解说请求太频繁，请稍后再试"), { statusCode: 429 }),
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const body = aiCommentarySchema.parse(request.body);
+      const room = registry.getRoom(request.params.roomId, body.seatToken);
+      if (room.game === null) {
+        return sendApiError(reply, 400, "AI_GAME_NOT_STARTED", "开局后才能请 AI 解说");
+      }
+      if (room.game.revision !== body.expectedRevision) {
+        return sendApiError(reply, 409, "STALE_REVISION", "游戏状态已更新，请重新分析");
+      }
+      if (options.aiCommentator === null || options.aiCommentator === undefined) {
+        return sendApiError(reply, 503, "AI_NOT_CONFIGURED", "AI 解说暂未配置");
+      }
+
+      const mode = body.mode;
+      const content = await options.aiCommentator.analyze(room, mode);
+      return reply.code(200).send({ mode, revision: room.game.revision, content });
+    } catch (error) {
+      if (error instanceof AiCommentaryUpstreamError) {
+        return sendApiError(reply, 502, "AI_UPSTREAM_ERROR", error.message);
+      }
+      return sendError(reply, error);
+    }
+  });
+
   app.get<{ Querystring: { roomId?: string; seatToken?: string } }>(
     "/ws",
     { websocket: true },
@@ -345,6 +393,11 @@ function sendError(reply: FastifyReply, error: unknown) {
 
   rejectionCodes.set(reply, normalized.code);
   return reply.code(statusCode).send({ error: normalized });
+}
+
+function sendApiError(reply: FastifyReply, statusCode: number, code: string, message: string) {
+  rejectionCodes.set(reply, code);
+  return reply.code(statusCode).send({ error: { code, message } });
 }
 
 function normalizeError(error: unknown): { code: string; message: string } {

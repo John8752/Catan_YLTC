@@ -23,6 +23,8 @@ Resource cards are finite. Production and resource-choice effects cannot take ca
 
 Players place two settlements and two roads in the same forward-then-reverse snake order used by the base profile. The second settlement grants one available resource from every adjacent producing hex.
 
+The optional public setup analysis follows the same presentation-only contract as `base-3-4`: one comment per player and one entertainment-only winner prediction, generated from public setup facts without delaying play or entering deterministic game state.
+
 ## Paired-player turn
 
 The profile uses the revised paired-player turn instead of the retired special build phase.

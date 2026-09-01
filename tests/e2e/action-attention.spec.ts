@@ -17,6 +17,7 @@ function scenario(revision: number, phase: GameState["phase"], extra: Partial<Ga
     members: base.players.map((p) => ({ id: p.id, name: p.name, color: p.color, isHost: p.id === "p1" })),
     settings: { ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: 10, mapSeed: base.seed, bankCountsPublic: false },
     game: projectGameForPlayer(state, "p1", [], null, { bankCountsPublic: false }),
+    setupAnalysis: null,
   };
 }
 const turn = (step: Extract<GameState["phase"], { kind: "turn" }>["step"], activePlayerId = "p1", turnNumber = 1): GameState["phase"] => ({

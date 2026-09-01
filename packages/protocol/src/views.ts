@@ -168,6 +168,32 @@ export interface RoomSettingsView {
   readonly bankCountsPublic: boolean;
 }
 
+export interface PublicSetupPlayerCommentView {
+  readonly playerId: string;
+  readonly comment: string;
+}
+
+export interface PublicSetupAnalysisContent {
+  readonly playerComments: readonly PublicSetupPlayerCommentView[];
+  readonly predictedWinnerId: string;
+  readonly prediction: string;
+}
+
+export type PublicSetupAnalysisView =
+  | {
+      readonly status: "loading";
+      readonly sourceRevision: number;
+    }
+  | ({
+      readonly status: "ready";
+      readonly sourceRevision: number;
+    } & PublicSetupAnalysisContent)
+  | {
+      readonly status: "failed";
+      readonly sourceRevision: number;
+      readonly message: string;
+    };
+
 export type RoomSettingsInput = Omit<RoomSettingsView, "mapSeed">;
 
 export interface RoomView {
@@ -178,6 +204,7 @@ export interface RoomView {
   readonly settings: RoomSettingsView;
   readonly previewMap: GameMap | null;
   readonly game: GameView | null;
+  readonly setupAnalysis: PublicSetupAnalysisView | null;
 }
 
 /**

@@ -24,6 +24,8 @@ Environment=NODE_ENV=production
 Environment=HOST=127.0.0.1
 Environment=PORT=8787
 Environment=LOG_LEVEL=info
+# Put DEEPSEEK_API_KEY in this root-owned file; never commit it or bake it into the web build.
+EnvironmentFile=-/etc/catan/catan.env
 # Rooms with no connected socket are collected after this many minutes (default 60).
 #Environment=ROOM_IDLE_TTL_MINUTES=60
 # Per-IP cap on room creation, the only unbounded allocation a stranger can trigger.
@@ -32,6 +34,8 @@ Environment=LOG_LEVEL=info
 # is what makes the cap above per-player instead of per-site. Change only if another
 # proxy (CDN, load balancer) is placed in front of Caddy.
 #Environment=TRUST_PROXY=127.0.0.1
+# Maximum paid AI commentary requests per client IP per minute.
+#Environment=AI_REQUESTS_PER_MINUTE=6
 
 # tsup bundles the workspace packages into dist, so plain node runs the build.
 ExecStart=/usr/bin/node /opt/catan/apps/server/dist/index.js

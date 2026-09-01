@@ -63,6 +63,7 @@ Map topology is independent from map content. Vertices, edges, adjacency and coa
 - A setup road must be on an empty edge touching the settlement just placed in that setup step.
 - After a player's second settlement, the bank grants one resource for every adjacent producing terrain hex.
 - When setup finishes, the first player enters `awaiting-roll` for turn 1.
+- If server-side AI commentary is configured, setup completion starts one non-authoritative public analysis. It gives every seated player one short placement comment and an entertainment-only winner prediction using only public setup positions, number tokens, terrain, ports, turn order and the victory target. The result is identical for every seat, survives reconnects for the life of the room and never enters `game-core`, replay state or legality checks. Missing or failed AI commentary does not delay turn 1.
 
 ## Turn and production
 

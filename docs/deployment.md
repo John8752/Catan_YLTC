@@ -44,8 +44,23 @@ Caddy ──静态文件──▶ /opt/catan/apps/web/dist      （前端构建�
 | `TRUST_PROXY` | 不设置（默认 `127.0.0.1`） | 信任哪一跳的 `X-Forwarded-For`。**限流按客户端 IP 计数，靠这个才能拿到真实地址**；默认信任本机 Caddy，前面再加一层 CDN/LB 时才需要改 |
 | `ROOM_IDLE_TTL_MINUTES` | 不设置（默认 `60`） | 无人连接的房间闲置多久后被回收 |
 | `ROOM_CREATIONS_PER_MINUTE` | 不设置（默认 `10`） | 单 IP 每分钟建房上限 |
+| `DEEPSEEK_API_KEY` | 部署时设置 | DeepSeek 服务端密钥；不配置时游戏照常运行，AI 解说按钮会提示暂未配置 |
+| `DEEPSEEK_MODEL` | 不设置（默认 `deepseek-v4-flash`） | AI 解说使用的模型，可在模型升级时覆盖 |
+| `DEEPSEEK_BASE_URL` | 不设置（默认 `https://api.deepseek.com`） | DeepSeek OpenAI 兼容接口根地址 |
+| `AI_REQUESTS_PER_MINUTE` | 不设置（默认 `6`） | 每个客户端 IP 每分钟的付费 AI 解说请求上限 |
 
 `ROOM_*` 两个变量的默认值写在 `apps/server/src/app.ts` 顶部；`deploy/catan.service` 里以注释形式列出，需要时解注释即可。传入非正整数会让进程启动失败并打印变量名，不会静默回退。
+
+AI key 只交给 Node 服务，绝不能写成 `VITE_*` 变量或放进 `apps/web`。生产机可这样配置：
+
+```bash
+sudo install -d -m 750 -o root -g catan /etc/catan
+sudo install -m 640 -o root -g catan /dev/null /etc/catan/catan.env
+sudoedit /etc/catan/catan.env  # 在编辑器中写入 DEEPSEEK_API_KEY=真实密钥
+sudo systemctl restart catan
+```
+
+`deploy/catan.service` 通过 `EnvironmentFile` 读取该文件。AI 请求由服务端转发，浏览器收到的只有解说文本；密钥不会进入静态前端、网络响应或游戏状态。
 
 > **别把 `TRUST_PROXY` 关掉。** 关掉之后所有请求在服务端看来都来自 `127.0.0.1`（Caddy
 > 的地址），每分钟的建房配额就从"每人 10 个"变成"全站 10 个"，一个人手快就把其他人全

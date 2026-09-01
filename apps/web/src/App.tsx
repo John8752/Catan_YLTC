@@ -25,6 +25,7 @@ import { OpponentStrip } from "./components/OpponentStrip.js";
 import { PlayerDock } from "./components/PlayerDock.js";
 import { RoomPanel } from "./components/RoomPanel.js";
 import { ActiveTradePanel } from "./components/ActiveTradePanel.js";
+import { AiCommentaryControl } from "./components/AiCommentaryControl.js";
 import { Welcome } from "./components/Welcome.js";
 import { ResourceEffectLayer } from "./effects/ResourceEffectLayer.js";
 import { DevelopmentEffectLayer, isDevelopmentEffect } from "./effects/DevelopmentEffectLayer.js";
@@ -252,6 +253,12 @@ export function App() {
     room={room} playerId={session.playerId} connectionState={connectionState} busy={busy}
     onStart={handleStart} onSettingsChange={handleRoomSettingsChange} onLeave={handleLeave}
     embedded showPlayers={false} className="min-h-0 flex-1"
+    headerAction={liveGame === null ? null : <AiCommentaryControl
+      session={session}
+      revision={liveGame.revision}
+      setupAnalysis={room.setupAnalysis}
+      players={room.members}
+    />}
   />;
 
   return (

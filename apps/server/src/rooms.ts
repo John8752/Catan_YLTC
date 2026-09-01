@@ -22,7 +22,12 @@ import {
   type PlayerSessionResponse,
   type RoomView,
   type RoomSettingsInput,
+  type PublicSetupAnalysisView,
 } from "@catan/protocol";
+import {
+  buildPublicSetupAnalysisInput,
+  type AiCommentator,
+} from "./ai-commentary.js";
 import { normalizePlayerName, RoomError } from "./room-errors.js";
 import { TurnTimerManager, type TurnTimerExpiry } from "./turn-timer.js";
 
@@ -46,6 +51,7 @@ interface RoomRecord {
   readonly history: GameEventRecord[];
   /** Derived public milestones, bounded to three per seat; never game legality. */
   readonly victoryWarnings: VictoryWarningEffectView[];
+  publicSetupAnalysis: PublicSetupAnalysisView | null;
   lastActiveAt: number;
 }
 
@@ -62,13 +68,24 @@ export class RoomRegistry {
   private readonly nextSeed: () => number;
   private readonly now: () => number;
   private readonly turnTimers: TurnTimerManager;
+  private aiCommentator: AiCommentator | null;
+  private disposed = false;
 
   constructor(
-    options: { readonly nextSeed?: () => number; readonly now?: () => number } = {},
+    options: {
+      readonly nextSeed?: () => number;
+      readonly now?: () => number;
+      readonly aiCommentator?: AiCommentator | null;
+    } = {},
   ) {
     this.nextSeed = options.nextSeed ?? (() => randomInt(1, 2_147_483_647));
     this.now = options.now ?? (() => Date.now());
     this.turnTimers = new TurnTimerManager(this.now);
+    this.aiCommentator = options.aiCommentator ?? null;
+  }
+
+  configureAiCommentator(aiCommentator: AiCommentator | null): void {
+    this.aiCommentator = aiCommentator;
   }
 
   createRoom(playerName: string): PlayerSessionResponse {
@@ -87,6 +104,7 @@ export class RoomRegistry {
       appliedCommands: new Set(),
       history: [],
       victoryWarnings: [],
+      publicSetupAnalysis: null,
       lastActiveAt: this.now(),
     };
 
@@ -311,6 +329,9 @@ export class RoomRegistry {
     room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
     room.revision += 1;
     room.appliedCommands.add(cacheKey);
+    if (result.events.some((event) => event.type === "setup_completed")) {
+      this.startPublicSetupAnalysis(room);
+    }
     this.syncTurnTimer(room);
     const response: GameCommandResponse = {
       commandId,
@@ -341,6 +362,7 @@ export class RoomRegistry {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.turnTimers.dispose();
   }
 
@@ -434,7 +456,46 @@ export class RoomRegistry {
       game: room.game === null
         ? null
         : projectGameForPlayer(room.game, viewerId, room.history, this.turnTimers.view(room.id), room.settings, room.victoryWarnings),
+      setupAnalysis: room.publicSetupAnalysis,
     };
+  }
+
+  private startPublicSetupAnalysis(room: RoomRecord): void {
+    if (this.aiCommentator === null || room.game === null || room.publicSetupAnalysis !== null) return;
+
+    const input = buildPublicSetupAnalysisInput(this.projectRoom(room, room.hostPlayerId));
+    const sourceRevision = input.sourceRevision;
+    room.publicSetupAnalysis = { status: "loading", sourceRevision };
+    void this.aiCommentator.analyzeSetup(input).then(
+      (analysis) => this.finishPublicSetupAnalysis(room.id, sourceRevision, {
+        status: "ready",
+        sourceRevision,
+        ...analysis,
+      }),
+      () => this.finishPublicSetupAnalysis(room.id, sourceRevision, {
+        status: "failed",
+        sourceRevision,
+        message: "AI 开局点评暂时没有生成成功",
+      }),
+    );
+  }
+
+  private finishPublicSetupAnalysis(
+    roomId: string,
+    sourceRevision: number,
+    analysis: PublicSetupAnalysisView,
+  ): void {
+    if (this.disposed) return;
+    const room = this.rooms.get(roomId);
+    if (
+      room === undefined ||
+      room.publicSetupAnalysis?.status !== "loading" ||
+      room.publicSetupAnalysis.sourceRevision !== sourceRevision
+    ) return;
+
+    room.publicSetupAnalysis = analysis;
+    room.revision += 1;
+    this.notify(room);
   }
 
   private syncTurnTimer(room: RoomRecord): void {

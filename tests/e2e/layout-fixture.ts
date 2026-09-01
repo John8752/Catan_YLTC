@@ -32,6 +32,7 @@ export function fixture(count: 4 | 6, revision = 40, finished = false): RoomView
     members: seatedPlayers.map((p) => ({ ...p, isHost: p.id === "p1" })),
     settings: { ruleProfile: count === 6 ? "extended-5-6" : "base-3-4", playerLimit: count, victoryPointsToWin: 10, mapSeed: state.seed, bankCountsPublic: true },
     game: { ...projected, effects: [] },
+    setupAnalysis: null,
   };
 }
 

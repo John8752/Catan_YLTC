@@ -101,5 +101,6 @@ function lobbyRoom(): RoomView {
     },
     previewMap: createStandardMap(77),
     game: null,
+    setupAnalysis: null,
   };
 }

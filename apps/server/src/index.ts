@@ -1,12 +1,15 @@
 import {
   buildApp,
+  DEFAULT_AI_REQUESTS_PER_MINUTE,
   DEFAULT_IDLE_ROOM_TTL_MS,
   DEFAULT_ROOM_CREATIONS_PER_MINUTE,
 } from "./app.js";
+import { DeepSeekCommentator } from "./ai-commentary.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 const host = process.env.HOST ?? "0.0.0.0";
 const logLevel = process.env.LOG_LEVEL ?? "info";
+const deepSeekApiKey = process.env.DEEPSEEK_API_KEY?.trim();
 const app = await buildApp(undefined, {
   logger: { level: logLevel },
   // Caddy is the only thing that can reach this process, so its X-Forwarded-For
@@ -17,6 +20,14 @@ const app = await buildApp(undefined, {
     "ROOM_CREATIONS_PER_MINUTE",
     DEFAULT_ROOM_CREATIONS_PER_MINUTE,
   ),
+  aiRequestsPerMinute: readPositiveInt("AI_REQUESTS_PER_MINUTE", DEFAULT_AI_REQUESTS_PER_MINUTE),
+  aiCommentator: deepSeekApiKey === undefined || deepSeekApiKey.length === 0
+    ? null
+    : new DeepSeekCommentator({
+        apiKey: deepSeekApiKey,
+        ...(process.env.DEEPSEEK_MODEL === undefined ? {} : { model: process.env.DEEPSEEK_MODEL }),
+        ...(process.env.DEEPSEEK_BASE_URL === undefined ? {} : { baseUrl: process.env.DEEPSEEK_BASE_URL }),
+      }),
 });
 
 // systemd sends SIGTERM on restart/stop: close listeners and in-flight sockets

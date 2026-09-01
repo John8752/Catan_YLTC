@@ -146,5 +146,6 @@ function roomView(state: GameState, viewerId: string, records: readonly GameEven
     },
     previewMap: null,
     game: projectGameForPlayer(state, viewerId, records),
+    setupAnalysis: null,
   };
 }

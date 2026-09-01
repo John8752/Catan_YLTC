@@ -1,4 +1,6 @@
 import type {
+  AiCommentaryMode,
+  AiCommentaryResponse,
   ApiErrorResponse,
   GameCommand,
   GameCommandResponse,
@@ -90,6 +92,18 @@ export async function submitGameCommand(
       expectedRevision,
       command,
     }),
+  });
+}
+
+export async function requestAiCommentary(
+  session: PlayerSession,
+  expectedRevision: number,
+  mode: AiCommentaryMode,
+): Promise<AiCommentaryResponse> {
+  return request<AiCommentaryResponse>(`/api/rooms/${encodeURIComponent(session.roomId)}/ai-commentary`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ seatToken: session.seatToken, expectedRevision, mode }),
   });
 }
 

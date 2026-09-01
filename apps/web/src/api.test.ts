@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { ApiError, submitGameCommand, type PlayerSession } from "./api.js";
+import { ApiError, requestAiCommentary, submitGameCommand, type PlayerSession } from "./api.js";
 
 const session: PlayerSession = { roomId: "BAB434", playerId: "player_1", seatToken: "seat" };
 
@@ -31,4 +31,26 @@ it("keeps a stale revision distinguishable from a refused move", async () => {
   const caught = await submitGameCommand(session, 7, { type: "RollDice" }).catch((error: unknown) => error);
 
   expect((caught as ApiError).code).toBe("STALE_REVISION");
+});
+
+it("requests AI commentary through the server without exposing provider credentials", async () => {
+  let capturedUrl: string | URL | Request = "";
+  let capturedInit: RequestInit | undefined;
+  const fetchMock: typeof fetch = async (input, init) => {
+    capturedUrl = input;
+    capturedInit = init;
+    return new Response(JSON.stringify({
+      mode: "summary",
+      revision: 9,
+      content: "局势胶着。",
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  vi.stubGlobal("fetch", fetchMock);
+
+  await requestAiCommentary(session, 9, "summary");
+
+  expect(capturedUrl).toBe("/api/rooms/BAB434/ai-commentary");
+  expect(capturedInit).toMatchObject({ method: "POST" });
+  expect(String(capturedInit?.body)).toBe(JSON.stringify({ seatToken: "seat", expectedRevision: 9, mode: "summary" }));
+  expect(JSON.stringify(capturedInit?.headers)).not.toContain("deepseek");
 });

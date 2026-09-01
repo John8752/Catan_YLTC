@@ -9,21 +9,25 @@ export function ResponsiveRoomPanel(props: RoomPanelProps) {
 
   if (!compact) return <RoomPanel {...props} showPlayers={false} />;
 
+  const { headerAction, ...roomPanelProps } = props;
   const historyCount = props.room.game?.history.length ?? 0;
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button className="mobile-room-trigger shrink-0" size="sm" variant="secondary" aria-label={`打开公开记录与房间信息，共 ${historyCount} 条记录`}>
-          <Activity className="size-4" />记录
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="game-info-sheet h-[72dvh] max-h-[72dvh] max-w-none gap-0 overflow-hidden border-[#f7e6bf]/30 bg-[#f8ecd2] p-0 text-[#263d39]">
-        <DialogHeader className="sr-only">
-          <DialogTitle>公开记录与房间信息</DialogTitle>
-          <DialogDescription>查看本局公开事件和房间连接状态。</DialogDescription>
-        </DialogHeader>
-        <RoomPanel {...props} embedded showPlayers={false} />
-      </DialogContent>
-    </Dialog>
+    <div className="flex shrink-0 items-center gap-1">
+      {headerAction}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button className="mobile-room-trigger shrink-0" size="sm" variant="secondary" aria-label={`打开公开记录与房间信息，共 ${historyCount} 条记录`}>
+            <Activity className="size-4" />记录
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="game-info-sheet h-[72dvh] max-h-[72dvh] max-w-none gap-0 overflow-hidden border-[#f7e6bf]/30 bg-[#f8ecd2] p-0 text-[#263d39]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>公开记录与房间信息</DialogTitle>
+            <DialogDescription>查看本局公开事件和房间连接状态。</DialogDescription>
+          </DialogHeader>
+          <RoomPanel {...roomPanelProps} embedded showPlayers={false} />
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

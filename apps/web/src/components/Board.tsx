@@ -39,6 +39,8 @@ export interface BoardProps {
   readonly onCommand?: (command: GameCommand) => void;
   readonly buildMode?: "road" | "settlement" | "city" | null;
   readonly selectedRobberHexId?: string | null;
+  /** A spot the AI intent read pointed at, marked but never selectable. */
+  readonly intentFocusVertexId?: string | null;
   readonly onRobberHexSelect?: (hexId: string) => void;
 }
 
@@ -54,6 +56,7 @@ export function Board({
   onCommand,
   buildMode = null,
   selectedRobberHexId = null,
+  intentFocusVertexId = null,
   onRobberHexSelect,
 }: BoardProps) {
   const robberHex = game.map.hexes.find((hex) => hex.id === game.map.robberHexId);
@@ -180,6 +183,7 @@ export function Board({
               />
             ))}
           </g>
+          <IntentFocusMarker game={game} vertexId={intentFocusVertexId} />
           <ConstructionTargets
             game={game}
             busy={busy}
@@ -325,4 +329,33 @@ function phaseLabel(game: GameView): string {
   }
 
   return "对局结束";
+}
+
+/**
+ * A ring on the spot the AI intent read pointed at.
+ *
+ * Purely a pointer: it never takes clicks and never sits in the construction
+ * layers, so it cannot be mistaken for somewhere the current player may build.
+ * The label carries the road distance because "还差两条路" is the part that
+ * makes the mark mean something at a glance.
+ */
+function IntentFocusMarker({ game, vertexId }: {
+  readonly game: GameView;
+  readonly vertexId: string | null;
+}) {
+  if (vertexId === null) return null;
+  const vertex = game.map.vertices.find((candidate) => candidate.id === vertexId);
+  if (vertex === undefined) return null;
+
+  return (
+    <g
+      className="intent-focus"
+      data-intent-focus-vertex={vertexId}
+      transform={`translate(${vertex.x * BOARD_HEX_SIZE} ${vertex.y * BOARD_HEX_SIZE})`}
+      aria-hidden="true"
+    >
+      <circle className="intent-focus-ring" r="11" />
+      <circle className="intent-focus-dot" r="3.5" />
+    </g>
+  );
 }

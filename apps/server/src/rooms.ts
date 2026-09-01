@@ -60,6 +60,8 @@ interface RoomRecord {
   /** Derived public milestones, bounded to three per seat; never game legality. */
   readonly victoryWarnings: VictoryWarningEffectView[];
   publicSetupAnalysis: PublicSetupAnalysisView | null;
+  /** Per player, the turn number whose intent read they have already spent. */
+  readonly tableIntentTurns: Map<string, number>;
   lastActiveAt: number;
 }
 
@@ -114,6 +116,7 @@ export class RoomRegistry {
       history: [],
       victoryWarnings: [],
       publicSetupAnalysis: null,
+      tableIntentTurns: new Map(),
       lastActiveAt: this.now(),
     };
 
@@ -308,6 +311,31 @@ export class RoomRegistry {
     const room = this.requireRoom(roomId);
     const member = this.requireCredential(room, seatToken);
     return this.projectRoom(room, member.id);
+  }
+
+  /**
+   * Whether this seat may still ask what the table is planning this turn.
+   *
+   * Reading every opponent's next build is the strongest thing the commentator
+   * does, so it is rationed per turn rather than per minute: one look, then
+   * play. The allowance lives on the room record so it is discarded with the
+   * room instead of outliving it in a registry-wide map.
+   */
+  tableIntentAvailable(roomId: string, seatToken: string): boolean {
+    const room = this.requireRoom(roomId);
+    const member = this.requireCredential(room, seatToken);
+    const phase = room.game?.phase;
+    if (phase === undefined || phase.kind !== "turn") return false;
+    return room.tableIntentTurns.get(member.id) !== phase.turnNumber;
+  }
+
+  /** Spend the allowance, once the model has actually answered. */
+  recordTableIntentUse(roomId: string, seatToken: string): void {
+    const room = this.requireRoom(roomId);
+    const member = this.requireCredential(room, seatToken);
+    const phase = room.game?.phase;
+    if (phase === undefined || phase.kind !== "turn") return;
+    room.tableIntentTurns.set(member.id, phase.turnNumber);
   }
 
   executeCommand(

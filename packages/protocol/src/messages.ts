@@ -1,4 +1,4 @@
-import type { RoomSettingsInput, RoomView } from "./views.js";
+import type { RoomSettingsInput, RoomView, TableIntentContent } from "./views.js";
 
 export interface CreateRoomRequest {
   readonly playerName: string;
@@ -38,7 +38,7 @@ export interface LeaveRoomResponse {
   readonly newHostPlayerId: string | null;
 }
 
-export const AI_COMMENTARY_MODES = ["commentary", "summary", "prediction"] as const;
+export const AI_COMMENTARY_MODES = ["commentary", "summary", "prediction", "intent"] as const;
 export type AiCommentaryMode = (typeof AI_COMMENTARY_MODES)[number];
 
 export interface AiCommentaryRequest {
@@ -51,6 +51,8 @@ export interface AiCommentaryResponse {
   readonly mode: AiCommentaryMode;
   readonly revision: number;
   readonly content: string;
+  /** Present only for "intent", whose answer is per player rather than prose. */
+  readonly intent?: TableIntentContent;
 }
 
 export type RoomServerMessage =

@@ -26,7 +26,7 @@ afterEach(() => cleanup());
 
 it("waits for the generate button instead of spending a call on open", async () => {
   vi.mocked(requestAiCommentary).mockResolvedValue({ mode: "commentary", revision: 12, content: "港口已经闻到矿石的味道了。" });
-  render(<AiCommentaryControl session={session} revision={12} setupAnalysis={null} players={players} />);
+  render(<AiCommentaryControl session={session} revision={12} turnNumber={4} setupAnalysis={null} players={players} />);
 
   fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
   expect(await screen.findByRole("dialog")).toBeTruthy();
@@ -41,7 +41,7 @@ it("appends each result under the last one and keeps them when the dialog is reo
   vi.mocked(requestAiCommentary)
     .mockResolvedValueOnce({ mode: "commentary", revision: 12, content: "第一条解说。" })
     .mockResolvedValueOnce({ mode: "prediction", revision: 12, content: "第二条解说。" });
-  render(<AiCommentaryControl session={session} revision={12} setupAnalysis={null} players={players} />);
+  render(<AiCommentaryControl session={session} revision={12} turnNumber={4} setupAnalysis={null} players={players} />);
 
   fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
   fireEvent.click(screen.getByRole("button", { name: /生成/ }));
@@ -71,7 +71,7 @@ it("breaks a result into one line per sentence", async () => {
     revision: 12,
     content: "林手里没砖。周已经修到第三条路了！陈还在等六点吗？",
   });
-  render(<AiCommentaryControl session={session} revision={12} setupAnalysis={null} players={players} />);
+  render(<AiCommentaryControl session={session} revision={12} turnNumber={4} setupAnalysis={null} players={players} />);
 
   fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
   fireEvent.click(screen.getByRole("button", { name: /生成/ }));
@@ -83,14 +83,14 @@ it("breaks a result into one line per sentence", async () => {
 
 it("marks only the entries the board has moved past", async () => {
   vi.mocked(requestAiCommentary).mockResolvedValue({ mode: "commentary", revision: 12, content: "刚才还是这个局面。" });
-  const view = render(<AiCommentaryControl session={session} revision={12} setupAnalysis={null} players={players} />);
+  const view = render(<AiCommentaryControl session={session} revision={12} turnNumber={4} setupAnalysis={null} players={players} />);
 
   fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
   fireEvent.click(screen.getByRole("button", { name: /生成/ }));
   expect(await screen.findByText("刚才还是这个局面。")).toBeTruthy();
   expect(screen.queryByText("棋局已推进，这段基于较早的局势")).toBeNull();
 
-  view.rerender(<AiCommentaryControl session={session} revision={13} setupAnalysis={null} players={players} />);
+  view.rerender(<AiCommentaryControl session={session} revision={13} turnNumber={4} setupAnalysis={null} players={players} />);
   expect(screen.getByText("棋局已推进，这段基于较早的局势")).toBeTruthy();
 });
 
@@ -98,6 +98,7 @@ it("automatically opens one public comment per player when setup analysis finish
   const view = render(<AiCommentaryControl
     session={session}
     revision={12}
+    turnNumber={4}
     players={players}
     setupAnalysis={{ status: "loading", sourceRevision: 12 }}
   />);
@@ -105,6 +106,7 @@ it("automatically opens one public comment per player when setup analysis finish
   view.rerender(<AiCommentaryControl
     session={session}
     revision={13}
+    turnNumber={4}
     players={players}
     setupAnalysis={{
       status: "ready",
@@ -123,4 +125,63 @@ it("automatically opens one public comment per player when setup analysis finish
   expect(screen.getByText("港口路线清晰，但前期需要耐心。")).toBeTruthy();
   expect(screen.getByText("娱乐性胜者预测 · 周")).toBeTruthy();
   expect(requestAiCommentary).not.toHaveBeenCalled();
+});
+
+it("reads the table's intent per player and sends a target to the board", async () => {
+  vi.mocked(requestAiCommentary).mockResolvedValue({
+    mode: "intent",
+    revision: 12,
+    content: "两个人都在盯同一片麦地。",
+    intent: {
+      overview: "两个人都在盯同一片麦地。",
+      players: [
+        { playerId: "player_1", targetVertexId: "V12", roadsNeeded: 2, intent: "想把路修到那块 8 点麦地。", blocker: "手上没有砖的产出。" },
+        { playerId: "player_2", targetVertexId: null, roadsNeeded: null, intent: "更像是在攒发展卡。", blocker: "村庄棋子快用完了。" },
+      ],
+    },
+  });
+  const onFocusVertex = vi.fn();
+  render(<AiCommentaryControl
+    session={session}
+    revision={12}
+    turnNumber={4}
+    setupAnalysis={null}
+    players={players}
+    onFocusVertex={onFocusVertex}
+  />);
+
+  fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
+  fireEvent.click(screen.getByRole("radio", { name: "大家在惦记什么" }));
+  fireEvent.click(screen.getByRole("button", { name: /生成/ }));
+
+  expect(await screen.findByText("想把路修到那块 8 点麦地。")).toBeTruthy();
+  expect(screen.getByText("卡点 · 手上没有砖的产出。")).toBeTruthy();
+  expect(screen.getByText("更像是在攒发展卡。")).toBeTruthy();
+  // Only the seat with a server-offered site gets something to point at.
+  expect(screen.getAllByRole("button", { name: /还差 2 条路/ })).toHaveLength(1);
+
+  fireEvent.click(screen.getByRole("button", { name: /还差 2 条路/ }));
+  expect(onFocusVertex).toHaveBeenCalledWith("V12");
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("spends the intent read once per turn and opens it again on the next one", async () => {
+  vi.mocked(requestAiCommentary).mockResolvedValue({
+    mode: "intent",
+    revision: 12,
+    content: "看完了。",
+    intent: { overview: "看完了。", players: [] },
+  });
+  const view = render(<AiCommentaryControl session={session} revision={12} turnNumber={4} setupAnalysis={null} players={players} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "AI 解说" }));
+  fireEvent.click(screen.getByRole("radio", { name: "大家在惦记什么" }));
+  fireEvent.click(screen.getByRole("button", { name: /生成/ }));
+  expect(await screen.findByText("看完了。")).toBeTruthy();
+
+  expect(screen.getByRole("radio", { name: "大家在惦记什么" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.getByText("「大家在惦记什么」每回合只看一次，下个回合再来。")).toBeTruthy();
+
+  view.rerender(<AiCommentaryControl session={session} revision={13} turnNumber={5} setupAnalysis={null} players={players} />);
+  expect(screen.getByRole("radio", { name: "大家在惦记什么" }).hasAttribute("disabled")).toBe(false);
 });

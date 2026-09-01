@@ -188,6 +188,21 @@ export interface PublicSetupAnalysisContent {
   readonly prediction: string;
 }
 
+/** One player's read: where they look headed, and what is holding them up. */
+export interface TableIntentPlayerView {
+  readonly playerId: string;
+  /** A site the server offered as reachable, never one the model invented. */
+  readonly targetVertexId: string | null;
+  readonly roadsNeeded: number | null;
+  readonly intent: string;
+  readonly blocker: string;
+}
+
+export interface TableIntentContent {
+  readonly overview: string;
+  readonly players: readonly TableIntentPlayerView[];
+}
+
 export type PublicSetupAnalysisView =
   | {
       readonly status: "loading";

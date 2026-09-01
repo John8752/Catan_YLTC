@@ -10,7 +10,7 @@ it("generates one public setup analysis, broadcasts it to every seat, and retain
   const analyzeSetup = vi.fn<AiCommentator["analyzeSetup"]>(() => pending);
   const registry = new RoomRegistry({
     nextSeed: () => 404,
-    aiCommentator: { analyze: async () => "unused", analyzeSetup },
+    aiCommentator: { analyze: async () => "unused", analyzeSetup, analyzeIntent: unusedIntent },
   });
   const sessions = createStartedRoom(registry);
   const latest = new Map<string, RoomView>();
@@ -123,7 +123,7 @@ it("retries a transient failure instead of burning the room's only opening read"
     });
     const registry = new RoomRegistry({
       nextSeed: () => 404,
-      aiCommentator: { analyze: async () => "unused", analyzeSetup },
+      aiCommentator: { analyze: async () => "unused", analyzeSetup, analyzeIntent: unusedIntent },
     });
     const sessions = createStartedRoom(registry);
     let latest: RoomView | undefined;
@@ -158,7 +158,7 @@ it("settles on failed once the retry budget runs out, and stops there", async ()
     });
     const registry = new RoomRegistry({
       nextSeed: () => 404,
-      aiCommentator: { analyze: async () => "unused", analyzeSetup },
+      aiCommentator: { analyze: async () => "unused", analyzeSetup, analyzeIntent: unusedIntent },
     });
     const sessions = createStartedRoom(registry);
     let latest: RoomView | undefined;
@@ -189,3 +189,7 @@ it("settles on failed once the retry budget runs out, and stops there", async ()
     vi.useRealTimers();
   }
 });
+
+async function unusedIntent() {
+  return { overview: "unused", players: [] };
+}

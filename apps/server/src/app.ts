@@ -9,6 +9,7 @@ import Fastify, {
 import { z } from "zod";
 import { AI_COMMENTARY_MODES } from "@catan/protocol";
 import { AiCommentaryUpstreamError, type AiCommentator } from "./ai-commentary.js";
+import { buildTableIntentInput } from "./ai-intent.js";
 import { RoomError } from "./room-errors.js";
 import { RoomRegistry } from "./rooms.js";
 
@@ -341,6 +342,20 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
       }
 
       const mode = body.mode;
+      if (mode === "intent") {
+        if (room.game.phase.kind !== "turn") {
+          return sendApiError(reply, 400, "AI_INTENT_NOT_IN_TURN", "摆放阶段还读不出谁想去哪");
+        }
+        if (!registry.tableIntentAvailable(request.params.roomId, body.seatToken)) {
+          return sendApiError(reply, 429, "AI_INTENT_TURN_SPENT", "这回合的意图侦察已经用过了，下个回合再看");
+        }
+        // Built from public topology only and answered to this seat alone: the
+        // read never enters room state, so no one else learns what was asked.
+        const intent = await options.aiCommentator.analyzeIntent(buildTableIntentInput(room));
+        registry.recordTableIntentUse(request.params.roomId, body.seatToken);
+        return reply.code(200).send({ mode, revision: room.game.revision, content: intent.overview, intent });
+      }
+
       const content = await options.aiCommentator.analyze(room, mode);
       return reply.code(200).send({ mode, revision: room.game.revision, content });
     } catch (error) {

@@ -13,7 +13,7 @@ describe("AI commentary API", () => {
   it("authenticates the seat, binds the response to a revision, and returns the commentary", async () => {
     const { registry, host, room } = startedRoom();
     const analyze = vi.fn<AiCommentator["analyze"]>(async () => "领先不等于稳，七点还在桌边磨刀。");
-    const app = await buildApp(registry, { aiCommentator: { analyze, analyzeSetup: unusedSetupAnalysis } });
+    const app = await buildApp(registry, { aiCommentator: { analyze, analyzeSetup: unusedSetupAnalysis, analyzeIntent: unusedIntent } });
     apps.push(app);
 
     const response = await app.inject({
@@ -35,7 +35,7 @@ describe("AI commentary API", () => {
   it("does not spend an AI request on a stale game snapshot", async () => {
     const { registry, host, room } = startedRoom();
     const analyze = vi.fn<AiCommentator["analyze"]>(async () => "unused");
-    const app = await buildApp(registry, { aiCommentator: { analyze, analyzeSetup: unusedSetupAnalysis } });
+    const app = await buildApp(registry, { aiCommentator: { analyze, analyzeSetup: unusedSetupAnalysis, analyzeIntent: unusedIntent } });
     apps.push(app);
 
     const response = await app.inject({
@@ -52,7 +52,7 @@ describe("AI commentary API", () => {
   it("limits paid requests independently from ordinary game commands", async () => {
     const { registry, host, room } = startedRoom();
     const app = await buildApp(registry, {
-      aiCommentator: { analyze: async () => "ok", analyzeSetup: unusedSetupAnalysis },
+      aiCommentator: { analyze: async () => "ok", analyzeSetup: unusedSetupAnalysis, analyzeIntent: unusedIntent },
       aiRequestsPerMinute: 1,
     });
     apps.push(app);
@@ -80,4 +80,8 @@ function startedRoom() {
 
 async function unusedSetupAnalysis() {
   return { playerComments: [], predictedWinnerId: "unused", prediction: "unused" };
+}
+
+async function unusedIntent() {
+  return { overview: "unused", players: [] };
 }

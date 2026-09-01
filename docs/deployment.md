@@ -47,7 +47,7 @@ Caddy ──静态文件──▶ /opt/catan/apps/web/dist      （前端构建�
 | `DEEPSEEK_API_KEY` | 部署时设置 | DeepSeek 服务端密钥；不配置时游戏照常运行，AI 解说按钮会提示暂未配置 |
 | `DEEPSEEK_MODEL` | 不设置（默认 `deepseek-v4-flash`） | AI 解说使用的模型，可在模型升级时覆盖 |
 | `DEEPSEEK_BASE_URL` | 不设置（默认 `https://api.deepseek.com`） | DeepSeek OpenAI 兼容接口根地址 |
-| `AI_REQUESTS_PER_MINUTE` | 不设置（默认 `6`） | 每个客户端 IP 每分钟的付费 AI 解说请求上限 |
+| `AI_REQUESTS_PER_MINUTE` | 不设置（默认 `6`） | 每个客户端 IP 每分钟的付费 AI 解说请求上限。「大家在惦记什么」在此之上还有一层硬限制：每个座位每回合只能读一次，写在服务端，无法用变量放宽 |
 
 `ROOM_*` 两个变量的默认值写在 `apps/server/src/app.ts` 顶部；`deploy/catan.service` 里以注释形式列出，需要时解注释即可。传入非正整数会让进程启动失败并打印变量名，不会静默回退。
 

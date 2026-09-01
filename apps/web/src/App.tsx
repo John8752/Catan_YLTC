@@ -54,9 +54,17 @@ export function App() {
   const [buildMode, setBuildMode] = useState<"road" | "settlement" | "city" | null>(null);
   const [selectedRobberHexId, setSelectedRobberHexId] = useState<string | null>(null);
   const [snapshotEpoch, setSnapshotEpoch] = useState(0);
+  // Where the AI said someone is heading, parked here so the dialog can close
+  // and leave the board pointing at it.
+  const [intentFocusVertexId, setIntentFocusVertexId] = useState<string | null>(null);
   const { activeEffect, completeActiveEffect } = useGameEffectQueue(room?.game ?? null);
   const actionNotice = useActionAttention(room?.game ?? null, snapshotEpoch, connectionState === "live");
   const victoryNotice = useVictoryWarnings(room?.game ?? null, snapshotEpoch, connectionState === "live", actionNotice !== null);
+
+  // A read goes stale the moment anyone builds, so the marker does not outlive
+  // the position it was describing.
+  const boardRevision = room?.game?.revision ?? null;
+  useEffect(() => setIntentFocusVertexId(null), [boardRevision]);
 
   useEffect(() => {
     if (session === null) {
@@ -256,8 +264,10 @@ export function App() {
     headerAction={liveGame === null ? null : <AiCommentaryControl
       session={session}
       revision={liveGame.revision}
+      turnNumber={liveGame.phase.kind === "turn" ? liveGame.phase.turnNumber : null}
       setupAnalysis={room.setupAnalysis}
       players={room.members}
+      onFocusVertex={setIntentFocusVertexId}
     />}
   />;
 
@@ -291,6 +301,7 @@ export function App() {
               busy={busy}
               buildMode={buildMode}
               selectedRobberHexId={selectedRobberHexId}
+              intentFocusVertexId={intentFocusVertexId}
               onCommand={handleGameCommand}
               onRobberHexSelect={handleRobberHexSelect}
             />

@@ -677,3 +677,9 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   .resource-arrival-pop { display: none; }
   .robber-flight { display: none; }
 }
+
+.intent-focus { pointer-events: none; }
+.intent-focus-ring { fill: rgba(169,89,62,.16); stroke: #d3703f; stroke-width: 2.5; stroke-dasharray: 5 4; transform-box: fill-box; transform-origin: center; animation: intent-focus-pulse 1.6s ease-in-out infinite; }
+.intent-focus-dot { fill: #ffe9c9; stroke: #a9593e; stroke-width: 1.6; }
+@keyframes intent-focus-pulse { 0%,100% { transform: scale(1); opacity: .95; } 50% { transform: scale(1.18); opacity: .65; } }
+@media (prefers-reduced-motion: reduce) { .intent-focus-ring { animation: none; } }

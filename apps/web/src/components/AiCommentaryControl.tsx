@@ -3,8 +3,9 @@ import {
   type AiCommentaryMode,
   type PublicSetupAnalysisView,
   type RoomView,
+  type TableIntentContent,
 } from "@catan/protocol";
-import { BrainCircuit, RefreshCw, Sparkles, Trophy } from "lucide-react";
+import { BrainCircuit, Crosshair, RefreshCw, Sparkles, Trophy } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { requestAiCommentary, type PlayerSession } from "@/api.js";
 import { Button } from "@/components/ui/button.js";
@@ -22,6 +23,7 @@ const MODE_LABELS: Readonly<Record<AiCommentaryMode, string>> = {
   commentary: "吐槽一下",
   summary: "总结局势",
   prediction: "预测走势",
+  intent: "大家在惦记什么",
 };
 const MODES = AI_COMMENTARY_MODES.map((mode) => ({ mode, label: MODE_LABELS[mode] }));
 
@@ -32,13 +34,18 @@ interface CommentaryLogEntry {
   readonly mode: AiCommentaryMode;
   readonly revision: number;
   readonly content: string;
+  /** Only "intent" carries one; every other mode answers in prose. */
+  readonly intent: TableIntentContent | null;
 }
 
-export function AiCommentaryControl({ session, revision, setupAnalysis, players }: {
+export function AiCommentaryControl({ session, revision, turnNumber, setupAnalysis, players, onFocusVertex }: {
   readonly session: PlayerSession;
   readonly revision: number;
+  /** null outside a turn, where nobody has a next build to read yet. */
+  readonly turnNumber: number | null;
   readonly setupAnalysis: PublicSetupAnalysisView | null;
   readonly players: RoomView["members"];
+  readonly onFocusVertex?: (vertexId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,6 +55,10 @@ export function AiCommentaryControl({ session, revision, setupAnalysis, players 
   const [mode, setMode] = useState<AiCommentaryMode>("commentary");
   const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<CommentaryView>("log");
+  // The server rations the intent read to one per turn. This only mirrors that
+  // rule so the button can explain itself instead of spending a request on a
+  // refusal; the server stays the one that decides.
+  const [intentReadOnTurn, setIntentReadOnTurn] = useState<number | null>(null);
   const nextEntryId = useRef(1);
   const logEndRef = useRef<HTMLDivElement>(null);
   const previousSetupStatus = useRef<PublicSetupAnalysisView["status"] | null>(setupAnalysis?.status ?? null);
@@ -66,17 +77,21 @@ export function AiCommentaryControl({ session, revision, setupAnalysis, players 
     if (open && activeView === "log") logEndRef.current?.scrollIntoView({ block: "end" });
   }, [entries, open, activeView, loading]);
 
+  const intentAvailable = turnNumber !== null && intentReadOnTurn !== turnNumber;
+
   const analyze = async () => {
     setActiveView("log");
     setLoading(true);
     setError(null);
     try {
       const result = await requestAiCommentary(session, revision, mode);
+      if (result.mode === "intent") setIntentReadOnTurn(turnNumber);
       setEntries((current) => [...current, {
         id: nextEntryId.current++,
         mode: result.mode,
         revision: result.revision,
         content: result.content,
+        intent: result.intent ?? null,
       }]);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "AI 解说暂时没有回应");
@@ -133,9 +148,14 @@ export function AiCommentaryControl({ session, revision, setupAnalysis, players 
           : <CommentaryLog
               entries={entries}
               revision={revision}
+              players={players}
               loading={loading}
               error={error}
               endRef={logEndRef}
+              onFocusVertex={onFocusVertex === undefined ? undefined : (vertexId) => {
+                onFocusVertex(vertexId);
+                setOpen(false);
+              }}
             />}
 
         {activeView === "log" ? (
@@ -149,18 +169,21 @@ export function AiCommentaryControl({ session, revision, setupAnalysis, players 
                   role="radio"
                   aria-checked={mode === option.mode}
                   variant={mode === option.mode ? "secondary" : "ghost"}
-                  disabled={loading}
+                  disabled={loading || (option.mode === "intent" && !intentAvailable)}
                   onClick={() => setMode(option.mode)}
                 >
                   {option.label}
                 </Button>
               ))}
             </div>
+            {intentAvailable || turnNumber === null ? null : (
+              <p className="basis-full text-xs text-[#8a7a5c]">「大家在惦记什么」每回合只看一次，下个回合再来。</p>
+            )}
             <Button
               type="button"
               size="sm"
               className="ms-auto"
-              disabled={loading}
+              disabled={loading || (mode === "intent" && !intentAvailable)}
               onClick={() => void analyze()}
             >
               {loading ? <RefreshCw className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
@@ -173,12 +196,14 @@ export function AiCommentaryControl({ session, revision, setupAnalysis, players 
   );
 }
 
-function CommentaryLog({ entries, revision, loading, error, endRef }: {
+function CommentaryLog({ entries, revision, players, loading, error, endRef, onFocusVertex }: {
   readonly entries: readonly CommentaryLogEntry[];
   readonly revision: number;
+  readonly players: RoomView["members"];
   readonly loading: boolean;
   readonly error: string | null;
   readonly endRef: RefObject<HTMLDivElement | null>;
+  readonly onFocusVertex: ((vertexId: string) => void) | undefined;
 }) {
   return (
     <div
@@ -203,6 +228,9 @@ function CommentaryLog({ entries, revision, loading, error, endRef }: {
             {toSentences(entry.content).map((sentence, index) => (
               <p key={index}>{sentence}</p>
             ))}
+            {entry.intent === null ? null : (
+              <IntentReading intent={entry.intent} players={players} onFocusVertex={onFocusVertex} />
+            )}
           </li>
         ))}
       </ol>
@@ -231,6 +259,55 @@ function toSentences(content: string): readonly string[] {
     .map((sentence) => sentence.trim())
     .filter((sentence) => sentence.length > 0);
   return sentences.length === 0 ? [content] : sentences;
+}
+
+/**
+ * The intent read, one row per seat.
+ *
+ * A vertex id says nothing to a player, so the target is a button rather than
+ * text: tapping it closes the dialog and lights that corner of the board up,
+ * which is the only form in which "他想去这儿" is actually useful mid-turn.
+ * Rows without a target stay text -- the server drops any spot the model did
+ * not pick from its own offered list, and nothing invented gets to point at
+ * the board.
+ */
+function IntentReading({ intent, players, onFocusVertex }: {
+  readonly intent: TableIntentContent;
+  readonly players: RoomView["members"];
+  readonly onFocusVertex: ((vertexId: string) => void) | undefined;
+}) {
+  return (
+    <ul className="mt-2 space-y-2 border-t border-[#6d5434]/12 pt-2">
+      {intent.players.map((reading) => {
+        const player = players.find((candidate) => candidate.id === reading.playerId);
+        const target = reading.targetVertexId;
+        return (
+          <li key={reading.playerId} className="leading-6">
+            <strong className="flex flex-wrap items-center gap-2 text-[#263d39]">
+              {player === undefined ? null : <PlayerColorDot color={player.color} className="size-2.5" />}
+              {player?.name ?? "玩家"}
+              {target === null || onFocusVertex === undefined ? null : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-6 gap-1 px-2 text-xs font-normal"
+                  onClick={() => onFocusVertex(target)}
+                >
+                  <Crosshair className="size-3" />
+                  {reading.roadsNeeded === 0 ? "现在就能建" : `还差 ${reading.roadsNeeded ?? 0} 条路`}
+                </Button>
+              )}
+            </strong>
+            {toSentences(reading.intent).map((sentence, index) => (
+              <p key={index}>{sentence}</p>
+            ))}
+            <p className="text-[#7a6a4f]">卡点 · {reading.blocker}</p>
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 function PublicSetupAnalysis({ analysis, players }: {

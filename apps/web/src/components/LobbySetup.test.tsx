@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { createStandardMap } from "@catan/game-core";
-import type { RoomView } from "@catan/protocol";
+import { createBaseGame, createStandardMap } from "@catan/game-core";
+import { projectGameForPlayer, type RoomView } from "@catan/protocol";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LobbySetup } from "./LobbySetup.js";
@@ -43,7 +43,7 @@ describe("lobby setup", () => {
         busy={false}
         onStart={vi.fn()}
         onSettingsChange={onSettingsChange}
-        onLeave={onLeave}
+        onLeave={onLeave} onDisband={vi.fn()}
       />,
     );
 
@@ -63,6 +63,50 @@ describe("lobby setup", () => {
     expect(onLeave).toHaveBeenCalledOnce();
   });
 
+  it("gives only the host a way out of a running match", () => {
+    const base = createBaseGame({ id: "disband", seed: 42, players: [
+      { id: "player_1", name: "林", color: "terracotta" },
+      { id: "player_2", name: "周", color: "ocean" },
+    ] });
+    const started = { ...lobbyRoom(), game: projectGameForPlayer(base, "player_1"), previewMap: null };
+    const onDisband = vi.fn();
+    const view = render(
+      <RoomPanel
+        room={started}
+        playerId="player_1"
+        connectionState="live"
+        busy={false}
+        onStart={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onLeave={vi.fn()}
+        onDisband={onDisband}
+      />,
+    );
+
+    // Leaving is gone mid-match, because the server refuses it; disbanding is not.
+    expect(screen.queryByRole("button", { name: "离开房间" })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "解散房间" })[0]!);
+    expect(screen.getByRole("dialog").textContent).toContain("进行中的这局会立即结束且无法恢复");
+    const confirms = screen.getAllByRole("button", { name: "解散房间" });
+    fireEvent.click(confirms[confirms.length - 1]!);
+    expect(onDisband).toHaveBeenCalled();
+    view.unmount();
+
+    render(
+      <RoomPanel
+        room={started}
+        playerId="player_2"
+        connectionState="live"
+        busy={false}
+        onStart={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onLeave={vi.fn()}
+        onDisband={vi.fn()}
+      />,
+    );
+    expect(screen.queryAllByRole("button", { name: "解散房间" })).toHaveLength(0);
+  });
+
   it("shows settings to guests without allowing them to edit", () => {
     render(
       <RoomPanel
@@ -73,6 +117,7 @@ describe("lobby setup", () => {
         onStart={vi.fn()}
         onSettingsChange={vi.fn()}
         onLeave={vi.fn()}
+        onDisband={vi.fn()}
       />,
     );
 

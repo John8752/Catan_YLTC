@@ -61,10 +61,19 @@ export type RoomServerMessage =
       readonly room: RoomView;
     }
   | {
+      /** The room is gone for everyone. Sent once, just before it stops existing. */
+      readonly type: "room_closed";
+      readonly message: string;
+    }
+  | {
       readonly type: "error";
       readonly code: string;
       readonly message: string;
     };
+
+export interface DisbandRoomRequest {
+  readonly seatToken: string;
+}
 
 export interface ApiErrorResponse {
   readonly error: {

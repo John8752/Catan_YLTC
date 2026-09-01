@@ -20,4 +20,6 @@ The product is private matches for a small group. Persistence would buy crash-re
 
 Eviction is required, not optional: players close the tab far more often than they press leave, so without a sweep every abandoned room stays resident until the process dies. Keying eviction on "has no subscriber" rather than "has not moved recently" is what makes the rule safe for a long, slow turn.
 
+The host can also end a room outright, started or not. Leaving is refused once a game is running, so before this the only ways a live room went away were the idle sweep an hour later or a process restart that took every other room with it. Disbanding tells each subscriber before the room stops existing, so a client returns to the entry screen instead of reconnecting to something that is gone. Eviction stays the backstop for rooms nobody ends on purpose.
+
 ADR-0002 already anticipates persisted matches: commands and events are recorded per room, so a future durable store can replay them without reshaping the engine. This ADR fixes the interim runtime, not the ceiling.

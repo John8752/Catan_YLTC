@@ -70,6 +70,8 @@ type RoomListener = (room: RoomView) => void;
 interface Subscription {
   readonly playerId: string;
   readonly listener: RoomListener;
+  /** Told once when the room is disbanded, so a socket can say why it is closing. */
+  readonly onClosed?: (() => void) | undefined;
 }
 
 export class RoomRegistry {
@@ -243,6 +245,28 @@ export class RoomRegistry {
     return { roomDeleted: false, newHostPlayerId: room.hostPlayerId };
   }
 
+  /**
+   * Ends the room for everybody, started or not.
+   *
+   * `leaveRoom` deliberately refuses once a game is running, which left a host
+   * with no way out of a match nobody wants to finish, and left an abandoned room
+   * sitting in memory until the idle sweep. This is the deliberate version of
+   * that: only the host, and everyone is told before the room stops existing.
+   */
+  disbandRoom(roomId: string, seatToken: string): void {
+    const room = this.requireRoom(roomId);
+    const member = this.requireCredential(room, seatToken);
+    if (member.id !== room.hostPlayerId) {
+      throw new RoomError("ONLY_HOST_CAN_DISBAND", "Only the room host can disband the room");
+    }
+
+    for (const subscription of this.subscriptions.get(room.id) ?? []) subscription.onClosed?.();
+    this.turnTimers.clear(room.id);
+    this.cancelSetupAnalysisRetry(room.id);
+    this.rooms.delete(room.id);
+    this.subscriptions.delete(room.id);
+  }
+
   startRoom(roomId: string, seatToken: string): RoomView {
     const room = this.requireRoom(roomId);
     const member = this.requireCredential(room, seatToken);
@@ -375,12 +399,17 @@ export class RoomRegistry {
     return response;
   }
 
-  subscribe(roomId: string, seatToken: string, listener: RoomListener): () => void {
+  subscribe(
+    roomId: string,
+    seatToken: string,
+    listener: RoomListener,
+    onClosed?: () => void,
+  ): () => void {
     const room = this.requireRoom(roomId);
     const member = this.requireCredential(room, seatToken);
     const playerId = member.id;
 
-    const subscription: Subscription = { playerId, listener };
+    const subscription: Subscription = { playerId, listener, onClosed };
     const roomSubscriptions = this.subscriptions.get(room.id) ?? new Set<Subscription>();
     roomSubscriptions.add(subscription);
     this.subscriptions.set(room.id, roomSubscriptions);

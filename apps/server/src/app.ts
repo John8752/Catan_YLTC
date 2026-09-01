@@ -286,6 +286,16 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
     }
   });
 
+  app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/disband", async (request, reply) => {
+    try {
+      const body = leaveRoomSchema.parse(request.body);
+      registry.disbandRoom(request.params.roomId, body.seatToken);
+      return reply.code(200).send({ roomDeleted: true });
+    } catch (error) {
+      return sendError(reply, error);
+    }
+  });
+
   app.get<{ Params: { roomId: string }; Querystring: { seatToken?: string } }>(
     "/api/rooms/:roomId",
     async (request, reply) => {
@@ -371,9 +381,19 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
       try {
         const roomId = z.string().min(1).parse(request.query.roomId);
         const seatToken = z.string().min(1).parse(request.query.seatToken);
-        const unsubscribe = registry.subscribe(roomId, seatToken, (room) => {
-          socket.send(JSON.stringify({ type: "room_state", room }));
-        });
+        const unsubscribe = registry.subscribe(
+          roomId,
+          seatToken,
+          (room) => {
+            socket.send(JSON.stringify({ type: "room_state", room }));
+          },
+          () => {
+            // Say why before closing, or the client just sees a dropped socket and
+            // starts reconnecting to a room that no longer exists.
+            socket.send(JSON.stringify({ type: "room_closed", message: "房主已解散房间" }));
+            socket.close();
+          },
+        );
 
         socket.on("close", unsubscribe);
       } catch (error) {

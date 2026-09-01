@@ -70,6 +70,18 @@ export async function rerollRoomMap(
   });
 }
 
+/** Ends the room for everyone. Host only, and it works mid-match. */
+export async function disbandRoom(session: PlayerSession): Promise<void> {
+  await request<{ readonly roomDeleted: boolean }>(
+    `/api/rooms/${encodeURIComponent(session.roomId)}/disband`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seatToken: session.seatToken }),
+    },
+  );
+}
+
 export async function leaveRoom(session: PlayerSession): Promise<LeaveRoomResponse> {
   return request<LeaveRoomResponse>(`/api/rooms/${encodeURIComponent(session.roomId)}/leave`, {
     method: "POST",

@@ -10,6 +10,79 @@ afterEach(async () => {
 });
 
 describe("room API", () => {
+  it("lets only the host disband, tells every seat, and works mid-match", async () => {
+    const app = await buildApp();
+    apps.push(app);
+    const host = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "林" },
+    })).json<PlayerSessionResponse>();
+    const guest = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/join`,
+      payload: { playerName: "周" },
+    })).json<PlayerSessionResponse>();
+    await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/start`,
+      payload: { seatToken: host.seatToken },
+    });
+
+    // Leaving is still refused once the game is running -- that is the hole this fills.
+    const leave = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/leave`,
+      payload: { seatToken: host.seatToken },
+    });
+    expect(leave.json()).toMatchObject({ error: { code: "CANNOT_LEAVE_STARTED_GAME" } });
+
+    const guestAttempt = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/disband`,
+      payload: { seatToken: guest.seatToken },
+    });
+    expect(guestAttempt.statusCode).toBe(400);
+    expect(guestAttempt.json()).toMatchObject({ error: { code: "ONLY_HOST_CAN_DISBAND" } });
+
+    const disband = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/disband`,
+      payload: { seatToken: host.seatToken },
+    });
+    expect(disband.statusCode).toBe(200);
+
+    // Gone for everyone, not just the host.
+    for (const seat of [host, guest]) {
+      const after = await app.inject({
+        method: "GET",
+        url: `/api/rooms/${host.roomId}?seatToken=${encodeURIComponent(seat.seatToken)}`,
+      });
+      expect(after.statusCode).toBe(404);
+      expect(after.json()).toMatchObject({ error: { code: "ROOM_NOT_FOUND" } });
+    }
+  });
+
+  it("warns every subscriber before the disbanded room stops existing", () => {
+    const registry = new RoomRegistry();
+    const host = registry.createRoom("林");
+    const guest = registry.joinRoom(host.roomId, "周");
+    const closed: string[] = [];
+    const unsubscribes = [host, guest].map((seat) => registry.subscribe(
+      seat.roomId,
+      seat.seatToken,
+      () => {},
+      () => closed.push(seat.playerId),
+    ));
+
+    registry.disbandRoom(host.roomId, host.seatToken);
+
+    expect(closed).toEqual([host.playerId, guest.playerId]);
+    expect(() => registry.getRoom(host.roomId, host.seatToken)).toThrow();
+    unsubscribes.forEach((unsubscribe) => unsubscribe());
+    registry.dispose();
+  });
+
   it("starts a two-player match on the standard profile and still refuses a solo one", async () => {
     const app = await buildApp();
     apps.push(app);

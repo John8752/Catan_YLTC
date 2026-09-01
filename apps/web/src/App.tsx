@@ -6,6 +6,7 @@ import {
   createRoom,
   getRoom,
   joinRoom,
+  disbandRoom,
   leaveRoom,
   rerollRoomMap,
   startRoom,
@@ -98,6 +99,12 @@ export function App() {
           }
           setRoom(message.room);
           setError(null);
+        } else if (message.type === "room_closed") {
+          // The room is already gone, so drop the seat before the socket's close
+          // handler starts reconnecting to something that no longer exists.
+          active = false;
+          clearCurrentSession();
+          setError(message.message);
         } else {
           setError(message.message);
         }
@@ -203,6 +210,14 @@ export function App() {
     setSelectedRobberHexId(hexId);
   }
 
+  async function handleDisband() {
+    if (session === null) return;
+    await runBusy(async () => {
+      await disbandRoom(session);
+      clearCurrentSession();
+    });
+  }
+
   async function handleLeave() {
     if (session === null) return;
     await runBusy(async () => {
@@ -259,7 +274,7 @@ export function App() {
     : <BankSupplyButton resources={liveGame.bankResources} />;
   const roomControls = <ResponsiveRoomPanel
     room={room} playerId={session.playerId} connectionState={connectionState} busy={busy}
-    onStart={handleStart} onSettingsChange={handleRoomSettingsChange} onLeave={handleLeave}
+    onStart={handleStart} onSettingsChange={handleRoomSettingsChange} onLeave={handleLeave} onDisband={handleDisband}
     embedded showPlayers={false} className="min-h-0 flex-1"
     headerAction={liveGame === null ? null : <AiCommentaryControl
       session={session}
@@ -322,7 +337,7 @@ export function App() {
         busy={busy}
         onStart={handleStart}
         onSettingsChange={handleRoomSettingsChange}
-        onLeave={handleLeave}
+        onLeave={handleLeave} onDisband={handleDisband}
       /> : <GameSidebar
         bankSupply={bankInSidebar ? bankSupply : null}
         roomControls={bankInSidebar ? roomControls : null}

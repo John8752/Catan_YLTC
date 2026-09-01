@@ -102,7 +102,8 @@ for (const count of [4, 6] as const) {
             expect(metrics.opponents.bottom).toBeLessThanOrEqual(metrics.board.y);
           }
           await expect(run.page.locator('[data-game-sidebar] .phase-chip')).toBeVisible();
-          await expect(run.page.locator('[data-game-sidebar] [data-attention-slot]')).toBeVisible();
+          await expect(run.page.locator('[data-game-sidebar] [data-attention-slot]')).toHaveCount(0);
+          await expect(run.page.locator('[data-game-sidebar]')).not.toContainText("轮到你了，请掷骰子");
           await expect(run.page.locator('[data-game-sidebar] [aria-label="放大地图"]')).toHaveCount(0);
           await expect(run.page.locator('.live-playfield .board-heading,.live-playfield .board-footer,.live-playfield [data-attention-slot]')).toHaveCount(0);
           expect(metrics.sidebar?.y + metrics.sidebar?.height).toBeLessThanOrEqual(height + 1);
@@ -218,11 +219,12 @@ test("history appends below, follows live updates, preserves reading and reopens
   const scroll = run.page.getByRole("region", { name: "公开记录", exact: true }).locator('[data-slot="scroll-area-viewport"]');
   const atBottom = () => scroll.evaluate((e) => e.scrollHeight - e.clientHeight - e.scrollTop < 3);
   try {
-    await expect(log.locator("li").first()).toContainText("第 11 次操作");
-    await expect(log.locator("li").last()).toContainText("第 40 次操作");
+    await expect(log.locator("li").first()).toHaveAttribute("data-history-key", "11-dice_rolled-0");
+    await expect(log.locator("li").last()).toHaveAttribute("data-history-key", "40-dice_rolled-0");
+    await expect(log).not.toContainText(/第\s*\d+\s*次操作/);
     await expect.poll(atBottom).toBe(true);
     run.push(fixture(6, 41));
-    await expect(log.locator("li").last()).toContainText("第 41 次操作");
+    await expect(log.locator("li").last()).toHaveAttribute("data-history-key", "41-dice_rolled-0");
     await expect.poll(atBottom).toBe(true);
     await scroll.evaluate((e) => { e.scrollTop = 0; });
     await expect(run.page.getByRole("button", { name: "回到最新", exact: true })).toBeVisible();

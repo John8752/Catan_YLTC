@@ -77,9 +77,9 @@ export function Board({
       <span className="phase-chip whitespace-nowrap">{phaseLabel(game)}</span>
       {roomControls}
     </div>
-    <ActionAttentionBanner notice={actionNotice} victoryNotice={victoryNotice}
-      fallback={infoHost === null ? null : <span className="w-full truncate text-xs text-[var(--game-rail-muted)]" title={boardInstruction(game, buildMode)}>{boardInstruction(game, buildMode)}</span>}
-    />
+    {infoHost === null || actionNotice !== null || victoryNotice !== null
+      ? <ActionAttentionBanner notice={actionNotice} victoryNotice={victoryNotice} />
+      : null}
   </>;
 
   return (

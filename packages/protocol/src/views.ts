@@ -272,62 +272,68 @@ function projectHistoryRecord(
   const playerName = (playerId: string) => state.players.find((player) => player.id === playerId)?.name ?? "玩家";
   if (event.type === "resources_produced") {
     if (event.grants.length === 0) {
-      return [{ revision: record.revision, type: event.type, message: "本轮没有人获得资源", privateDetail: null }];
+      return [{ revision: record.revision, type: event.type, message: "本轮无资源", privateDetail: null }];
     }
-    return event.grants.map((grant) => ({
+    return [{
       revision: record.revision,
       type: event.type,
-      message: `${playerName(grant.playerId)} 获得 ${formatResources(grant.resources)}`,
+      message: event.grants.map((grant) => `${playerName(grant.playerId)} +${formatResources(grant.resources)}`).join("；"),
       privateDetail: null,
-    }));
+    }];
   }
+  // The next public action already identifies the new turn. Keeping this
+  // transport transition in the log adds a row without adding useful context.
+  if (event.type === "turn_ended") return [];
   let message: string;
   let privateDetail: string | null = null;
 
   switch (event.type) {
-    case "initial_settlement_placed": message = `${playerName(event.playerId)} 放置了初始定居点`; break;
-    case "initial_road_placed": message = `${playerName(event.playerId)} 放置了初始道路`; break;
-    case "starting_resources_granted": message = `${playerName(event.playerId)} 获得起始资源：${formatResources(event.resources)}`; break;
+    case "initial_settlement_placed": message = `${playerName(event.playerId)} 放置初始村庄`; break;
+    case "initial_road_placed": message = `${playerName(event.playerId)} 放置初始道路`; break;
+    case "starting_resources_granted": message = `${playerName(event.playerId)} 起始资源：${formatResources(event.resources)}`; break;
     case "setup_completed": message = "初始摆放完成"; break;
     case "dice_rolled": message = `${playerName(event.playerId)} 掷出 ${event.dice[0] + event.dice[1]}`; break;
     case "resources_discarded": message = `${playerName(event.playerId)} 弃掉 ${event.total} 张资源`; break;
     case "robber_moved":
-      message = `${playerName(event.playerId)} 移动了强盗${event.victimId === null ? "" : `并偷取了 ${playerName(event.victimId)}`}`;
+      message = event.victimId === null
+        ? `${playerName(event.playerId)} 移动强盗`
+        : `${playerName(event.playerId)} 移动强盗，从${playerName(event.victimId)}处偷取 1 张`;
       if (event.stolenResource !== null && (event.playerId === viewerId || event.victimId === viewerId)) {
-        privateDetail = `偷取资源：${event.stolenResource}`;
+        privateDetail = event.playerId === viewerId
+          ? `偷到：${resourceLabel(event.stolenResource)}`
+          : `被偷：${resourceLabel(event.stolenResource)}`;
       }
       break;
-    case "turn_ended": message = `${playerName(event.playerId)} 结束回合`; break;
-    case "piece_built": message = `${playerName(event.playerId)} 建造了 ${pieceLabel(event.piece)}`; break;
-    case "trade_offered": message = `${playerName(event.playerId)} 发布交易报价`; break;
+    case "piece_built": message = `${playerName(event.playerId)} 建造 ${pieceLabel(event.piece)}`; break;
+    case "trade_offered": message = `${playerName(event.playerId)} 发布报价`; break;
     case "trade_response_recorded":
       message = event.response === "accepted"
-        ? `${playerName(event.playerId)} 同意了交易报价`
+        ? `${playerName(event.playerId)} 接受报价`
         : event.response === "countered"
-          ? `${playerName(event.playerId)} 提出了反报价`
-          : `${playerName(event.playerId)} 拒绝了交易报价`;
+          ? `${playerName(event.playerId)} 提出反报价`
+          : `${playerName(event.playerId)} 拒绝报价`;
       break;
-    case "trade_cancelled": message = `${playerName(event.playerId)} 取消交易报价`; break;
-    case "player_trade_completed": message = `${playerName(event.proposerId)} 给 ${playerName(event.accepterId)} ${formatResources(event.give)}，获得 ${formatResources(event.receive)}`; break;
-    case "maritime_trade_completed": message = `${playerName(event.playerId)} 用 ${event.ratio} ${resourceLabel(event.give)}换得 1 ${resourceLabel(event.receive)}`; break;
+    case "trade_cancelled": message = `${playerName(event.playerId)} 取消报价`; break;
+    case "player_trade_completed": message = `${playerName(event.proposerId)} 与 ${playerName(event.accepterId)}：${formatResources(event.give)}换${formatResources(event.receive)}`; break;
+    case "maritime_trade_completed": message = `${playerName(event.playerId)} 港口：${event.ratio}${resourceLabel(event.give)}换1${resourceLabel(event.receive)}`; break;
     case "development_card_bought":
-      message = `${playerName(event.playerId)} 购买了一张发展卡`;
+      message = `${playerName(event.playerId)} 购买发展卡`;
       if (event.playerId === viewerId) privateDetail = `购入：${developmentLabel(event.cardType)}`;
       break;
     case "development_card_played":
       message = event.cardType === "monopoly"
-        ? `${playerName(event.playerId)} 使用了垄断：${resourceLabel(event.resource)}，共获得 ${event.total} 张`
+        ? `${playerName(event.playerId)} 使用垄断（${resourceLabel(event.resource)}），获得 ${event.total} 张`
         : event.cardType === "resource-choice"
-          ? `${playerName(event.playerId)} 使用了丰收：${formatResources(event.resources)}`
-          : `${playerName(event.playerId)} 使用了 ${developmentLabel(event.cardType)}`;
+          ? `${playerName(event.playerId)} 使用丰收（${formatResources(event.resources)}）`
+          : `${playerName(event.playerId)} 使用 ${developmentLabel(event.cardType)}`;
       if (event.cardType === "monopoly") {
         const ownLoss = event.transfers.find((transfer) => transfer.playerId === viewerId)?.amount ?? 0;
-        if (ownLoss > 0) privateDetail = `你交出了 ${ownLoss} 张${resourceLabel(event.resource)}`;
+        if (ownLoss > 0) privateDetail = `你交出 ${ownLoss} 张${resourceLabel(event.resource)}`;
       }
       break;
-    case "free_road_built": message = `${playerName(event.playerId)} 放置了免费道路（${event.placed}/${event.total}${event.completed ? "，完成" : ""}）`; break;
-    case "award_changed": message = event.holderId === null ? `${awardLabel(event.award)} 暂时无人持有` : `${playerName(event.holderId)} 获得 ${awardLabel(event.award)}`; break;
-    case "game_won": message = `${playerName(event.playerId)} 赢得对局`; break;
+    case "free_road_built": message = `${playerName(event.playerId)} 免费道路 ${event.placed}/${event.total}`; break;
+    case "award_changed": message = event.holderId === null ? `${awardLabel(event.award)}：暂无` : `${playerName(event.holderId)} 获得 ${awardLabel(event.award)}`; break;
+    case "game_won": message = `${playerName(event.playerId)} 获胜`; break;
   }
 
   return [{ revision: record.revision, type: event.type, message, privateDetail }];
@@ -336,7 +342,7 @@ function projectHistoryRecord(
 function formatResources(resources: ResourceHand): string {
   const parts = RESOURCE_TYPES
     .filter((resource) => resources[resource] > 0)
-    .map((resource) => `${resources[resource]} ${resourceLabel(resource)}`);
+    .map((resource) => `${resources[resource]}${resourceLabel(resource)}`);
   return parts.length === 0 ? "无资源" : parts.join("、");
 }
 

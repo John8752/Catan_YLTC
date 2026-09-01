@@ -78,7 +78,7 @@ export function PublicHistory({ history }: { readonly history: GameView["history
     <section className="flex min-h-0 flex-1 flex-col" aria-label="公开记录">
       <div className="mb-2 flex items-center justify-between text-sm font-bold text-[var(--sidebar-muted,#5d665f)]">
         <span className="flex items-center gap-2"><Activity className="size-4 text-[var(--sidebar-accent,#b45c42)]" />公开记录</span>
-        <span className="text-xs">最新 {entries.length} 条 · 向下更新</span>
+        <span className="text-xs">{entries.length} 条</span>
       </div>
       <ScrollArea
         className="min-h-0 flex-1 rounded-xl border border-[var(--sidebar-line,#6d543426)] bg-[var(--sidebar-soft,#ffffff59)]"
@@ -108,7 +108,7 @@ export function PublicHistory({ history }: { readonly history: GameView["history
               {entry.privateDetail === null ? null : <span className="mt-1 block text-sm font-bold text-[var(--sidebar-accent,#a34e39)]">{entry.privateDetail}</span>}
             </li>
           ))}
-          {entries.length === 0 ? <li className="py-8 text-center text-[var(--sidebar-muted,#7c817a)]">对局记录会显示在这里</li> : null}
+          {entries.length === 0 ? <li className="py-8 text-center text-[var(--sidebar-muted,#7c817a)]">暂无记录</li> : null}
         </ol>
       </ScrollArea>
       {paused ? <Button size="sm" className="mt-2 shrink-0" onClick={scrollToLatest}><ArrowDown className="size-4" />{unread ? "有新记录 · 回到最新" : "回到最新"}</Button> : null}

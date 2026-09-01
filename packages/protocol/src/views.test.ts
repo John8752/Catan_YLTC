@@ -232,11 +232,11 @@ describe("player-safe game projections", () => {
     const victimView = projectGameForPlayer(game, "player_2", records);
     const bystanderView = projectGameForPlayer(game, "player_4", records);
     expect(victimView.history.map((entry) => entry.message)).toEqual([
-      "林 使用了垄断：矿，共获得 5 张",
-      "林 使用了丰收：1 木、1 麦",
-      "林 放置了免费道路（1/2）",
+      "林 使用垄断（矿），获得 5 张",
+      "林 使用丰收（1木、1麦）",
+      "林 免费道路 1/2",
     ]);
-    expect(victimView.history[0]?.privateDetail).toBe("你交出了 3 张矿");
+    expect(victimView.history[0]?.privateDetail).toBe("你交出 3 张矿");
     expect(bystanderView.history[0]?.privateDetail).toBeNull();
     expect(victimView.effects).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -304,7 +304,7 @@ describe("player-safe game projections", () => {
     });
   });
 
-  it("expands production into exact public grants for every player", () => {
+  it("summarizes one production event in a single concise public row", () => {
     const game = createBaseGame({
       id: "game_production_history",
       seed: 12,
@@ -332,16 +332,37 @@ describe("player-safe game projections", () => {
       },
     }] satisfies GameEventRecord[];
 
-    expect(projectGameForPlayer(game, "player_2", records).history.map((entry) => entry.message)).toEqual([
-      "林 获得 1 砖、1 木",
-      "陈 获得 2 矿",
-    ]);
+    expect(projectGameForPlayer(game, "player_2", records).history.map((entry) => entry.message))
+      .toEqual(["林 +1砖、1木；陈 +2矿"]);
     expect(projectGameForPlayer(game, "player_2", records).effects).toContainEqual(expect.objectContaining({
       id: "8:resources-produced",
       reason: "production",
       sources: expect.arrayContaining([expect.objectContaining({ hexId: "hex_ore", amount: 2 })]),
       triggeredHexIds: expect.arrayContaining(["hex_unclaimed"]),
     }));
+  });
+
+  it("omits turn transitions and sequence-number boilerplate from routine history", () => {
+    const game = createBaseGame({
+      id: "game_concise_history",
+      seed: 121,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [
+      { revision: 41, event: { type: "turn_ended", playerId: "player_1", nextPlayerId: "player_2", turnNumber: 4 } },
+      { revision: 42, event: { type: "dice_rolled", playerId: "player_2", dice: [2, 3] } },
+      { revision: 43, event: { type: "resources_produced", total: 0, grants: [], sources: [], triggeredHexIds: [] } },
+      { revision: 44, event: { type: "trade_offered", offerId: "offer_2", playerId: "player_2" } },
+      { revision: 45, event: { type: "trade_cancelled", offerId: "offer_2", playerId: "player_2" } },
+    ] satisfies GameEventRecord[];
+
+    const messages = projectGameForPlayer(game, "player_1", records).history.map((entry) => entry.message);
+    expect(messages).toEqual(["周 掷出 5", "本轮无资源", "周 发布报价", "周 取消报价"]);
+    expect(messages.join(" ")).not.toMatch(/第\s*\d+\s*次操作|结束回合/);
   });
 
   it("keeps trade responses and the chosen final exchange publicly auditable", () => {
@@ -371,9 +392,9 @@ describe("player-safe game projections", () => {
     ] satisfies GameEventRecord[];
 
     expect(projectGameForPlayer(game, "player_3", records).history.map((entry) => entry.message)).toEqual([
-      "周 同意了交易报价",
-      "陈 提出了反报价",
-      "林 给 周 2 砖，获得 1 麦",
+      "周 接受报价",
+      "陈 提出反报价",
+      "林 与 周：2砖换1麦",
     ]);
     expect(projectGameForPlayer(game, "player_3", records).effects).toContainEqual(expect.objectContaining({
       reason: "player-trade",
@@ -399,12 +420,21 @@ describe("player-safe game projections", () => {
       { revision: 11, event: { type: "robber_moved", playerId: "player_1", fromHexId: "hex_0", hexId: "hex_1", victimId: "player_2", stolenResource: "grain" } },
     ] satisfies GameEventRecord[];
 
-    expect(projectGameForPlayer(game, "player_1", records).effects).toEqual(expect.arrayContaining([
+    const actorView = projectGameForPlayer(game, "player_1", records);
+    const victimView = projectGameForPlayer(game, "player_2", records);
+    const bystanderView = projectGameForPlayer(game, "player_3", records);
+    expect(actorView.history).toEqual([
+      expect.objectContaining({ message: "林 港口：4砖换1矿", privateDetail: null }),
+      expect.objectContaining({ message: "林 移动强盗，从周处偷取 1 张", privateDetail: "偷到：麦" }),
+    ]);
+    expect(victimView.history[1]?.privateDetail).toBe("被偷：麦");
+    expect(bystanderView.history[1]?.privateDetail).toBeNull();
+    expect(actorView.effects).toEqual(expect.arrayContaining([
       expect.objectContaining({ reason: "maritime-trade", grants: [expect.objectContaining({ resources: resourceAmounts({ ore: 1 }), origin: { kind: "bank" } })] }),
       expect.objectContaining({ kind: "robber-move", fromHexId: "hex_0", toHexId: "hex_1" }),
       expect.objectContaining({ kind: "resource-transfer", transfers: [expect.objectContaining({ resource: "grain" })] }),
     ]));
-    expect(projectGameForPlayer(game, "player_3", records).effects).toContainEqual(expect.objectContaining({
+    expect(bystanderView.effects).toContainEqual(expect.objectContaining({
       kind: "resource-transfer",
       transfers: [expect.objectContaining({ resource: null, sourcePlayerId: "player_2", playerId: "player_1" })],
     }));

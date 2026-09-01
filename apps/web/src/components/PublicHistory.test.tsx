@@ -19,6 +19,8 @@ it("shows the latest thirty entries oldest first and preserves existing row iden
   const list = screen.getByRole("log");
   const rows = within(list).getAllByRole("listitem");
   expect(rows).toHaveLength(30);
+  expect(screen.getByText("30 条")).toBeDefined();
+  expect(screen.queryByText(/向下更新/)).toBeNull();
   expect(rows[0]?.textContent).toBe("操作 2");
   expect(rows[29]?.textContent).toBe("操作 31");
   const retained = screen.getByText("操作 3");

@@ -56,10 +56,10 @@ export function collectVictoryWarnings(
 }
 
 export function victoryWarningMessage(warning: VictoryWarningEffectView): string {
-  const progress = `${warning.playerName} 公开分数达到 ${warning.publicPoints}/${warning.targetPoints}`;
+  const progress = `${warning.playerName} 公开分 ${warning.publicPoints}/${warning.targetPoints}`;
   return warning.publicPoints >= warning.targetPoints
-    ? `${progress}，公开分数已达目标，胜负以回合结算为准`
-    : `${progress}，接近获胜（距目标 ${warning.targetPoints - warning.publicPoints} 分）`;
+    ? `${progress}（等待回合结算）`
+    : `${progress}（距目标 ${warning.targetPoints - warning.publicPoints} 分）`;
 }
 
 export function victoryWarningHistory(warning: VictoryWarningEffectView): GameHistoryEntryView {

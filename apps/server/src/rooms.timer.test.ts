@@ -70,7 +70,9 @@ describe("authoritative room countdown", () => {
     const ended = registry.getRoom(host.roomId, host.seatToken);
     expect(ended.game?.revision).toBe((actionRevision ?? 0) + 1);
     expect(ended.game?.phase).toMatchObject({ kind: "turn", step: "roll", turnNumber: 2 });
-    expect(ended.game?.history.at(-1)?.type).toBe("turn_ended");
+    expect(ended.game?.phase.kind === "turn" ? ended.game.phase.activePlayerId : activePlayerId).not.toBe(activePlayerId);
+    expect(ended.game?.openTrade).toBeNull();
+    expect(ended.game?.history.some((entry) => entry.type === "turn_ended")).toBe(false);
     expect(ended.game?.turnTimer).toMatchObject({ kind: "roll", durationMs: 5_000 });
 
     registry.dispose();

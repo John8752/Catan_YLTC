@@ -17,13 +17,21 @@ export function fixture(count: 4 | 6, revision = 40, finished = false): RoomView
     lastRoll: [2, 3],
     players: base.players.map((player) => ({ ...player, resources: resourceAmounts({ brick: 2, lumber: 3, wool: 4, grain: 5, ore: 6 }) })),
   };
-  const records: GameEventRecord[] = Array.from({ length: revision }, (_, i) => ({ revision: i + 1, event: { type: "dice_rolled", playerId: "p1", dice: [2, 3] } }));
+  const seatedPlayers = players.slice(0, count);
+  const records: GameEventRecord[] = Array.from({ length: revision }, (_, i) => ({
+    revision: i + 1,
+    event: {
+      type: "dice_rolled",
+      playerId: seatedPlayers[i % seatedPlayers.length]!.id,
+      dice: [(i % 6) + 1, ((i * 2 + 1) % 6) + 1] as readonly [number, number],
+    },
+  }));
   const projected = projectGameForPlayer(state, "p1", records);
   return {
     id: "LAYOUT", revision, hostPlayerId: "p1", previewMap: null,
-    members: players.slice(0, count).map((p) => ({ ...p, isHost: p.id === "p1" })),
+    members: seatedPlayers.map((p) => ({ ...p, isHost: p.id === "p1" })),
     settings: { ruleProfile: count === 6 ? "extended-5-6" : "base-3-4", playerLimit: count, victoryPointsToWin: 10, mapSeed: state.seed, bankCountsPublic: true },
-    game: { ...projected, effects: [], history: projected.history.map((e) => ({ ...e, message: `第 ${e.revision} 次操作：布局验收掷出 2 + 3，其他玩家获得资源。` })) },
+    game: { ...projected, effects: [] },
   };
 }
 

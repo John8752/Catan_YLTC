@@ -116,7 +116,7 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await proposerPage.getByRole("button", { name: "接受所选反报价" }).click();
 
     await expect(proposerPage.getByRole("region", { name: "等待桌上回应" })).toHaveCount(0);
-    await expect(proposerPage.getByText(/林 给 岚|岚 给 林/).first()).toBeVisible();
+    await expect(proposerPage.getByText(/林 与 岚|岚 与 林/).first()).toBeVisible();
 
     await expect.poll(async () => (await getRoom(request, proposer)).game?.openTrade, {
       message: "trade completion should reach the server",

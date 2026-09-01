@@ -88,7 +88,7 @@ describe("public near-victory milestones", () => {
   it("does not announce victory for an inactive player with public points at the target", () => {
     const warnings = collectVictoryWarnings(state(6), { ...state(10), phase: { kind: "turn", step: "action", activePlayerId: "p2", turnNumber: 1 } }, []);
     const projection = view(state(10), warnings);
-    expect(projection.history[0]?.message).toContain("胜负以回合结算为准");
+    expect(projection.history[0]?.message).toBe("林 公开分 10/10（等待回合结算）");
     expect(projection.history[0]?.message).not.toContain("赢得");
   });
 });

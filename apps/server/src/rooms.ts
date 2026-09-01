@@ -27,9 +27,17 @@ import {
 import {
   buildPublicSetupAnalysisInput,
   type AiCommentator,
+  type PublicSetupAnalysisInput,
 } from "./ai-commentary.js";
 import { normalizePlayerName, RoomError } from "./room-errors.js";
 import { TurnTimerManager, type TurnTimerExpiry } from "./turn-timer.js";
+
+/**
+ * How long to wait before each retry of a failed public setup analysis. The
+ * length of this list is the retry budget: two entries means three attempts.
+ * Kept short because the room sits on `loading` for the whole sequence.
+ */
+const SETUP_ANALYSIS_RETRY_DELAYS_MS = [1_000, 4_000] as const;
 
 interface RoomMember {
   readonly id: string;
@@ -68,6 +76,7 @@ export class RoomRegistry {
   private readonly nextSeed: () => number;
   private readonly now: () => number;
   private readonly turnTimers: TurnTimerManager;
+  private readonly setupAnalysisRetries = new Map<string, ReturnType<typeof setTimeout>>();
   private aiCommentator: AiCommentator | null;
   private disposed = false;
 
@@ -220,6 +229,7 @@ export class RoomRegistry {
 
     if (room.members.length === 0) {
       this.turnTimers.clear(room.id);
+      this.cancelSetupAnalysisRetry(room.id);
       this.rooms.delete(room.id);
       this.subscriptions.delete(room.id);
       return { roomDeleted: true, newHostPlayerId: null };
@@ -283,6 +293,7 @@ export class RoomRegistry {
       this.rooms.delete(room.id);
       this.subscriptions.delete(room.id);
       this.turnTimers.clear(room.id);
+      this.cancelSetupAnalysisRetry(room.id);
       evicted.push(room.id);
     }
 
@@ -364,6 +375,7 @@ export class RoomRegistry {
   dispose(): void {
     this.disposed = true;
     this.turnTimers.dispose();
+    for (const roomId of [...this.setupAnalysisRetries.keys()]) this.cancelSetupAnalysisRetry(roomId);
   }
 
   private createRoomId(): string {
@@ -464,20 +476,64 @@ export class RoomRegistry {
     if (this.aiCommentator === null || room.game === null || room.publicSetupAnalysis !== null) return;
 
     const input = buildPublicSetupAnalysisInput(this.projectRoom(room, room.hostPlayerId));
+    room.publicSetupAnalysis = { status: "loading", sourceRevision: input.sourceRevision };
+    this.runPublicSetupAnalysis(room.id, input, 0);
+  }
+
+  /**
+   * The job runs once on `setup_completed` and nothing else ever calls it, so a
+   * single upstream blip used to cost a room its only opening read for good.
+   * Transient failures are retried in place; the room stays on `loading` until
+   * the attempts run out, and only then does it settle on `failed`.
+   */
+  private runPublicSetupAnalysis(
+    roomId: string,
+    input: PublicSetupAnalysisInput,
+    attempt: number,
+  ): void {
+    const commentator = this.aiCommentator;
+    if (commentator === null) return;
     const sourceRevision = input.sourceRevision;
-    room.publicSetupAnalysis = { status: "loading", sourceRevision };
-    void this.aiCommentator.analyzeSetup(input).then(
-      (analysis) => this.finishPublicSetupAnalysis(room.id, sourceRevision, {
+
+    void commentator.analyzeSetup(input).then(
+      (analysis) => this.finishPublicSetupAnalysis(roomId, sourceRevision, {
         status: "ready",
         sourceRevision,
         ...analysis,
       }),
-      () => this.finishPublicSetupAnalysis(room.id, sourceRevision, {
-        status: "failed",
-        sourceRevision,
-        message: "AI 开局点评暂时没有生成成功",
-      }),
+      () => {
+        const delay = SETUP_ANALYSIS_RETRY_DELAYS_MS[attempt];
+        if (delay === undefined || !this.isAwaitingSetupAnalysis(roomId, sourceRevision)) {
+          this.finishPublicSetupAnalysis(roomId, sourceRevision, {
+            status: "failed",
+            sourceRevision,
+            message: "AI 开局点评暂时没有生成成功",
+          });
+          return;
+        }
+
+        this.setupAnalysisRetries.set(roomId, setTimeout(() => {
+          this.setupAnalysisRetries.delete(roomId);
+          if (this.isAwaitingSetupAnalysis(roomId, sourceRevision)) {
+            this.runPublicSetupAnalysis(roomId, input, attempt + 1);
+          }
+        }, delay));
+      },
     );
+  }
+
+  /** Whether the room is still waiting on the very analysis run that is reporting back. */
+  private isAwaitingSetupAnalysis(roomId: string, sourceRevision: number): boolean {
+    if (this.disposed) return false;
+    const analysis = this.rooms.get(roomId)?.publicSetupAnalysis;
+    return analysis?.status === "loading" && analysis.sourceRevision === sourceRevision;
+  }
+
+  private cancelSetupAnalysisRetry(roomId: string): void {
+    const handle = this.setupAnalysisRetries.get(roomId);
+    if (handle === undefined) return;
+    clearTimeout(handle);
+    this.setupAnalysisRetries.delete(roomId);
   }
 
   private finishPublicSetupAnalysis(

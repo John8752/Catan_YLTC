@@ -111,3 +111,81 @@ function completeSetup(registry: RoomRegistry, sessions: readonly PlayerSessionR
     commandIndex += 1;
   }
 }
+
+it("retries a transient failure instead of burning the room's only opening read", async () => {
+  vi.useFakeTimers();
+  try {
+    let attempts = 0;
+    const analyzeSetup = vi.fn<AiCommentator["analyzeSetup"]>(async (input) => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("upstream blip");
+      return resultFor(input);
+    });
+    const registry = new RoomRegistry({
+      nextSeed: () => 404,
+      aiCommentator: { analyze: async () => "unused", analyzeSetup },
+    });
+    const sessions = createStartedRoom(registry);
+    let latest: RoomView | undefined;
+    const stopWatching = registry.subscribe(
+      sessions[0]!.roomId,
+      sessions[0]!.seatToken,
+      (room) => { latest = room; },
+    );
+
+    completeSetup(registry, sessions);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(analyzeSetup).toHaveBeenCalledTimes(1);
+    // The first failure must not reach the table: the room keeps waiting.
+    expect(latest?.setupAnalysis?.status).toBe("loading");
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(analyzeSetup).toHaveBeenCalledTimes(2);
+    expect(latest?.setupAnalysis?.status).toBe("ready");
+
+    stopWatching();
+    registry.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("settles on failed once the retry budget runs out, and stops there", async () => {
+  vi.useFakeTimers();
+  try {
+    const analyzeSetup = vi.fn<AiCommentator["analyzeSetup"]>(async () => {
+      throw new Error("upstream down");
+    });
+    const registry = new RoomRegistry({
+      nextSeed: () => 404,
+      aiCommentator: { analyze: async () => "unused", analyzeSetup },
+    });
+    const sessions = createStartedRoom(registry);
+    let latest: RoomView | undefined;
+    const stopWatching = registry.subscribe(
+      sessions[0]!.roomId,
+      sessions[0]!.seatToken,
+      (room) => { latest = room; },
+    );
+
+    completeSetup(registry, sessions);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(analyzeSetup).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(analyzeSetup).toHaveBeenCalledTimes(2);
+    expect(latest?.setupAnalysis?.status).toBe("loading");
+
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(analyzeSetup).toHaveBeenCalledTimes(3);
+    expect(latest?.setupAnalysis).toMatchObject({ status: "failed" });
+
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(analyzeSetup).toHaveBeenCalledTimes(3);
+
+    stopWatching();
+    registry.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});

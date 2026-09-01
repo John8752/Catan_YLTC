@@ -53,8 +53,8 @@ export function SelectedResourceCards({
   const resources = RESOURCE_TYPES.filter((resource) => value[resource] > 0);
   if (resources.length === 0) {
     return (
-      <div className="flex min-h-16 items-center justify-center rounded-xl border border-dashed border-[#6d5434]/25 bg-white/25 px-3">
-        <Badge variant="outline" className="border-0 bg-transparent text-[#766d60]">{emptyLabel}</Badge>
+      <div className="flex min-h-16 items-center justify-center rounded-xl border border-dashed border-[var(--sidebar-line,#6d543440)] bg-[var(--sidebar-soft,#ffffff40)] px-3">
+        <Badge variant="outline" className="border-0 bg-transparent text-[var(--sidebar-muted,#766d60)]">{emptyLabel}</Badge>
       </div>
     );
   }

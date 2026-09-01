@@ -53,3 +53,23 @@ it("does not jump on repeated snapshots and follows a new entry even at the thir
   rerender(<PublicHistory history={history(31)} />);
   expect(viewport.scrollTop).toBe(1200);
 });
+
+it("keeps following when layout shrinks before the resize observer, but preserves paused reading", () => {
+  let height = 200;
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(() => height);
+  const { container } = render(<PublicHistory history={history(30)} />);
+  const viewport = container.querySelector<HTMLElement>('[data-slot="scroll-area-viewport"]')!;
+  viewport.scrollTop = 1000;
+  fireEvent.scroll(viewport);
+  height = 100;
+  fireEvent.scroll(viewport);
+  expect(viewport.scrollTop).toBe(1200);
+  expect(screen.queryByRole("button", { name: /回到最新/ })).toBeNull();
+
+  viewport.scrollTop = 200;
+  fireEvent.scroll(viewport);
+  height = 50;
+  fireEvent.scroll(viewport);
+  expect(viewport.scrollTop).toBe(200);
+  expect(screen.getByRole("button", { name: /回到最新/ })).toBeDefined();
+});

@@ -64,7 +64,15 @@
   --border: oklch(0.72 0.035 75 / 45%);
   --input: oklch(0.72 0.035 75 / 55%);
   --ring: oklch(0.55 0.08 190);
-  --game-rail-width: 20.5rem;
+  --game-rail-width: 22.5rem;
+  --game-opponent-width: 12.5rem;
+  --game-rail-bg: #1c3434;
+  --game-rail-ink: #c8d1c9;
+  --game-rail-muted: #a5b5ac;
+  --game-rail-line: #d3dfd61a;
+  --game-rail-soft: #ffffff05;
+  --game-rail-control: #304846;
+  --game-rail-accent: #d1b793;
 }
 
 /* Scale rem-based game controls with the usable CSS viewport, not device pixels.
@@ -194,7 +202,9 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .live-playfield .board-stage { min-height: 0; flex: 1; aspect-ratio: auto; overflow: hidden; }
 .live-playfield .board-instruction { margin: .15rem 0 0; font-size: .68rem; line-height: 1.2; }
 
-.board-stage { position: relative; touch-action: none; user-select: none; }
+.board-stage { position: relative; cursor: grab; touch-action: none; user-select: none; }
+.board-stage:active { cursor: grabbing; }
+.board-stage:focus-visible { outline: 2px solid rgba(255,226,138,.72); outline-offset: -2px; }
 .board-transform {
   width: 100%;
   height: 100%;
@@ -207,25 +217,12 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   min-width: 0;
   display: grid;
   place-items: center;
-  transform: translate3d(var(--board-pan-x,0),var(--board-pan-y,0),0) scale(var(--board-zoom,1));
+  transform: translate3d(var(--board-pan-x,0),var(--board-pan-y,0),0) scale(var(--board-scale,1));
   transform-origin: center;
   transition: transform 120ms ease-out;
   will-change: transform;
 }
 .board-stage:active .board-transform { transition: none; }
-.board-zoom-controls {
-  flex: none;
-  z-index: 12;
-  display: flex;
-  gap: .2rem;
-  padding: .2rem;
-  border: 1px solid rgba(255,255,255,.2);
-  border-radius: .65rem;
-  background: rgba(16,56,56,.76);
-  box-shadow: 0 5px 16px rgba(7,29,29,.28);
-  backdrop-filter: blur(8px);
-}
-
 .game-info-sheet,
 .trade-composer-sheet {
   top: auto;
@@ -293,7 +290,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 
 .board-shell { width: min(100%, 940px); color: #fff9e8; }
 .board-heading { display: flex; justify-content: space-between; align-items: end; padding: 0 1rem; }
-.phase-chip { border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: .45rem .75rem; color: rgba(255,255,255,.8); font-size: .75rem; }
+.phase-chip { border: 1px solid var(--phase-chip-line, rgba(255,255,255,.22)); border-radius: 999px; padding: .45rem .75rem; color: var(--phase-chip-ink, rgba(255,255,255,.8)); font-size: .75rem; }
 .board-stage { width: 100%; aspect-ratio: 1.25; }
 .board-svg { width: 100%; height: 100%; min-height: 0; min-width: 0; overflow: visible; }
 .hex-content { transition: transform .18s ease, filter .18s ease; }
@@ -393,8 +390,8 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .board-instruction { margin: .35rem 0 0; color: #f4e6c5; font-weight: 700; text-align: center; }
 .resolution-form { display: grid; gap: .65rem; }.dice-result { font-weight: 800; color: #6d422b; }
 .action-stack { display: grid; gap: .55rem; }.build-buttons { display: grid; grid-template-columns: repeat(3,1fr); gap: .35rem; }.build-button { border: 1px solid rgba(91,67,38,.25); border-radius: 8px; padding: .52rem .25rem; background: #f4e7ca; color: #4f3b28; font-weight: 750; cursor: pointer; }.build-button.is-active { color: #fff; background: #9a5239; box-shadow: 0 0 0 2px rgba(154,82,57,.2); }
-.robber-map-prompt,.robber-victim-picker { display: grid; gap: .35rem; color: #31453f; }
-.robber-map-prompt p,.robber-victim-picker p { margin: 0; color: #69716b; font-size: .76rem; line-height: 1.45; }
+.robber-map-prompt,.robber-victim-picker { display: grid; gap: .35rem; color: var(--sidebar-ink, #31453f); }
+.robber-map-prompt p,.robber-victim-picker p { margin: 0; color: var(--sidebar-muted, #69716b); font-size: .76rem; line-height: 1.45; }
 .robber-victim-picker { grid-template-columns: minmax(0,1fr) auto; align-items: center; }
 .robber-victim-picker small { grid-column: 1 / -1; }
 .robber-victim-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem; }
@@ -587,7 +584,6 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   .live-playfield .board-heading .eyebrow { display: none; }
   .live-playfield .phase-chip { padding: .45rem .75rem; font-size: .75rem; }
   .live-playfield .board-instruction { margin: .35rem 0 0; font-size: inherit; line-height: inherit; }
-  .board-zoom-controls { position: absolute; right: .75rem; bottom: calc(100% + .75rem); }
   .active-trade-surface {
     right: calc(var(--game-rail-width) + 1.5rem);
     bottom: 1rem;
@@ -606,13 +602,6 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
     border-radius: 1rem;
     padding-bottom: .75rem;
   }
-}
-
-/* Wide/short-landscape boards have spare ocean in the corners. HUD floats there
-   instead of reserving a full-width row. Narrow portrait screens keep that row. */
-@media (min-width: 1280px) {
-  .live-playfield .board-shell { position: relative; }
-  .live-playfield .board-heading { position: absolute; z-index: 10; inset: 0 0 auto; }
 }
 
 @media (max-width: 820px) {

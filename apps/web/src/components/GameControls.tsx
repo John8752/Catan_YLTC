@@ -85,7 +85,7 @@ export function GameControls({
               variant="outline"
               size="sm"
               className={cn(
-                "border-[#a65c43]/25 bg-[#fffaf0]/70",
+                "border-[var(--sidebar-line,#a65c4340)] bg-[var(--sidebar-control,#fffaf0b3)]",
                 buildMode === mode && "border-[#b45c42] bg-[#b45c42] text-white hover:bg-[#9f4d38] hover:text-white",
               )}
               type="button"

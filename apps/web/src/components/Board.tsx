@@ -1,6 +1,7 @@
 import type { ActionAttentionEffectView, GameCommand, GameView, VictoryWarningEffectView } from "@catan/protocol";
 import type { KeyboardEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button.js";
 import {
   Dialog,
@@ -22,12 +23,14 @@ import {
 } from "./BoardMap.js";
 import { ConstructionTargets } from "./ConstructionTargets.js";
 import { BankSupply } from "./BankSupply.js";
-import { BoardZoomControls } from "./BoardZoomControls.js";
 import { ActionAttentionBanner } from "@/effects/ActionAttentionBanner.js";
+
+const DEFAULT_BOARD_SCALE = 1.08;
 
 export interface BoardProps {
   readonly game: GameView;
   readonly compact?: boolean;
+  readonly infoHost?: HTMLElement | null;
   readonly roomControls?: ReactNode;
   readonly bankSupply?: ReactNode;
   readonly actionNotice?: ActionAttentionEffectView | null;
@@ -42,6 +45,7 @@ export interface BoardProps {
 export function Board({
   game,
   compact = false,
+  infoHost = null,
   roomControls,
   bankSupply = <BankSupply resources={game.bankResources} />,
   actionNotice = null,
@@ -53,7 +57,7 @@ export function Board({
   onRobberHexSelect,
 }: BoardProps) {
   const robberHex = game.map.hexes.find((hex) => hex.id === game.map.robberHexId);
-  const viewport = useBoardViewport();
+  const viewport = useBoardViewport(DEFAULT_BOARD_SCALE);
   const [pendingRoadCommand, setPendingRoadCommand] = useState<Extract<GameCommand, { type: "PlaceInitialRoad" | "BuildRoad" | "BuildFreeRoad" }> | null>(null);
 
   useEffect(() => setPendingRoadCommand(null), [game.revision]);
@@ -66,16 +70,21 @@ export function Board({
     onCommand?.(command);
   };
 
+  const heading = <>
+    <div className="board-heading flex items-center justify-between gap-1">
+      {infoHost === null ? <p className="eyebrow">种子 {game.seed}</p> : null}
+      {bankSupply}
+      <span className="phase-chip whitespace-nowrap">{phaseLabel(game)}</span>
+      {roomControls}
+    </div>
+    <ActionAttentionBanner notice={actionNotice} victoryNotice={victoryNotice}
+      fallback={infoHost === null ? null : <span className="w-full truncate text-xs text-[var(--game-rail-muted)]" title={boardInstruction(game, buildMode)}>{boardInstruction(game, buildMode)}</span>}
+    />
+  </>;
+
   return (
     <section className="board-shell" data-board-root="true" aria-label="游戏棋盘">
-      <div className="board-heading gap-1">
-        <p className="eyebrow">种子 {game.seed}</p>
-        {bankSupply}
-        {compact ? <BoardZoomControls compact {...viewport} /> : null}
-        <span className="phase-chip ml-auto whitespace-nowrap">{phaseLabel(game)}</span>
-        {roomControls}
-      </div>
-      <ActionAttentionBanner notice={actionNotice} victoryNotice={victoryNotice} />
+      {infoHost === null ? heading : createPortal(heading, infoHost)}
       <div className="board-stage" {...viewport.viewportProps}>
         <div className="board-transform" style={viewport.transformStyle}>
           <svg
@@ -250,9 +259,8 @@ export function Board({
           </svg>
         </div>
       </div>
-      {compact ? null : <div className="board-footer relative flex shrink-0 items-center justify-between gap-2">
+      {compact || infoHost !== null ? null : <div className="board-footer relative flex shrink-0 items-center justify-between gap-2">
         <p className="board-instruction flex-1" aria-live="polite">{boardInstruction(game, buildMode)}</p>
-        <BoardZoomControls compact={false} {...viewport} />
       </div>}
       <Dialog open={pendingRoadCommand !== null} onOpenChange={(open) => !open && setPendingRoadCommand(null)}>
         <DialogContent className="border-2 border-[#d0a853] bg-[#fff0cd] text-[#263f3b] shadow-[0_20px_60px_rgba(4,24,25,.58)] sm:max-w-sm" showCloseButton={false}>

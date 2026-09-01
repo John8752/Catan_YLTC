@@ -21,13 +21,13 @@ export function DockActions({ game, compact, buildMode, selectedRobberHexId, chi
   const mustResolve = game.interaction.kind === "turn-roll" || game.interaction.kind === "discard" ||
     (game.interaction.kind === "robber" && game.interaction.targets.some((target) => target.hexId === selectedRobberHexId && target.victimIds.length > 1));
   const open = !compact || mustResolve || expanded;
-  const title = compact && buildMode !== null ? `请在地图选择${{ road: "道路位置", settlement: "定居点位置", city: "要升级的村庄" }[buildMode]}`
+  const title = buildMode !== null ? `请在地图选择${{ road: "道路位置", settlement: "定居点位置", city: "要升级的村庄" }[buildMode]}`
     : prompt?.title ?? (compact ? game.interaction.instruction : "本回合操作");
 
   return <Collapsible open={open} onOpenChange={setExpanded} asChild>
-    <section className="col-span-2 min-w-0 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1 md:col-span-1 md:col-start-2 md:row-span-3 md:row-start-1 lg:py-1 xl:col-start-3 xl:row-span-2" aria-label="本回合操作">
+    <section className="col-span-2 min-w-0 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1 md:col-span-1 md:col-start-2 md:row-span-3 md:row-start-1 lg:border-transparent lg:bg-transparent" aria-label="本回合操作">
       <div className={cn("flex items-center justify-between gap-1 phone-landscape:flex-wrap", compact ? "min-h-8" : "mb-1")}>
-        <span data-action-title="true" title={title} className={cn("flex min-w-0 items-center gap-1 text-xs font-black text-[#5d665f] phone-landscape:basis-full lg:text-sm", prompt?.tone === "required" && "text-[#8c3f3a]")}>
+        <span data-action-title="true" title={title} className={cn("flex min-w-0 items-center gap-1 text-xs font-black text-[#5d665f] phone-landscape:basis-full lg:text-sm lg:text-[var(--game-rail-muted)]", prompt?.tone === "required" && "text-[#8c3f3a] lg:rounded lg:bg-[#f1d4cf] lg:px-1 lg:text-[#783d38]")}>
           <Hammer className="hidden size-3.5 shrink-0 lg:block" aria-hidden="true" /><span className="truncate">{title}</span>
         </span>
         {game.lastRoll === null ? null : <Badge variant="secondary" className="shrink-0 gap-1 px-1.5" aria-label={`骰子：${game.lastRoll[0]} + ${game.lastRoll[1]}`}>

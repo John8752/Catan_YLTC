@@ -22,9 +22,18 @@ export interface BoardMapProps {
 }
 
 // Design-space dimensions only. Ports, terrain and pieces share the SVG fit and
-// gesture transform; never compensate individual labels with inverse zoom.
-// A narrow icon-over-ratio badge: half the preceding 108.8-unit width.
-const PORT_METRICS = { width: 54.4, height: 68, iconSize: 30, ratioFont: 24, cornerRadius: 8 } as const;
+// presentation transform; never compensate individual labels with inverse scaling.
+// Keep the icon and exchange ratio visually grouped. These values leave only a
+// small measured gap between their bounds while preserving enough card padding.
+const PORT_METRICS = {
+  width: 48,
+  height: 56,
+  iconSize: 24,
+  iconY: -13.5,
+  ratioFont: 21,
+  ratioY: 15,
+  cornerRadius: 7,
+} as const;
 
 export function boardViewBox(map: GameMapView): string {
   const portMetrics = PORT_METRICS;
@@ -138,10 +147,10 @@ export function BoardPorts({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
             </g>
             <g className="port-sign" transform={`translate(${geometry.sign.x} ${geometry.sign.y})`}>
               <rect x={-portMetrics.width / 2} y={-portMetrics.height / 2} width={portMetrics.width} height={portMetrics.height} rx={portMetrics.cornerRadius} />
-              <g className="port-type-icon" transform="translate(0 -17)" aria-hidden="true">
+              <g className="port-type-icon" transform={`translate(0 ${portMetrics.iconY})`} aria-hidden="true">
                 <ResourceIcon kind={port.kind === "generic" ? "unknown" : port.resource} context="port" className="port-resource-icon" transform={`scale(${portMetrics.iconSize / 38})`} />
               </g>
-              <text className="port-ratio" y="18" dominantBaseline="middle" textAnchor="middle" style={{ fontSize: portMetrics.ratioFont }}>{label}</text>
+              <text className="port-ratio" y={portMetrics.ratioY} dominantBaseline="middle" textAnchor="middle" style={{ fontSize: portMetrics.ratioFont }}>{label}</text>
             </g>
           </g>
         );

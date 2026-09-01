@@ -23,7 +23,7 @@ export function DevelopmentControls({ game, busy, onCommand }: DevelopmentContro
   if (game.interaction.kind !== "turn-action" && game.interaction.kind !== "turn-roll") return null;
 
   return (
-    <details className="min-w-0 rounded-md border border-[#4e3923]/18 bg-[#fffaf0]/70" data-resource-sink="development">
+    <details className="min-w-0 rounded-md border border-[var(--sidebar-line,#4e39232e)] bg-[var(--sidebar-control,#fffaf0b3)]" data-resource-sink="development">
       <summary className="h-8 cursor-pointer list-inside content-center px-2 text-sm font-bold whitespace-nowrap">发展卡（{game.you.developmentCards.length}）</summary>
       <div className="development-stack p-2">
         {game.you.developmentCards.length === 0 ? <p>尚无发展卡</p> : null}
@@ -33,7 +33,7 @@ export function DevelopmentControls({ game, busy, onCommand }: DevelopmentContro
             card.acquiredTurn < turnNumber &&
             !game.developmentCardPlayedThisTurn;
           return (
-            <div className="development-card" key={card.id}>
+            <div className="development-card text-[#263d39]" key={card.id}>
               <span>{cardLabel(card.type)}</span>
               {card.type === "victory-point" ? <small>隐藏 1 分</small> : null}
               {card.type === "monopoly" ? <ResourceSelect value={resource} onChange={setResource} /> : null}

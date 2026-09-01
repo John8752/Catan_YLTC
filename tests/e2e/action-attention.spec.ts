@@ -51,17 +51,17 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
       await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-card]')).toHaveCount(5);
       await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-count]')).toHaveCount(0);
       if (width < 1024) await page.keyboard.press("Escape");
-      const zoom = page.getByRole("button", { name: width < 1024 ? "地图工具" : "放大地图", exact: true });
-      await zoom.focus();
+      const mapViewport = page.getByRole("region", { name: "可移动地图视口", exact: true });
+      await mapViewport.focus();
       run.push(scenario(2, turn("roll")));
       await expect(page.locator('[data-action-title]')).toHaveText("轮到你了 · 请掷骰子");
       await expect(page.locator('[data-action-attention="required"]')).toHaveCount(1);
       await expect(page.locator('[data-action-notice]')).toHaveText("轮到你了");
-      await expect(zoom).toBeFocused();
+      await expect(mapViewport).toBeFocused();
       const bounds = await page.evaluate(() => {
         const stage = document.querySelector('.board-stage')!.getBoundingClientRect();
         const banner = document.querySelector('[data-action-notice]')!.getBoundingClientRect();
-        return { clear: banner.bottom <= stage.top, overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
+        return { clear: banner.bottom <= stage.top || banner.left >= stage.right, overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
           pointer: getComputedStyle(document.querySelector('[data-attention-slot]')!).pointerEvents };
       });
       expect(bounds).toEqual({ clear: true, overflow: false, pointer: "none" });

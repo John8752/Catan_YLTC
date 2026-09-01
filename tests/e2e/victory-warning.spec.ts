@@ -51,12 +51,12 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
     const run = await openGame(browser, width, height, options);
     try {
       const { page } = run;
-      const zoom = page.getByRole("button", { name: width < 1024 ? "地图工具" : "放大地图", exact: true });
-      await zoom.focus();
+      const mapViewport = page.getByRole("region", { name: "可移动地图视口", exact: true });
+      await mapViewport.focus();
       run.push(7);
       await expect(page.locator('[data-player-score="p2"]')).toHaveText("7/10");
       await expect(page.locator('[data-victory-notice]')).toContainText("7/10");
-      await expect(zoom).toBeFocused();
+      await expect(mapViewport).toBeFocused();
       run.push(9, undefined, "p1");
       await expect(page.locator('.self-seat [data-player-score="p1"]')).toHaveText("9/10");
       await expect(page.locator('.self-seat [data-player-score="p1"]')).toHaveCSS("background-color", "rgb(255, 211, 123)");
@@ -72,7 +72,7 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
         return { fits: badges.every((badge) => within(badge.getBoundingClientRect(), badge.closest('[data-player-target]')!.getBoundingClientRect())),
           resourceClear: resourceBox.right <= ownBadge.left && resourceBox.height < Number.parseFloat(getComputedStyle(resource).fontSize) * 2,
           overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
-          bannerClear: banner.bottom <= stage.top && banner.left >= 0 && banner.right <= innerWidth,
+          bannerClear: (banner.bottom <= stage.top || banner.left >= stage.right) && banner.left >= 0 && banner.right <= innerWidth,
           dockFits: dock.bottom <= innerHeight, pointer: getComputedStyle(document.querySelector('[data-attention-slot]')!).pointerEvents };
       });
       expect(metrics).toEqual({ fits: true, resourceClear: true, overflow: false, bannerClear: true, dockFits: true, pointer: "none" });

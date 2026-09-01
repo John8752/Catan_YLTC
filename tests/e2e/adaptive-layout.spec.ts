@@ -1,108 +1,18 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createGame, resourceAmounts, type GameState, type PlayerSeed, type GameEventRecord } from "../../packages/game-core/src/index.js";
-import { projectGameForPlayer, type RoomView } from "../../packages/protocol/src/index.js";
-import { expect, test, type Browser, type BrowserContextOptions, type Page, type WebSocketRoute } from "@playwright/test";
+import { resourceAmounts } from "../../packages/game-core/src/index.js";
+import { expect, test } from "@playwright/test";
+import { fixture, openFixture, measure } from "./layout-fixture.js";
 import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";
 
-const players: PlayerSeed[] = [
-  { id: "p1", name: "布局验收", color: "terracotta" },
-  { id: "p2", name: "玩家甲", color: "ocean" },
-  { id: "p3", name: "玩家乙", color: "pine" },
-  { id: "p4", name: "玩家丙", color: "wheat" },
-  { id: "p5", name: "玩家丁", color: "plum" },
-  { id: "p6", name: "玩家戊", color: "charcoal" },
-];
 const sizes = [...primaryPhoneCases, ...([
   [1024, 768], [1366, 768], [1920, 1021], [2560, 1440], [3840, 2160],
   [3440, 1440], [1920, 720], [960, 540], [844, 390], [640, 360], [390, 844], [360, 640],
 ] as const).map(([width, height]) => viewportCase(width, height))];
 
-function fixture(count: 4 | 6, revision = 40, finished = false): RoomView {
-  const base = createGame({ id: "layout_game", seed: 93357307, players: players.slice(0, count), ruleProfile: count === 6 ? "extended-5-6" : "base-3-4" });
-  const state: GameState = {
-    ...base, revision, phase: finished ? { kind: "finished", winnerId: "p1" } : { kind: "turn", activePlayerId: "p1", step: "action", turnNumber: 4 },
-    lastRoll: [2, 3],
-    players: base.players.map((player) => ({ ...player, resources: resourceAmounts({ brick: 2, lumber: 3, wool: 4, grain: 5, ore: 6 }) })),
-  };
-  const records: GameEventRecord[] = Array.from({ length: revision }, (_, i) => ({ revision: i + 1, event: { type: "dice_rolled", playerId: "p1", dice: [2, 3] } }));
-  const projected = projectGameForPlayer(state, "p1", records);
-  return {
-    id: "LAYOUT", revision, hostPlayerId: "p1", previewMap: null,
-    members: players.slice(0, count).map((p) => ({ ...p, isHost: p.id === "p1" })),
-    settings: { ruleProfile: count === 6 ? "extended-5-6" : "base-3-4", playerLimit: count, victoryPointsToWin: 10, mapSeed: state.seed, bankCountsPublic: true },
-    game: { ...projected, effects: [], history: projected.history.map((e) => ({ ...e, message: `第 ${e.revision} 次操作：布局验收掷出 2 + 3，其他玩家获得资源。` })) },
-  };
-}
-
-async function openFixture(browser: Browser, width: number, height: number, room: RoomView, options: BrowserContextOptions = {}) {
-  const context = await browser.newContext({ viewport: { width, height }, ...options });
-  await context.addInitScript(() => localStorage.setItem("catan-yltc-seat", JSON.stringify({ roomId: "LAYOUT", playerId: "p1", seatToken: "test" })));
-  const page = await context.newPage();
-  const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.route(/\/api\/rooms\/LAYOUT\?/, (route) => route.fulfill({ json: room }));
-  let socket: WebSocketRoute | undefined;
-  await page.routeWebSocket(/\/ws\?/, (route) => { socket = route; });
-  await page.goto("/");
-  await expect(page.locator(".hex-tile")).toHaveCount(room.game?.map.hexes.length ?? 0);
-  await expect.poll(() => socket !== undefined).toBe(true);
-  return { context, page, errors, push: (next: RoomView) => socket!.send(JSON.stringify({ type: "room_state", room: next })) };
-}
-
-async function measure(page: Page) {
-  return page.evaluate(() => {
-    const board = document.querySelector(".board-stage")!.getBoundingClientRect();
-    const fit = [...document.querySelectorAll(".hex-surface,.port-sign")].every((e) => {
-      const b = e.getBoundingClientRect();
-      return b.left >= board.left && b.right <= board.right && b.top >= board.top && b.bottom <= board.bottom;
-    });
-    const overlays = [...document.querySelectorAll('.board-zoom-controls,[data-resource-source="bank"],.phase-chip')].map((e) => e.getBoundingClientRect());
-    const hudClear = [...document.querySelectorAll(".hex-surface,.port-sign")].every((e) => {
-      const b = e.getBoundingClientRect();
-      return overlays.every((o) => b.right <= o.left || b.left >= o.right || b.bottom <= o.top || b.top >= o.bottom);
-    });
-    const font = (selector: string) => Number.parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
-    const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
-    const signs = [...document.querySelectorAll<SVGRectElement>(".port-sign > rect")].map((element) => element.getBoundingClientRect());
-    const intersect = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
-    const portText = [...document.querySelectorAll<SVGTextElement>(".port-ratio")].map((element) => {
-      const matrix = element.getScreenCTM()!;
-      const text = element.getBoundingClientRect();
-      const card = element.closest(".port-sign")!.querySelector("rect")!.getBoundingClientRect();
-      return { font: Number.parseFloat(getComputedStyle(element).fontSize) * Math.hypot(matrix.a, matrix.b),
-        fits: text.left >= card.left && text.right <= card.right && text.top >= card.top && text.bottom <= card.bottom };
-    });
-    const portContents = [...document.querySelectorAll(".port-sign")].map((sign) => {
-      const card = sign.querySelector("rect")!.getBoundingClientRect();
-      const icon = sign.querySelector(".port-type-icon")?.getBoundingClientRect();
-      const ratio = sign.querySelector(".port-ratio")!.getBoundingClientRect();
-      const generic = sign.parentElement!.getAttribute("data-port-resource") === "generic";
-      const brickInk = sign.querySelector('[data-port-resource-icon="brick"] .resource-icon-primary');
-      return { text: sign.textContent, generic,
-        resource: sign.querySelector("[data-port-resource-icon]")?.getAttribute("data-port-resource-icon"),
-        expectedResource: sign.parentElement!.getAttribute("data-port-resource"),
-        bounds: { icon: icon?.toJSON(), card: card.toJSON(), ratio: ratio.toJSON() },
-        iconHasInk: brickInk === null || getComputedStyle(brickInk).fill !== getComputedStyle(sign.querySelector("rect")!).fill,
-        iconFits: icon !== undefined && icon.left >= card.left && icon.right <= card.right && icon.top >= card.top && icon.bottom <= ratio.top,
-      };
-    });
-    return {
-      fit, hudClear, rootFont: font("html"), nameFont: font(".opponent-strip strong"),
-      portText, portContents, portsSeparated: signs.every((a, i) => signs.slice(i + 1).every((b) => !intersect(a, b))),
-      portTileRatio: signs[0]!.width / document.querySelector(".hex-surface")!.getBoundingClientRect().width,
-      portNumberOverlaps: [...document.querySelectorAll(".token")].flatMap((e) => signs.flatMap((sign, index) => intersect(sign, e.getBoundingClientRect()) ? [{ hex: e.closest('[data-hex-id]')?.getAttribute('data-hex-id'), portIndex: index }] : [])),
-      statFont: font('[data-opponent-summary] [title="资源卡"]'),
-      tile: rect(".hex-surface"), number: rect(".token-number"), dock: rect(".player-dock"),
-      overflow: document.documentElement.scrollWidth > innerWidth + 1 || document.documentElement.scrollHeight > innerHeight + 1,
-      sidebar: document.querySelector("[data-game-sidebar]")?.getBoundingClientRect().toJSON(),
-    };
-  });
-}
-
 for (const count of [4, 6] as const) {
   for (const { name, width, height, options } of sizes) {
-    test(`${count} seats fit ${name} with readable controls and uncropped ports`, async ({ browser }) => {
+    test(`${count} seats fit ${name} with readable controls and bounded port overflow`, async ({ browser }) => {
       const room = fixture(count);
       const run = await openFixture(browser, width, height, room, options);
       try {
@@ -150,7 +60,8 @@ for (const count of [4, 6] as const) {
         expect(scoreBounds!.x + scoreBounds!.width).toBeLessThanOrEqual(seatBounds!.x + seatBounds!.width);
         const metrics = await measure(run.page);
         expect(metrics.overflow).toBe(false);
-        expect(metrics.fit).toBe(true);
+        expect(metrics.terrainFit).toBe(true);
+        expect(metrics.maxPortOverflow).toBeLessThanOrEqual(metrics.tile.width * 0.2);
         expect(metrics.hudClear).toBe(true);
         expect(metrics.portsSeparated).toBe(true);
         expect(metrics.portNumberOverlaps).toEqual([]);
@@ -159,31 +70,48 @@ for (const count of [4, 6] as const) {
         for (const port of metrics.portContents) {
           expect(port.text).toBe(port.generic ? "3:1" : "2:1");
           expect(port.iconFits, `Port content overlap: ${port.expectedResource} ${JSON.stringify(port.bounds)}`).toBe(true);
+          expect(port.contentGap, `Port content too far apart: ${port.expectedResource} ${JSON.stringify(port.bounds)}`)
+            .toBeLessThanOrEqual(metrics.tile.width * 0.09);
           expect(port.iconHasInk).toBe(true);
           expect(port.resource).toBe(port.generic ? "unknown" : port.expectedResource);
         }
         for (const text of metrics.portText) {
           expect(text.fits).toBe(true);
-          // Narrow icon-only ports still share the map's fit and zoom transform.
-          expect(text.font / metrics.tile.width).toBeCloseTo(24 / (56 * Math.sqrt(3)), 4);
+          // Narrow icon-only ports still share the map's presentation transform.
+          expect(text.font / metrics.tile.width).toBeCloseTo(21 / (56 * Math.sqrt(3)), 4);
         }
-        expect(metrics.portTileRatio).toBeCloseTo(54.4 / (56 * Math.sqrt(3)), 4);
+        expect(metrics.portTileRatio).toBeCloseTo(48 / (56 * Math.sqrt(3)), 4);
         expect(metrics.dock.y + metrics.dock.height).toBeLessThanOrEqual(height + 1);
         if (width >= 1024) {
           const logViewport = run.page.getByRole("region", { name: "公开记录", exact: true }).locator('[data-slot="scroll-area-viewport"]');
           const logBounds = await logViewport.boundingBox();
-          const footerBounds = await run.page.locator('aside[aria-label="房间状态"] [data-slot="card-footer"]').boundingBox();
+          const roomPanelBounds = await run.page.locator('aside[aria-label="房间状态"] [data-slot="card"]').boundingBox();
           expect(logBounds!.height).toBeGreaterThanOrEqual(80);
-          expect(logBounds!.y + logBounds!.height).toBeLessThanOrEqual(footerBounds!.y);
+          expect(logBounds!.y + logBounds!.height).toBeLessThanOrEqual(roomPanelBounds!.y + roomPanelBounds!.height);
           expect(metrics.nameFont).toBeGreaterThanOrEqual(16);
           expect(metrics.statFont).toBeGreaterThanOrEqual(14);
-          expect(metrics.sidebar?.x).toBeGreaterThan(metrics.dock.x + metrics.dock.width - 1);
+          expect(metrics.dock.x).toBeGreaterThanOrEqual(metrics.sidebar!.x);
+          expect(metrics.dock.right).toBeLessThanOrEqual(metrics.sidebar!.right);
+          expect(metrics.dock.bottom).toBeCloseTo(metrics.sidebar!.bottom, 0);
+          expect(metrics.board.right).toBeLessThanOrEqual(metrics.sidebar!.x);
+          if (width >= 1280) {
+            expect(metrics.opponents.right).toBeLessThanOrEqual(metrics.board.x);
+            expect(metrics.board.y).toBeCloseTo(metrics.sidebar!.y, 0);
+            expect(metrics.board.bottom).toBeCloseTo(metrics.sidebar!.bottom, 0);
+          } else {
+            expect(metrics.opponents.bottom).toBeLessThanOrEqual(metrics.board.y);
+          }
+          await expect(run.page.locator('[data-game-sidebar] .phase-chip')).toBeVisible();
+          await expect(run.page.locator('[data-game-sidebar] [data-attention-slot]')).toBeVisible();
+          await expect(run.page.locator('[data-game-sidebar] [aria-label="放大地图"]')).toHaveCount(0);
+          await expect(run.page.locator('.live-playfield .board-heading,.live-playfield .board-footer,.live-playfield [data-attention-slot]')).toHaveCount(0);
           expect(metrics.sidebar?.y + metrics.sidebar?.height).toBeLessThanOrEqual(height + 1);
           // Two-line ports participate in fitting. Readability
           // and uncropped content replace the old one-line-port size benchmark.
         }
         const dir = path.join(process.cwd(), "output/playwright");
         await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, `adaptive-${count}-${width}x${height}.json`), JSON.stringify(metrics, null, 2));
         await run.page.screenshot({ path: path.join(dir, `adaptive-${count}-${width}x${height}.png`), fullPage: true, scale: "css" });
         if (count === 6 && (width === 1920 && height === 1021 || width === 390)) {
           if (width < 1024) await run.page.getByRole("button", { name: "查看银行库存" }).click();
@@ -208,7 +136,7 @@ test("large-screen type scales with CSS viewport, not Retina pixel density", asy
 });
 
 for (const { name, width, height, options } of [...primaryPhoneCases, viewportCase(360, 640), viewportCase(640, 360)]) {
-  test(`compact disclosure keeps live stock, zoom and required actions usable at ${name}`, async ({ browser }) => {
+  test(`compact disclosure keeps live stock, map panning and required actions usable at ${name}`, async ({ browser }) => {
     let room = fixture(6);
     if (room.game?.interaction.kind !== "turn-action") throw new Error("Expected action fixture");
     room = { ...room, game: { ...room.game, interaction: { ...room.game.interaction, roadEdgeIds: [room.game.map.edges[0]!.id] } } };
@@ -226,15 +154,15 @@ for (const { name, width, height, options } of [...primaryPhoneCases, viewportCa
       await expect(bank).toBeFocused();
 
       const fitted = await measure(page);
-      const mapTools = page.getByRole("button", { name: "地图工具", exact: true });
-      await expect(page.getByRole("button", { name: "放大地图", exact: true })).toBeHidden();
-      await mapTools.click();
-      await page.getByRole("button", { name: "放大地图", exact: true }).click();
-      await expect.poll(async () => (await measure(page)).tile.width).toBeGreaterThan(fitted.tile.width * 1.1);
+      const mapViewport = page.getByRole("region", { name: "可移动地图视口", exact: true });
+      await expect(page.getByRole("button", { name: "地图工具", exact: true })).toHaveCount(0);
+      await mapViewport.focus();
+      await page.keyboard.press("ArrowRight");
+      await expect.poll(async () => (await measure(page)).tile.x).toBeGreaterThan(fitted.tile.x + 20);
       expect((await measure(page)).portTileRatio).toBeCloseTo(fitted.portTileRatio, 4);
-      await page.getByRole("button", { name: "恢复地图大小", exact: true }).click();
-      await page.keyboard.press("Escape");
-      await expect(mapTools).toBeFocused();
+      await page.keyboard.press("Home");
+      await expect.poll(async () => (await measure(page)).tile.x).toBeCloseTo(fitted.tile.x, 1);
+      await expect(mapViewport).toBeFocused();
 
       await page.getByRole("button", { name: "展开本回合操作" }).click();
       await expect(page.getByRole("button", { name: "结束回合", exact: true })).toBeVisible();
@@ -253,7 +181,7 @@ for (const { name, width, height, options } of [...primaryPhoneCases, viewportCa
   });
 }
 
-test("opponent anchors survive breakpoints and room footer actions stay reachable", async ({ browser }) => {
+test("opponent anchors survive breakpoints and removed live-room actions stay absent", async ({ browser }) => {
   const run = await openFixture(browser, 1920, 1021, fixture(6));
   const anchor = await run.page.locator('[data-player-target="p2"]').elementHandle();
   try {
@@ -276,14 +204,9 @@ test("opponent anchors survive breakpoints and room footer actions stay reachabl
       await expect(run.page.locator(`${width! >= 1024 ? '[data-game-sidebar]' : '.board-heading'} [data-resource-source="bank"]`)).toBeVisible();
       expect(await anchor!.evaluate((e) => e.isConnected)).toBe(true);
       if (width! < 1024) await run.page.getByRole("button", { name: /打开公开记录与房间信息/ }).click();
-      const bounds = await run.page.locator('aside[aria-label="房间状态"] [data-slot="card-footer"]').boundingBox();
-      for (const label of ["退出座位", "在新标签页开一个座位"]) {
-        const action = run.page.getByRole("button", { name: label, exact: true });
-        await expect(action).toBeVisible();
-        const b = await action.boundingBox();
-        expect(b!.x).toBeGreaterThanOrEqual(bounds!.x);
-        expect(b!.x + b!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width);
-      }
+      await expect(run.page.getByRole("button", { name: "退出座位", exact: true })).toHaveCount(0);
+      await expect(run.page.getByRole("button", { name: "在新标签页开一个座位", exact: true })).toHaveCount(0);
+      await expect(run.page.getByRole("region", { name: "公开记录", exact: true })).toBeVisible();
       if (width! < 1024) await run.page.keyboard.press("Escape");
     }
   } finally { await run.context.close(); }

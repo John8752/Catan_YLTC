@@ -21,6 +21,7 @@ import { useMediaQuery } from "./hooks/use-media-query.js";
 import { GameResult } from "./components/GameResult.js";
 import { LobbySetup } from "./components/LobbySetup.js";
 import { GameSidebar } from "./components/GameSidebar.js";
+import { OpponentStrip } from "./components/OpponentStrip.js";
 import { PlayerDock } from "./components/PlayerDock.js";
 import { RoomPanel } from "./components/RoomPanel.js";
 import { ActiveTradePanel } from "./components/ActiveTradePanel.js";
@@ -33,19 +34,15 @@ import { useVictoryWarnings } from "./effects/use-victory-warnings.js";
 import {
   adoptLegacyTabSession,
   createPlayerSessionStore,
-  nextFreeSeatSlot,
   seatSlotFromLocation,
 } from "./player-session.js";
 
 adoptLegacyTabSession(window.sessionStorage, window.localStorage);
 const seatSlot = seatSlotFromLocation(window.location.search);
 const playerSessionStore = createPlayerSessionStore(window.localStorage, seatSlot);
-// Driving several seats from one browser is a local-testing need, so the shortcut
-// for it only appears there rather than confusing a table of real players.
-const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-
 export function App() {
   const bankInSidebar = useMediaQuery("(min-width: 1024px)");
+  const [boardInfoHost, setBoardInfoHost] = useState<HTMLDivElement | null>(null);
   const [session, setSession] = useState<PlayerSession | null>(() => readSession());
   const [room, setRoom] = useState<RoomView | null>(null);
   const [connectionState, setConnectionState] = useState<"connecting" | "live" | "offline">(
@@ -205,17 +202,6 @@ export function App() {
     });
   }
 
-  // A seat cannot be released once the game starts, so this only forgets it here.
-  // It is the way out of a finished match, and the price of leaving a live one.
-  function handleAbandonSeat() {
-    clearCurrentSession();
-  }
-
-  function handleOpenExtraSeat() {
-    const slot = nextFreeSeatSlot(window.localStorage);
-    window.open(`${window.location.pathname}?seat=${slot}`, "_blank", "noopener");
-  }
-
   function clearCurrentSession() {
     playerSessionStore.clear();
     setSession(null);
@@ -260,24 +246,24 @@ export function App() {
   const liveGame = room.game;
   // Route one bank/effect anchor to its current surface; do not mount hidden copies.
   const bankSupply = liveGame === null ? null : bankInSidebar
-    ? <BankSupply resources={liveGame.bankResources} className="mr-0 w-full shrink-0 justify-center" />
+    ? <BankSupply resources={liveGame.bankResources} className="mr-0 w-full shrink-0 justify-center border-transparent bg-transparent shadow-none backdrop-blur-none lg:rounded-none lg:[&>span]:bg-white/5 lg:[&>span]:text-[var(--game-rail-muted)]" />
     : <BankSupplyButton resources={liveGame.bankResources} />;
   const roomControls = <ResponsiveRoomPanel
     room={room} playerId={session.playerId} connectionState={connectionState} busy={busy}
     onStart={handleStart} onSettingsChange={handleRoomSettingsChange} onLeave={handleLeave}
-    onAbandonSeat={handleAbandonSeat} onOpenExtraSeat={isLocalHost ? handleOpenExtraSeat : null}
-    embedded showPlayers={false} className="min-h-0 flex-1 lg:min-h-60"
+    embedded showPlayers={false} className="min-h-0 flex-1"
   />;
 
   return (
     <main className={liveGame === null
       ? "game-layout grid min-h-svh grid-cols-1 gap-3 p-3 lg:h-svh lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:overflow-hidden"
-      : "game-layout live-game-layout grid h-dvh min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-1.5 overflow-hidden p-[max(.35rem,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] phone-landscape:grid-cols-[minmax(0,1fr)_14rem] phone-landscape:grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_var(--game-rail-width)] lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-3 lg:p-3"}>
+      : "game-layout live-game-layout grid h-dvh min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-1.5 overflow-hidden p-[max(.35rem,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] phone-landscape:grid-cols-[minmax(0,1fr)_14rem] phone-landscape:grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_var(--game-rail-width)] lg:grid-rows-[auto_minmax(0,1fr)] lg:gap-3 lg:p-[max(.75rem,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] xl:grid-cols-[var(--game-opponent-width)_minmax(0,1fr)_var(--game-rail-width)] xl:grid-rows-[minmax(0,1fr)]"}>
       {liveGame === null ? <div className="game-brand lg:col-start-1 lg:row-start-1" aria-label="Catan YLTC">
         <span aria-hidden="true">⬡</span>
         <strong>Catan YLTC</strong>
       </div> : null}
-      <div className={liveGame === null ? "playfield min-h-[420px] lg:col-start-1 lg:row-start-2 lg:min-h-0" : "playfield live-playfield col-start-1 row-start-2 min-h-0 overflow-hidden lg:row-start-1"}>
+      {liveGame === null ? null : <OpponentStrip game={liveGame} />}
+      <div className={liveGame === null ? "playfield min-h-[420px] lg:col-start-1 lg:row-start-2 lg:min-h-0" : "playfield live-playfield col-start-1 row-start-2 min-h-0 min-w-0 overflow-hidden xl:col-start-2 xl:row-start-1"}>
         {room.game === null ? (
           <LobbySetup
             room={room}
@@ -290,6 +276,7 @@ export function App() {
             <Board
               game={room.game}
               compact={!bankInSidebar}
+              infoHost={bankInSidebar ? boardInfoHost : null}
               roomControls={bankInSidebar ? null : roomControls}
               actionNotice={actionNotice}
               victoryNotice={victoryNotice}
@@ -310,17 +297,6 @@ export function App() {
           </>
         )}
       </div>
-      {room.game === null ? null : (
-        <PlayerDock
-          game={room.game}
-          compact={!bankInSidebar}
-          busy={busy}
-          onCommand={handleGameCommand}
-          buildMode={buildMode}
-          selectedRobberHexId={selectedRobberHexId}
-          onBuildModeChange={setBuildMode}
-        />
-      )}
       {liveGame === null ? <RoomPanel
         room={room}
         playerId={session.playerId}
@@ -329,13 +305,21 @@ export function App() {
         onStart={handleStart}
         onSettingsChange={handleRoomSettingsChange}
         onLeave={handleLeave}
-        onAbandonSeat={handleAbandonSeat}
-        onOpenExtraSeat={isLocalHost ? handleOpenExtraSeat : null}
       /> : <GameSidebar
-        game={liveGame}
         bankSupply={bankInSidebar ? bankSupply : null}
         roomControls={bankInSidebar ? roomControls : null}
-      />}
+        onInfoMount={setBoardInfoHost}
+      >
+        <PlayerDock
+          game={liveGame}
+          compact={!bankInSidebar}
+          busy={busy}
+          onCommand={handleGameCommand}
+          buildMode={buildMode}
+          selectedRobberHexId={selectedRobberHexId}
+          onBuildModeChange={setBuildMode}
+        />
+      </GameSidebar>}
       {liveGame?.openTrade === null || liveGame === null ? null : (
         <div className="active-trade-surface">
           <ActiveTradePanel game={liveGame} busy={busy} onCommand={handleGameCommand} />

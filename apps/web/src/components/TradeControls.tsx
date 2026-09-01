@@ -62,7 +62,7 @@ export function TradeControls({
       <Button
         variant="outline"
         size="sm"
-        className="w-full border-[#a65c43]/25 bg-[#fffaf0]/80 shadow-sm"
+        className="w-full border-[var(--sidebar-line,#a65c4340)] bg-[var(--sidebar-control,#fffaf0cc)] shadow-sm"
         onClick={() => document.getElementById("active-trade-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
       >
         <Handshake className="size-4" />查看交易桌
@@ -82,7 +82,7 @@ export function TradeControls({
           size="sm"
           aria-expanded={composerOpen}
           className={cn(
-            "w-full border-[#a65c43]/25 bg-[#fffaf0]/80 shadow-sm",
+            "w-full border-[var(--sidebar-line,#a65c4340)] bg-[var(--sidebar-control,#fffaf0cc)] shadow-sm",
             composerOpen && "border-[#37685d]/45 bg-[#37685d] text-white hover:bg-[#315d53] hover:text-white",
           )}
         >

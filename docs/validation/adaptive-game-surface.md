@@ -2,6 +2,8 @@
 
 Date: 2026-08-31
 
+The later [three-column layout validation](./three-column-layout.md) supersedes the desktop placement described below. The mobile matrix, uniform map scaling and earlier feature validation remain applicable.
+
 ## Scope
 
 - Desktop public history, bank and opponents share the right rail; the private dock stays below the map. Short rails reserve readable history space and let opponents scroll.
@@ -11,8 +13,8 @@ Date: 2026-08-31
 - Required local actions keep the entire dock pale coral-red with a soft red border and dark red task-specific headings. A matching player-safe current-action effect produces one 1.5-second notice above the map; trade offers receive a quieter prompt. Initial/reconnect snapshots do not replay notices and reduced-motion disables the brief glow.
 - The local seat shows the same public-score badge as opponents; hidden victory-point cards are excluded.
 - Public near-victory progress starts three points below the room target and escalates at two and one. Amber trophy badges show public score/target; each seat receives at most one notice per tier and the same milestone is appended to public history. Action notices take priority over the three-second warning.
-- SVG fits terrain and port bounds into the remaining space. Port signs use a 54.4×68 icon-over-ratio design, halving the preceding 108.8-unit width. Dedicated ports show only their resource icon; generic ports use the existing SVG question-mark icon. Ratios use 24-unit type, down from 30.6. Chinese port descriptions remain accessible but are not visible text. Every map element scales together, without independent port-size/font compensation. Number tokens use 24-unit type instead of 15-unit type.
-- Game controls use bounded viewport-responsive rem sizing. Compact bank details and map zoom tools open on demand; the repeated board footer is removed. Optional actions collapse while required roll/discard/victim controls remain accessible. Selecting a build returns space to the map. Short phone landscapes move the dock beside the map.
+- SVG fits terrain and port bounds into the remaining space. Port signs use a compact 48×56 icon-over-ratio design with 24-unit icons and 21-unit ratio type. The icon and ratio are pulled together with only a small measured gap, while rendered bounds remain non-overlapping at every tested size. Dedicated ports show only their resource icon; generic ports use the existing SVG question-mark icon. Chinese port descriptions remain accessible but are not visible text. Every map element scales together, without independent port-size/font compensation. Number tokens use 24-unit type instead of 15-unit type.
+- Game controls use bounded viewport-responsive rem sizing. Compact bank details open on demand; map-tool buttons and the repeated board footer are removed. The map uses a fixed enlarged presentation scale and moves directly by drag or arrow keys, with double-click/Home returning it to center. Optional actions collapse while required roll/discard/victim controls remain accessible. Selecting a build returns space to the map. Short phone landscapes move the dock beside the map.
 - History retains the latest 30 projected entries, appends below, follows the bottom, pauses while reading older entries and offers a return-to-latest button.
 - Result tabs use light text in inactive, hover, selected and keyboard-focus states.
 - No game legality, canonical game state, server authority or proprietary artwork changed. Protocol changes are limited to bank-count visibility, player-safe current-action cues and public near-victory milestones.
@@ -47,16 +49,16 @@ With a browser default font size of 16px, expected desktop sizing is:
 
 The same 1920×1021 CSS viewport at DPR 1 and DPR 2 produces identical type sizing. Monitor diagonal, viewing distance and OS scaling are not discoverable from viewport dimensions; physical-size equivalence across monitors is not guaranteed. Browser zoom remains available.
 
-The old one-line-port tile-width benchmark is superseded by the icon-over-ratio design. Tests assert constant port/hex and font/hex proportions at every viewport and during zoom, complete port bounds, no overlapping port cards and no number-token occlusion. Icon and ratio rows must remain separated, each port must show its correct resource/question-mark icon, and visible port text contains only its ratio. The bank-style background must not override brick-icon ink. Board size is limited by the tighter viewport axis, so changing design-space port dimensions also changes the full-map fit rather than imposing a fixed screen-pixel size.
+The old one-line-port tile-width benchmark is superseded by the icon-over-ratio design. Tests assert constant port/hex and font/hex proportions at every viewport and during panning, bounded edge overflow, no overlapping port cards and no number-token occlusion. Terrain bounds remain visible. Icon and ratio rows must remain separated, and their gap is capped at 0.09 hex widths so the content cannot drift apart again. Each port must show its correct resource/question-mark icon, and visible port text contains only its ratio. The bank-style background must not override brick-icon ink. Board size is limited by the tighter viewport axis, then receives one uniform presentation scale rather than fixed screen-pixel sizing.
 
 ## Additional regressions
 
 - History starts at the bottom, follows appended events, pauses on upward scroll and resumes explicitly.
 - A retained visible log row keeps its offset when old entries leave the 30-row window; repeated snapshots do not cause a jump.
 - Mobile history opens at the newest entry and retains Radix Escape behavior.
-- Opponent DOM anchors survive desktop/mobile breakpoint changes; local room footer controls remain within their panel.
+- Opponent DOM anchors survive desktop/mobile breakpoint changes; the live room panel omits the retired exit-seat and extra-seat controls at every breakpoint.
 - Bank location follows the desktop/compact breakpoint with exactly one resource-source anchor. Live bank counts and local public scores survive resizing; history remains at least 80 CSS pixels tall in the desktop fixture matrix.
-- Compact disclosure tests cover live bank updates while its dialog is open, hidden-count redaction, Escape/focus return, one effect anchor, zoom/reset with constant port proportions, automatic build-panel collapse and directly accessible rolling. Optional controls use Radix disclosure, dialog and popover primitives.
+- Compact disclosure tests cover live bank updates while its dialog is open, hidden-count redaction, Escape/focus return, one effect anchor, direct map movement/recentering with constant port proportions, automatic build-panel collapse and directly accessible rolling. Optional controls use Radix disclosure and dialog primitives.
 - Bank rendering tests cover zero stock and both 19- and 24-card supplies, icon-only visible content, accessible resource names and unchanged hand/compact labels.
 - Bank-visibility tests cover the public default, host-only updates, stale revisions, invalid values, preservation on unrelated updates, post-start locking and redaction for all seats. The real three-seat E2E match now runs with hidden bank counts.
 - Action-notice browser tests cover the eight primary phone cases plus 360×640, 390×844, 960×540 and 1920×1021, asserting no map overlap, document overflow or focus theft; notifications expire without removing persistent emphasis. Setup, discard, robber, paired action and incoming offers use distinct headings; reload does not replay a notice. Unit tests also cover duplicates, stale revisions, reconnect baselines and free roads.

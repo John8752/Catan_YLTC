@@ -20,7 +20,7 @@ export function ResponsiveRoomPanel(props: RoomPanelProps) {
       <DialogContent className="game-info-sheet h-[72dvh] max-h-[72dvh] max-w-none gap-0 overflow-hidden border-[#f7e6bf]/30 bg-[#f8ecd2] p-0 text-[#263d39]">
         <DialogHeader className="sr-only">
           <DialogTitle>公开记录与房间信息</DialogTitle>
-          <DialogDescription>查看本局公开事件、房间连接状态和离开操作。</DialogDescription>
+          <DialogDescription>查看本局公开事件和房间连接状态。</DialogDescription>
         </DialogHeader>
         <RoomPanel {...props} embedded showPlayers={false} />
       </DialogContent>

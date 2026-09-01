@@ -1,36 +1,29 @@
-import { useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type WheelEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 
-// Scale 1 fits the complete island and ports into the available board stage.
-// Gestures may zoom out further for orientation after panning.
-const MIN_SCALE = 0.5;
-const MAX_SCALE = 2.6;
+const PAN_LIMIT = 160;
+const KEYBOARD_PAN_STEP = 32;
 
 interface Point {
   readonly x: number;
   readonly y: number;
 }
 
-interface ViewTransform extends Point {
-  readonly scale: number;
-}
-
 interface GestureStart {
-  readonly view: ViewTransform;
+  readonly view: Point;
   readonly point: Point;
-  readonly midpoint?: Point;
-  readonly distance?: number;
 }
 
-const RESET_VIEW: ViewTransform = { x: 0, y: 0, scale: 1 };
+const CENTER: Point = { x: 0, y: 0 };
 
-export function useBoardViewport() {
-  const [view, setView] = useState<ViewTransform>(RESET_VIEW);
+export function useBoardViewport(scale = 1) {
+  const [view, setView] = useState<Point>(CENTER);
   const pointers = useRef(new Map<number, Point>());
   const gesture = useRef<GestureStart | null>(null);
   const suppressClick = useRef(false);
 
-  const reset = () => setView(RESET_VIEW);
-  const zoomBy = (amount: number) => setView((current) => boundedView({ ...current, scale: current.scale + amount }));
+  useEffect(() => setView(CENTER), [scale]);
+
+  const reset = () => setView(CENTER);
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 && event.pointerType === "mouse") return;
@@ -46,31 +39,13 @@ export function useBoardViewport() {
     const first = points[0];
     if (first === undefined) return;
 
-    if (points.length >= 2 && start.midpoint !== undefined && start.distance !== undefined) {
-      const second = points[1];
-      if (second === undefined) return;
-      const midpoint = pointMidpoint(first, second);
-      const distance = pointDistance(first, second);
-      if (Math.abs(distance - start.distance) > 3) {
-        suppressClick.current = true;
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
-      }
-      const scale = start.view.scale * (distance / Math.max(start.distance, 1));
-      setView(boundedView({
-        scale,
-        x: start.view.x + midpoint.x - start.midpoint.x,
-        y: start.view.y + midpoint.y - start.midpoint.y,
-      }));
-      return;
-    }
-
     const dx = first.x - start.point.x;
     const dy = first.y - start.point.y;
     if (Math.hypot(dx, dy) > 5) {
       suppressClick.current = true;
       if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
     }
-    setView(boundedView({ scale: start.view.scale, x: start.view.x + dx, y: start.view.y + dy }));
+    setView(boundedPoint({ x: start.view.x + dx, y: start.view.y + dy }, scale));
   };
 
   const finishPointer = (event: PointerEvent<HTMLDivElement>) => {
@@ -80,63 +55,61 @@ export function useBoardViewport() {
     window.setTimeout(() => { suppressClick.current = false; }, 0);
   };
 
-  const onWheel = (event: WheelEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    zoomBy(event.deltaY < 0 ? 0.15 : -0.15);
-  };
-
   const onClickCapture = (event: MouseEvent<HTMLDivElement>) => {
     if (!suppressClick.current) return;
     event.preventDefault();
     event.stopPropagation();
   };
 
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    const delta = {
+      ArrowLeft: { x: -KEYBOARD_PAN_STEP, y: 0 },
+      ArrowRight: { x: KEYBOARD_PAN_STEP, y: 0 },
+      ArrowUp: { x: 0, y: -KEYBOARD_PAN_STEP },
+      ArrowDown: { x: 0, y: KEYBOARD_PAN_STEP },
+    }[event.key];
+    if (event.key === "Home") {
+      event.preventDefault();
+      reset();
+    } else if (delta !== undefined) {
+      event.preventDefault();
+      setView((current) => boundedPoint({ x: current.x + delta.x, y: current.y + delta.y }, scale));
+    }
+  };
+
   return {
-    scale: view.scale,
     transformStyle: {
       "--board-pan-x": `${view.x}px`,
       "--board-pan-y": `${view.y}px`,
-      "--board-zoom": view.scale,
+      "--board-scale": scale,
     } as CSSProperties,
     viewportProps: {
+      role: "region" as const,
+      "aria-label": "可移动地图视口",
+      tabIndex: 0,
       onPointerDown,
       onPointerMove,
       onPointerUp: finishPointer,
       onPointerCancel: finishPointer,
-      onWheel,
       onDoubleClick: reset,
       onClickCapture,
+      onKeyDown,
     },
-    reset,
-    zoomIn: () => zoomBy(0.2),
-    zoomOut: () => zoomBy(-0.2),
   };
 }
 
-function gestureFromPointers(pointers: ReadonlyMap<number, Point>, view: ViewTransform): GestureStart | null {
+function gestureFromPointers(pointers: ReadonlyMap<number, Point>, view: Point): GestureStart | null {
   const points = [...pointers.values()];
   if (points.length === 0) return null;
   const first = points[0];
   if (first === undefined) return null;
-  if (points.length === 1) return { view, point: first };
-  const second = points[1];
-  if (second === undefined) return { view, point: first };
-  return {
-    view,
-    point: first,
-    midpoint: pointMidpoint(first, second),
-    distance: pointDistance(first, second),
-  };
+  return { view, point: first };
 }
 
-function boundedView(view: ViewTransform): ViewTransform {
-  const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, view.scale));
-  // Panning only means something once the board is larger than its frame. Deriving
-  // the bound straight from the scale would go negative below 1 and snap the board
-  // to a corner, so it is floored instead.
-  const maxOffset = Math.max(0, 240 * (scale - 1));
+function boundedPoint(view: Point, scale: number): Point {
+  const maxOffset = scale > 1 ? PAN_LIMIT : 0;
   return {
-    scale,
     x: maxOffset === 0 ? 0 : Math.min(maxOffset, Math.max(-maxOffset, view.x)),
     y: maxOffset === 0 ? 0 : Math.min(maxOffset, Math.max(-maxOffset, view.y)),
   };
@@ -144,12 +117,4 @@ function boundedView(view: ViewTransform): ViewTransform {
 
 function eventPoint(event: PointerEvent<HTMLDivElement>): Point {
   return { x: event.clientX, y: event.clientY };
-}
-
-function pointMidpoint(first: Point, second: Point): Point {
-  return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
-}
-
-function pointDistance(first: Point, second: Point): number {
-  return Math.hypot(second.x - first.x, second.y - first.y);
 }

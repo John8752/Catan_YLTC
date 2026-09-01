@@ -21,10 +21,13 @@ it.each([4, 6] as const)("renders narrow icon-over-ratio ports without visible C
   for (const port of ports) {
     const generic = port.getAttribute("data-port-resource") === "generic";
     const sign = port.querySelector(".port-sign")!;
-    expect(sign.querySelector(":scope > rect")?.getAttribute("width")).toBe("54.4");
-    expect(sign.querySelector(":scope > rect")?.getAttribute("height")).toBe("68");
+    expect(sign.querySelector(":scope > rect")?.getAttribute("width")).toBe("48");
+    expect(sign.querySelector(":scope > rect")?.getAttribute("height")).toBe("56");
+    expect(sign.querySelector(".port-type-icon")?.getAttribute("transform")).toBe("translate(0 -13.5)");
     expect(sign.textContent).toBe(generic ? "3:1" : "2:1");
-    expect(sign.querySelector(".port-ratio")?.getAttribute("style")).toContain("font-size:24px");
+    expect(sign.querySelector(".port-resource-icon")?.getAttribute("transform")).toBe("scale(0.631578947368421)");
+    expect(sign.querySelector(".port-ratio")?.getAttribute("y")).toBe("15");
+    expect(sign.querySelector(".port-ratio")?.getAttribute("style")).toContain("font-size:21px");
     expect(port.getAttribute("aria-label")).toContain(generic ? "通用港口，三换一" : "港口，二换一");
     expect(sign.querySelector("[data-port-resource-icon]")?.getAttribute("data-port-resource-icon"))
       .toBe(generic ? "unknown" : port.getAttribute("data-port-resource"));

@@ -24,6 +24,7 @@ import {
 import { ConstructionTargets } from "./ConstructionTargets.js";
 import { BankSupply } from "./BankSupply.js";
 import { ActionAttentionBanner } from "@/effects/ActionAttentionBanner.js";
+import { TurnForecastBar } from "./TurnForecastBar.js";
 
 const DEFAULT_BOARD_SCALE = 1.08;
 
@@ -71,10 +72,12 @@ export function Board({
   };
 
   const heading = <>
-    <div className="board-heading flex items-center justify-between gap-1">
+    <div className="board-heading flex flex-wrap items-center justify-between gap-1">
       {infoHost === null ? <p className="eyebrow">种子 {game.seed}</p> : null}
       {bankSupply}
-      <span className="phase-chip whitespace-nowrap">{phaseLabel(game)}</span>
+      {game.phase.kind === "turn"
+        ? <TurnForecastBar game={game} />
+        : <span className="phase-chip whitespace-nowrap">{phaseLabel(game)}</span>}
       {roomControls}
     </div>
     {infoHost === null || actionNotice !== null || victoryNotice !== null

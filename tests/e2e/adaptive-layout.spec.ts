@@ -29,6 +29,13 @@ for (const count of [4, 6] as const) {
         if (width < 1024) await run.page.getByRole("button", { name: "收起本回合操作" }).click();
         await expect(run.page.locator("[data-player-target]")).toHaveCount(count);
         await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
+        await expect(run.page.locator('[data-turn-forecast]')).toBeVisible();
+        await expect(run.page.locator('[data-turn-forecast]')).toHaveAttribute("data-turn-forecast-distance", "0");
+        if (width >= 600 && width < 1024 && height <= 500) {
+          await expect(run.page.getByText("轮到你 · 主回合", { exact: true })).toBeVisible();
+          const heading = await run.page.locator('.board-heading').boundingBox();
+          expect(heading?.height).toBeLessThanOrEqual(40);
+        }
         await expect(run.page.locator('[data-player-score]')).toHaveCount(count);
         await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("0");
         const bankHost = width >= 1024 ? '[data-game-sidebar]' : '.board-heading';
@@ -101,7 +108,7 @@ for (const count of [4, 6] as const) {
           } else {
             expect(metrics.opponents.bottom).toBeLessThanOrEqual(metrics.board.y);
           }
-          await expect(run.page.locator('[data-game-sidebar] .phase-chip')).toBeVisible();
+          await expect(run.page.locator('[data-game-sidebar] [data-turn-forecast]')).toBeVisible();
           await expect(run.page.locator('[data-game-sidebar] [data-attention-slot]')).toHaveCount(0);
           await expect(run.page.locator('[data-game-sidebar]')).not.toContainText("轮到你了，请掷骰子");
           await expect(run.page.locator('[data-game-sidebar] [aria-label="放大地图"]')).toHaveCount(0);

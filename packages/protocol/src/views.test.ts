@@ -1,8 +1,35 @@
-import { createBaseGame, resourceAmounts, type GameEventRecord } from "@catan/game-core";
+import { createBaseGame, createGame, resourceAmounts, type GameEventRecord } from "@catan/game-core";
 import { describe, expect, it } from "vitest";
 import { MAX_PROJECTED_EVENT_RECORDS, projectGameForPlayer } from "./views.js";
 
 describe("player-safe game projections", () => {
+  it("projects the authoritative 5–6 player action queue", () => {
+    const game = createGame({
+      id: "game_turn_queue",
+      seed: 42,
+      ruleProfile: "extended-5-6",
+      players: [
+        { id: "p1", name: "一", color: "terracotta" },
+        { id: "p2", name: "二", color: "ocean" },
+        { id: "p3", name: "三", color: "pine" },
+        { id: "p4", name: "四", color: "wheat" },
+        { id: "p5", name: "五", color: "plum" },
+        { id: "p6", name: "六", color: "charcoal" },
+      ],
+    });
+    const view = projectGameForPlayer({
+      ...game,
+      phase: { kind: "turn", activePlayerId: "p1", step: "action", turnNumber: 4 },
+    }, "p5");
+
+    expect(view.turnQueue.slice(0, 4)).toEqual([
+      { playerId: "p1", kind: "primary", turnNumber: 4 },
+      { playerId: "p4", kind: "paired", turnNumber: 4 },
+      { playerId: "p2", kind: "primary", turnNumber: 5 },
+      { playerId: "p5", kind: "paired", turnNumber: 5 },
+    ]);
+  });
+
   it("carries the server phase deadline without making the client authoritative", () => {
     const game = createBaseGame({
       id: "game_timer_projection",

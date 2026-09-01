@@ -62,7 +62,7 @@ export async function measure(page: Page) {
       const b = e.getBoundingClientRect();
       return b.left >= board.left && b.right <= board.right && b.top >= board.top && b.bottom <= board.bottom;
     });
-    const overlays = [...document.querySelectorAll('[data-resource-source="bank"],.phase-chip')].map((e) => e.getBoundingClientRect());
+    const overlays = [...document.querySelectorAll('[data-resource-source="bank"],.phase-chip,[data-turn-forecast]')].map((e) => e.getBoundingClientRect());
     const hudClear = [...document.querySelectorAll(".hex-surface,.port-sign")].every((e) => {
       const b = e.getBoundingClientRect();
       return overlays.every((o) => b.right <= o.left || b.left >= o.right || b.bottom <= o.top || b.top >= o.bottom);
@@ -107,6 +107,11 @@ export async function measure(page: Page) {
       statFont: font('[data-opponent-summary] [title="资源卡"]'),
       tile: rect(".hex-surface"), number: rect(".token-number"), dock: rect(".player-dock"),
       board: board.toJSON(), opponents: rect(".opponent-strip"),
+      forecast: document.querySelector('[data-turn-forecast]')?.getBoundingClientRect().toJSON(),
+      heading: document.querySelector('.board-heading')?.getBoundingClientRect().toJSON(),
+      headingChildren: [...document.querySelector('.board-heading')?.children ?? []].map((element) => ({
+        text: element.textContent, bounds: element.getBoundingClientRect().toJSON(), display: getComputedStyle(element).display,
+      })),
       mapScale: new DOMMatrix(getComputedStyle(document.querySelector(".board-transform")!).transform).a,
       overflow: document.documentElement.scrollWidth > innerWidth + 1 || document.documentElement.scrollHeight > innerHeight + 1,
       sidebar: document.querySelector("[data-game-sidebar]")?.getBoundingClientRect().toJSON(),

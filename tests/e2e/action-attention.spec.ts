@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { createGame, resourceAmounts, type GameState } from "../../packages/game-core/src/index.js";
-import { projectGameForPlayer, type RoomView } from "../../packages/protocol/src/index.js";
+import { projectGameForPlayer, type RoomView, type TurnTimerView } from "../../packages/protocol/src/index.js";
 import { expect, test, type Browser, type BrowserContextOptions, type WebSocketRoute } from "@playwright/test";
 import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";
 
@@ -12,11 +12,20 @@ const base = createGame({ id: "attention_e2e", seed: 42, ruleProfile: "extended-
 const numbered = base.map.hexes.find((hex) => hex.numberToken !== null)!;
 function scenario(revision: number, phase: GameState["phase"], extra: Partial<GameState> = {}): RoomView {
   const state = { ...base, revision, phase, map: { ...base.map, robberHexId: numbered.id }, ...extra };
+  const timer: TurnTimerView | null = phase.kind === "turn" && ["roll", "action", "paired-action"].includes(phase.step)
+    ? {
+        playerId: phase.activePlayerId,
+        kind: phase.step === "roll" ? "roll" : "action",
+        durationMs: phase.step === "roll" ? 5_000 : 120_000,
+        deadlineAt: phase.step === "roll" ? 105_000 : 220_000,
+        serverNow: 100_000,
+      }
+    : null;
   return {
     id: "NOTICE", revision, hostPlayerId: "p1", previewMap: null,
     members: base.players.map((p) => ({ id: p.id, name: p.name, color: p.color, isHost: p.id === "p1" })),
     settings: { ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: 10, mapSeed: base.seed, bankCountsPublic: false },
-    game: projectGameForPlayer(state, "p1", [], null, { bankCountsPublic: false }),
+    game: projectGameForPlayer(state, "p1", [], timer, { bankCountsPublic: false }),
     setupAnalysis: null,
   };
 }
@@ -47,6 +56,26 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
     const { page } = run;
     try {
       await expect(page.locator('[data-action-attention="none"]')).toHaveCount(1);
+      await expect(page.locator('[data-turn-forecast]')).toBeVisible();
+      await expect(page.locator('[data-turn-forecast-summary]')).toHaveText("再过 4 次操作 · 搭档行动");
+      await expect(page.locator('[data-turn-queue-current="true"]')).toHaveAttribute("data-turn-queue-player", "p2");
+      await expect(page.locator('[data-turn-queue-self="true"]')).toHaveAttribute("data-turn-queue-player", "p1");
+      const forecastArtifact = name.includes("iPhone 16 portrait browser-area")
+        ? "iphone-16-portrait"
+        : name.includes("iPhone 16 landscape browser-area")
+          ? "iphone-16-landscape"
+          : width === 1920
+            ? "desktop"
+            : null;
+      if (forecastArtifact !== null) {
+        await mkdir("output/playwright", { recursive: true });
+        await page.screenshot({
+          path: `output/playwright/turn-forecast-${forecastArtifact}.png`,
+          fullPage: true,
+          scale: "css",
+          animations: "disabled",
+        });
+      }
       await expect(page.locator('[data-resource-source="bank"] [data-resource-count]')).toHaveCount(0);
       if (width < 1024) await page.getByRole("button", { name: "查看银行库存" }).click();
       await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-card]')).toHaveCount(5);

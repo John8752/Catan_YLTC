@@ -6,7 +6,6 @@ import { GameControls } from "./GameControls.js";
 import { DockActions } from "./DockActions.js";
 import { ResourceCard, resourceLabel } from "./ResourceCard.js";
 import { emptyResourceSelection, incrementResource } from "./ResourceCardPicker.js";
-import { TurnTimerBadge } from "./TurnTimerBadge.js";
 import { PlayerPublicStats } from "./PlayerPublicStats.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
 import { PlayerScoreBadge } from "./PlayerScoreBadge.js";
@@ -39,7 +38,6 @@ export function PlayerDock({
 
   const activeSelection = game.interaction.kind === "discard" ? discardSelection : null;
   const activeSelectionLabel = "准备弃掉";
-  const ownTimer = game.turnTimer?.playerId === game.you.id ? game.turnTimer : null;
   const prompt = describeAction(game.interaction);
   const nearVictory = game.phase.kind === "turn" && victoryWarningTier(game.you.visibleVictoryPoints, game.victoryPointsToWin) !== null;
 
@@ -56,11 +54,6 @@ export function PlayerDock({
       prompt?.tone === "required" && "border-[#e49c96] bg-[#fce5e3] ring-2 ring-[#e49c96]/65 lg:border-[#e49c96]/30 lg:bg-[#303c39] lg:ring-1 lg:ring-inset lg:ring-[#e49c96]/15",
       prompt?.tone === "trade" && "border-[#a9c7c0] ring-1 ring-[#a9c7c0]/40",
     )}>
-      {ownTimer === null ? null : (
-        <span className="absolute bottom-[calc(100%+.75rem)] left-5 z-30 phone-landscape:static phone-landscape:mb-1 lg:static lg:mb-1" data-turn-timer-slot="self">
-          <TurnTimerBadge timer={ownTimer} className="px-2 py-1 text-xs" />
-        </span>
-      )}
       <div className={cn("grid grid-cols-[minmax(112px,.26fr)_minmax(0,1fr)] items-stretch gap-2 phone-landscape:flex phone-landscape:flex-col md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:flex lg:flex-col lg:gap-1", nearVictory && "max-md:grid-cols-[minmax(128px,.32fr)_minmax(0,1fr)]")}>
         <div
           className={cn("self-seat flex min-w-0 items-center gap-1.5 rounded-xl border border-[#6d5434]/15 bg-white/35 px-2 py-1.5 md:col-start-1 md:row-start-1 lg:border-transparent lg:bg-transparent lg:py-1", nearVictory && "max-md:grid max-md:grid-cols-[.625rem_minmax(0,1fr)_auto] max-md:gap-x-1 max-md:gap-y-0")}

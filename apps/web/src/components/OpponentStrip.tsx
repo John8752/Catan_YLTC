@@ -1,7 +1,6 @@
 import { victoryWarningTier, type GameView } from "@catan/protocol";
 import { cn } from "@/lib/utils.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
-import { TurnTimerBadge } from "./TurnTimerBadge.js";
 import { PlayerScoreBadge } from "./PlayerScoreBadge.js";
 
 const MAX_VISIBLE_PLAYER_NAME_LENGTH = 6;
@@ -15,13 +14,9 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
   const opponents = game.players.filter((player) => player.id !== game.you.id);
 
   return (
-    <section className={cn(
-      "opponent-strip col-start-1 row-start-1 grid min-w-0 shrink-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 phone-landscape:col-span-2 lg:auto-cols-[14rem] xl:min-h-0 xl:shrink xl:auto-rows-max xl:grid-flow-row xl:grid-cols-1 xl:auto-cols-auto xl:content-start xl:gap-0 xl:overflow-x-hidden xl:overflow-y-auto xl:rounded-xl xl:bg-[var(--game-rail-bg)] xl:pb-0 xl:ring-1 xl:ring-inset xl:ring-[var(--game-rail-line)]",
-      game.turnTimer !== null && game.turnTimer.playerId !== game.you.id && "pb-8",
-    )} aria-label="其他玩家" tabIndex={0}>
+    <section className="opponent-strip col-start-1 row-start-1 grid min-w-0 shrink-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 phone-landscape:col-span-2 lg:auto-cols-[14rem] xl:min-h-0 xl:shrink xl:auto-rows-max xl:grid-flow-row xl:grid-cols-1 xl:auto-cols-auto xl:content-start xl:gap-0 xl:overflow-x-hidden xl:overflow-y-auto xl:rounded-xl xl:bg-[var(--game-rail-bg)] xl:pb-0 xl:ring-1 xl:ring-inset xl:ring-[var(--game-rail-line)]" aria-label="其他玩家" tabIndex={0}>
       {opponents.map((player) => {
         const active = player.id === activePlayerId;
-        const timer = game.turnTimer?.playerId === player.id ? game.turnTimer : null;
         const nearVictory = game.phase.kind === "turn" && victoryWarningTier(player.visibleVictoryPoints, game.victoryPointsToWin) !== null;
         return (
           <article
@@ -58,11 +53,6 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
               <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余村庄 ${player.remainingPieces.settlements}`}>村庄 <b className="text-[#fff4c9]">{player.remainingPieces.settlements}</b></span>
               <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余道路 ${player.remainingPieces.roads}`}>道路 <b className="text-[#fff4c9]">{player.remainingPieces.roads}</b></span>
             </div>
-            {timer === null ? null : (
-              <span className="absolute top-[calc(100%+.25rem)] left-0 z-30 lg:static lg:mt-1 lg:block" data-turn-timer-slot="opponent">
-                <TurnTimerBadge timer={timer} className="px-2 py-1 text-xs" />
-              </span>
-            )}
           </article>
         );
       })}

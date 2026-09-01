@@ -4,8 +4,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBaseGame, type GameState } from "@catan/game-core";
 import { projectGameForPlayer } from "@catan/protocol";
-import { OpponentStrip } from "./OpponentStrip.js";
-import { PlayerDock } from "./PlayerDock.js";
+import { TurnForecastBar } from "./TurnForecastBar.js";
 import { TurnTimerBadge } from "./TurnTimerBadge.js";
 
 const PLAYERS = [
@@ -52,24 +51,16 @@ describe("TurnTimerBadge", () => {
     expect(screen.getByRole("timer").getAttribute("aria-label")).toContain("操作倒计时");
   });
 
-  it("places the timer outside the active opponent card and above the local dock", () => {
+  it("places the active timer in the persistent turn forecast", () => {
     const opponentGame = turnView("player_2", "roll");
-    const { container: opponents } = render(<OpponentStrip game={opponentGame} />);
-    expect(opponents.querySelector('[data-player-id="player_2"] [data-turn-timer-slot="opponent"] [role="timer"]')).not.toBeNull();
-    expect(opponents.querySelector('[data-player-id="player_3"] [role="timer"]')).toBeNull();
+    const { container: opponents } = render(<TurnForecastBar game={opponentGame} />);
+    expect(opponents.querySelector('[data-turn-queue-current="true"] [role="timer"]')).not.toBeNull();
+    expect(opponents.querySelector('[data-turn-queue-player="player_3"] [role="timer"]')).toBeNull();
     cleanup();
 
     const ownGame = turnView("player_1", "action");
-    const { container: dock } = render(<PlayerDock
-      game={ownGame}
-      busy={false}
-      onCommand={() => undefined}
-      buildMode={null}
-      selectedRobberHexId={null}
-      onBuildModeChange={() => undefined}
-    />);
-    expect(dock.querySelector('[data-turn-timer-slot="self"] [role="timer"]')).not.toBeNull();
-    expect(dock.querySelector('[data-current-player="true"] [role="timer"]')).toBeNull();
+    const { container: dock } = render(<TurnForecastBar game={ownGame} />);
+    expect(dock.querySelector('[data-turn-queue-current="true"] [role="timer"]')).not.toBeNull();
   });
 });
 

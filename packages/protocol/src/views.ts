@@ -24,6 +24,8 @@ import {
   RESOURCE_TYPES,
   type ResourceType,
   type TradeOfferState,
+  turnOpportunityQueue,
+  type TurnOpportunityKind,
   type RuleProfile,
   type PlayableRuleProfile,
 } from "@catan/game-core";
@@ -78,6 +80,13 @@ export interface GameView {
   readonly effects: readonly PublicGameEffectView[];
   readonly summary: GameSummaryView | null;
   readonly turnTimer: TurnTimerView | null;
+  readonly turnQueue: readonly TurnQueueEntryView[];
+}
+
+export interface TurnQueueEntryView {
+  readonly playerId: string;
+  readonly kind: TurnOpportunityKind;
+  readonly turnNumber: number;
 }
 
 export interface GameHistoryEntryView {
@@ -287,6 +296,7 @@ export function projectGameForPlayer(
     effects: [...recentRecords.flatMap((record) => projectPlayerSafeEffect(record, viewerId)), ...projectActionAttention(state, viewerId, interaction, eventRecords), ...(state.phase.kind === "turn" ? recentWarnings : [])],
     summary: projectGameSummary(state, eventRecords),
     turnTimer,
+    turnQueue: turnOpportunityQueue(state),
   };
 }
 

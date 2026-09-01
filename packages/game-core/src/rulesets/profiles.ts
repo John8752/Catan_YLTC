@@ -33,7 +33,11 @@ const EXTENDED_DEVELOPMENT_CARDS = [
 const PROFILE_DEFINITIONS: Readonly<Record<PlayableRuleProfile, RuleProfileDefinition>> = {
   "base-3-4": {
     id: "base-3-4",
-    minPlayers: 3,
+    // Two seats play the same standard game: the board, supplies and turn order
+    // are unchanged, there is simply one opponent. The `two-player` profile in
+    // RuleProfile stays reserved for a variant with its own neutral-player rules
+    // (open question O1), which this is not.
+    minPlayers: 2,
     maxPlayers: 4,
     resourceCardsPerType: BASE_RESOURCE_CARDS_PER_TYPE,
     developmentDeckSize: BASE_DEVELOPMENT_CARDS.length,

@@ -54,12 +54,10 @@ export function RoomPanel({
   headerAction,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
-  const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 3;
+  const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 2;
   const canStart = isHost && room.members.length >= minimumPlayers && room.game === null;
-  const playerLimits = room.settings.ruleProfile === "extended-5-6" ? ([5, 6] as const) : ([3, 4] as const);
   const settings: RoomSettingsInput = {
     ruleProfile: room.settings.ruleProfile,
-    playerLimit: room.settings.playerLimit,
     victoryPointsToWin: room.settings.victoryPointsToWin,
     bankCountsPublic: room.settings.bankCountsPublic,
   };
@@ -96,12 +94,12 @@ export function RoomPanel({
                 <span>{isHost ? "房主可调整" : "由房主设置"}</span>
               </div>
               <div className="space-y-1 rounded-xl border border-[#695237]/15 bg-white/35 p-3">
-                <SettingRow label="规则版本">
-                  <div className="flex rounded-lg bg-[#ded0b2]/60 p-1" aria-label="规则版本">
+                <SettingRow label="牌桌规模">
+                  <div className="flex rounded-lg bg-[#ded0b2]/60 p-1" aria-label="牌桌规模">
                     {([
-                      ["base-3-4", "基础 3–4", 4],
-                      ["extended-5-6", "扩展 5–6", 6],
-                    ] as const).map(([ruleProfile, label, playerLimit]) => (
+                      ["base-3-4", "最多 4 人"],
+                      ["extended-5-6", "最多 6 人"],
+                    ] as const).map(([ruleProfile, label]) => (
                       <Button
                         key={ruleProfile}
                         type="button"
@@ -118,39 +116,10 @@ export function RoomPanel({
                         onClick={() => onSettingsChange({
                           ...settings,
                           ruleProfile,
-                          playerLimit,
                           victoryPointsToWin: room.settings.victoryPointsToWin,
                         })}
                       >
                         {label}
-                      </Button>
-                    ))}
-                  </div>
-                </SettingRow>
-                <SettingRow label="人数上限">
-                  <div className="flex rounded-lg bg-[#ded0b2]/60 p-1" aria-label="人数上限">
-                    {playerLimits.map((playerLimit) => (
-                      <Button
-                        key={playerLimit}
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className={cn(
-                          "h-7 min-w-10 rounded-md px-3 text-xs",
-                          room.settings.playerLimit === playerLimit
-                            ? "bg-[#37685d] text-white hover:bg-[#315d53] hover:text-white"
-                            : "text-[#53665f] hover:bg-white/55",
-                        )}
-                        aria-pressed={room.settings.playerLimit === playerLimit}
-                        disabled={!isHost || busy || room.members.length > playerLimit}
-                        onClick={() => onSettingsChange({
-                          ...settings,
-                          ruleProfile: room.settings.ruleProfile,
-                          playerLimit,
-                          victoryPointsToWin: room.settings.victoryPointsToWin,
-                        })}
-                      >
-                        {playerLimit} 人
                       </Button>
                     ))}
                   </div>
@@ -164,7 +133,6 @@ export function RoomPanel({
                     onChange={(event) => onSettingsChange({
                       ...settings,
                       ruleProfile: room.settings.ruleProfile,
-                      playerLimit: room.settings.playerLimit,
                       victoryPointsToWin: Number(event.target.value),
                     })}
                   >

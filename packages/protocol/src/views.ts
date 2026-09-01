@@ -171,7 +171,12 @@ export interface LobbyMemberView {
 
 export interface RoomSettingsView {
   readonly ruleProfile: PlayableRuleProfile;
-  readonly playerLimit: 3 | 4 | 5 | 6;
+  /**
+   * Derived from the rule profile, never chosen on its own: the profile is what
+   * decides the map, the supplies and the turn policy, and the seat cap comes
+   * with it. Kept in the view so a lobby can show "3/4" without knowing profiles.
+   */
+  readonly playerLimit: 4 | 6;
   readonly victoryPointsToWin: number;
   readonly mapSeed: number;
   readonly bankCountsPublic: boolean;
@@ -218,7 +223,7 @@ export type PublicSetupAnalysisView =
       readonly message: string;
     };
 
-export type RoomSettingsInput = Omit<RoomSettingsView, "mapSeed">;
+export type RoomSettingsInput = Omit<RoomSettingsView, "mapSeed" | "playerLimit">;
 
 export interface RoomView {
   readonly id: string;

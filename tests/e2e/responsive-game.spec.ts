@@ -11,7 +11,6 @@ test("six-player board keeps five opponents, the map and the private dock in one
       seatToken: host.seatToken,
       expectedRevision: host.room.revision,
       ruleProfile: "extended-5-6",
-      playerLimit: 6,
       victoryPointsToWin: 10,
     },
   });

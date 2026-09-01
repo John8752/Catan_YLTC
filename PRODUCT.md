@@ -29,8 +29,8 @@ Primary verbs:
 
 ## Rule profiles
 
-- `base-3-4`: first complete rules target.
-- `two-player`: planned variant with its own setup and turn policy.
+- `base-3-4`: first complete rules target; seats two to four, all playing the same game.
+- `two-player`: planned *variant* with its own setup and turn policy. Not what a two-seat match uses today.
 - `extended-5-6`: playable larger-board profile with expanded supplies and its own paired-turn policy.
 
 Player count is never used as a substitute for a named rule profile.

@@ -31,7 +31,7 @@ describe("lobby setup", () => {
     expect(screen.getByText("等待房主确认")).toBeTruthy();
   });
 
-  it("exposes player limit and victory target controls to the host", () => {
+  it("exposes table size and victory target controls to the host", () => {
     const room = lobbyRoom();
     const onSettingsChange = vi.fn();
     const onLeave = vi.fn();
@@ -47,15 +47,15 @@ describe("lobby setup", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "3 人" }));
-    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 3, victoryPointsToWin: 10, bankCountsPublic: true });
+    // One control, not two: the profile is the choice, and the seat cap follows it.
+    expect(screen.queryByRole("button", { name: "3 人" })).toBeNull();
 
     fireEvent.change(screen.getByRole("combobox", { name: "获胜分数" }), { target: { value: "12" } });
-    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: 12, bankCountsPublic: true });
-    fireEvent.click(screen.getByRole("button", { name: "扩展 5–6" }));
-    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: 10, bankCountsPublic: true });
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", victoryPointsToWin: 12, bankCountsPublic: true });
+    fireEvent.click(screen.getByRole("button", { name: "最多 6 人" }));
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "extended-5-6", victoryPointsToWin: 10, bankCountsPublic: true });
     fireEvent.change(screen.getByRole("combobox", { name: "银行剩余数量" }), { target: { value: "hidden" } });
-    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: 10, bankCountsPublic: false });
+    expect(onSettingsChange).toHaveBeenCalledWith({ ruleProfile: "base-3-4", victoryPointsToWin: 10, bankCountsPublic: false });
 
     fireEvent.click(screen.getByRole("button", { name: "离开房间" }));
     expect(screen.getByRole("dialog", { name: "确认离开房间？" }).textContent).toContain("房主将自动转交给 周");
@@ -76,7 +76,7 @@ describe("lobby setup", () => {
       />,
     );
 
-    expect((screen.getByRole("button", { name: "3 人" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "最多 4 人" }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("combobox", { name: "获胜分数" }) as HTMLSelectElement).disabled).toBe(true);
     expect((screen.getByRole("combobox", { name: "银行剩余数量" }) as HTMLSelectElement).disabled).toBe(true);
     expect(screen.getByText("由房主设置")).toBeTruthy();

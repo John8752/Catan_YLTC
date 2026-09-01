@@ -56,8 +56,9 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     const initialSeedLabel = await seedLabel.textContent();
     await host.getByRole("button", { name: "再次随机" }).click();
     await expect.poll(() => seedLabel.textContent()).not.toBe(initialSeedLabel);
-    await host.getByRole("button", { name: "3 人", exact: true }).click();
-    await expect(host.getByRole("button", { name: "3 人", exact: true })).toHaveAttribute("aria-pressed", "true");
+    // Table size is one control now, and the seat cap rides on it.
+    await expect(host.getByRole("button", { name: "最多 4 人" })).toHaveAttribute("aria-pressed", "true");
+    expect(await host.getByRole("button", { name: "3 人", exact: true }).count()).toBe(0);
     await host.getByRole("combobox", { name: "获胜分数" }).selectOption("12");
     await expect(host.getByRole("combobox", { name: "获胜分数" })).toHaveValue("12");
     await expect(host.getByRole("combobox", { name: "银行剩余数量" })).toHaveValue("public");
@@ -66,7 +67,7 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
 
     await joinRoom(second, "岚", roomCode ?? "");
     await joinRoom(third, "舟", roomCode ?? "");
-    await expect(host.getByText("3/3")).toBeVisible();
+    await expect(host.getByText("3/4")).toBeVisible();
     await expect(second.getByRole("combobox", { name: "获胜分数" })).toHaveValue("12");
     await expect(second.getByRole("combobox", { name: "获胜分数" })).toBeDisabled();
     await expect(second.getByRole("combobox", { name: "银行剩余数量" })).toHaveValue("hidden");

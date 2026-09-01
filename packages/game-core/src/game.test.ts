@@ -53,9 +53,21 @@ describe("base game creation", () => {
     });
   });
 
-  it("rejects unsupported player counts", () => {
-    expect(() => createBaseGame({ id: "game_1", seed: 42, players: players.slice(0, 2) })).toThrow(
-      "requires three or four players",
+  it("seats two players on the standard board", () => {
+    const state = createBaseGame({ id: "game_1", seed: 42, players: players.slice(0, 2) });
+    expect(state.players).toHaveLength(2);
+    expect(state.ruleProfile).toBe("base-3-4");
+    // Two seats change nothing else: same board, same bank, same setup order.
+    expect(state.map.hexes).toHaveLength(19);
+    expect(state.phase.kind).toBe("setup");
+  });
+
+  it("rejects player counts the profile cannot seat", () => {
+    expect(() => createBaseGame({ id: "game_1", seed: 42, players: players.slice(0, 1) })).toThrow(
+      "requires 2–4 players",
+    );
+    expect(() => createBaseGame({ id: "game_1", seed: 42, players: [...players, ...players].slice(0, 5) })).toThrow(
+      "requires 2–4 players",
     );
   });
 });

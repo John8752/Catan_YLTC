@@ -110,7 +110,7 @@ export class RoomRegistry {
       seed: this.createSeed(),
       revision: 1,
       members: [{ id: playerId, seatToken, name, color: PLAYER_COLORS[0] }],
-      settings: { ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN, bankCountsPublic: true },
+      settings: { ruleProfile: "base-3-4", victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN, bankCountsPublic: true },
       game: null,
       appliedCommands: new Set(),
       history: [],
@@ -138,8 +138,9 @@ export class RoomRegistry {
       throw new RoomError("ROOM_ALREADY_STARTED", "This room has already started");
     }
 
-    if (room.members.length >= room.settings.playerLimit) {
-      throw new RoomError("ROOM_FULL", `This room is limited to ${room.settings.playerLimit} players`);
+    const seatCap = getRuleProfileDefinition(room.settings.ruleProfile).maxPlayers;
+    if (room.members.length >= seatCap) {
+      throw new RoomError("ROOM_FULL", `This room is limited to ${seatCap} players`);
     }
 
     const color = PLAYER_COLORS.find(
@@ -170,19 +171,12 @@ export class RoomRegistry {
     expectedRevision: number,
     settings: {
       readonly ruleProfile: PlayableRuleProfile;
-      readonly playerLimit: 3 | 4 | 5 | 6;
       readonly victoryPointsToWin: number;
       readonly bankCountsPublic?: boolean | undefined;
     },
   ): RoomView {
     const room = this.requireConfigurableRoom(roomId, seatToken, expectedRevision);
     const profile = getRuleProfileDefinition(settings.ruleProfile);
-    if (settings.playerLimit < profile.minPlayers || settings.playerLimit > profile.maxPlayers) {
-      throw new RoomError(
-        "INVALID_ROOM_SETTINGS",
-        `${settings.ruleProfile} supports a player limit of ${profile.minPlayers}–${profile.maxPlayers}`,
-      );
-    }
     if (
       !Number.isInteger(settings.victoryPointsToWin) ||
       settings.victoryPointsToWin < MIN_VICTORY_POINTS_TO_WIN ||
@@ -193,13 +187,14 @@ export class RoomRegistry {
         `Victory target must be ${MIN_VICTORY_POINTS_TO_WIN}–${MAX_VICTORY_POINTS_TO_WIN} points`,
       );
     }
-    if (settings.playerLimit < room.members.length) {
+    // Switching profiles is what can shrink the room now, so the seated players
+    // are what the new profile has to be able to hold.
+    if (profile.maxPlayers < room.members.length) {
       throw new RoomError("ROOM_CAPACITY_TOO_SMALL", "Player limit cannot be lower than the occupied seats");
     }
 
     room.settings = {
       ruleProfile: settings.ruleProfile,
-      playerLimit: settings.playerLimit,
       victoryPointsToWin: settings.victoryPointsToWin,
       bankCountsPublic: settings.bankCountsPublic ?? room.settings.bankCountsPublic,
     };
@@ -485,7 +480,7 @@ export class RoomRegistry {
       })),
       settings: {
         ruleProfile: room.settings.ruleProfile,
-        playerLimit: room.settings.playerLimit,
+        playerLimit: getRuleProfileDefinition(room.settings.ruleProfile).maxPlayers as 4 | 6,
         victoryPointsToWin: room.settings.victoryPointsToWin,
         mapSeed: room.seed,
         bankCountsPublic: room.settings.bankCountsPublic,

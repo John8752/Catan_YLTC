@@ -139,7 +139,7 @@ function roomView(state: GameState, viewerId: string, records: readonly GameEven
     members: players.map((player) => ({ ...player, isHost: player.id === "player_1" })),
     settings: {
       ruleProfile: "base-3-4",
-      playerLimit: 3,
+      playerLimit: 4,
       victoryPointsToWin: 10,
       mapSeed: state.seed,
       bankCountsPublic: true,

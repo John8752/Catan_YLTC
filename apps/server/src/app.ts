@@ -42,7 +42,6 @@ const roomSettingsSchema = z.object({
   seatToken: z.string().min(1),
   expectedRevision: z.number().int().positive(),
   ruleProfile: z.enum(["base-3-4", "extended-5-6"]),
-  playerLimit: z.union([z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
   victoryPointsToWin: z.number().int().min(5).max(15),
   bankCountsPublic: z.boolean().optional(),
 });
@@ -258,7 +257,6 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
       return reply.code(200).send(
         registry.updateSettings(request.params.roomId, body.seatToken, body.expectedRevision, {
           ruleProfile: body.ruleProfile,
-          playerLimit: body.playerLimit,
           victoryPointsToWin: body.victoryPointsToWin,
           bankCountsPublic: body.bankCountsPublic,
         }),

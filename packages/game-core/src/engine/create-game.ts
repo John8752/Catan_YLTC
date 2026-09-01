@@ -38,9 +38,7 @@ export function createGame(input: CreateGameInput): GameState {
   if (input.players.length < profile.minPlayers || input.players.length > profile.maxPlayers) {
     throw new GameRuleError(
       "UNSUPPORTED_PLAYER_COUNT",
-      ruleProfile === "base-3-4"
-        ? "The base-3-4 rule profile requires three or four players"
-        : `The ${ruleProfile} rule profile requires ${profile.minPlayers}–${profile.maxPlayers} players`,
+      `The ${ruleProfile} rule profile requires ${profile.minPlayers}–${profile.maxPlayers} players`,
     );
   }
 

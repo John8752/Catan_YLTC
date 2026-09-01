@@ -14,7 +14,7 @@
 
 | ID | Question | Needed by |
 |---|---|---|
-| O1 | Exact two-player variant and neutral-player behavior | two-player milestone |
+| O1 | Exact two-player *variant* and neutral-player behavior. Two seats already play plain `base-3-4`; this is about whether a distinct variant is worth building | two-player milestone |
 | O3 | Reconnection grace period and abandoned-seat policy | M1 |
 | O4 | Whether chat is in-product or external | trading UX milestone |
 | O5 | Public release name and rights review | public deployment |

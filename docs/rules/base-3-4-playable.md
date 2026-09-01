@@ -4,7 +4,7 @@
 
 This document fixes the executable scope of the first complete playable version. It is a behavior contract for tests and implementation, not a reproduction of any commercial rulebook.
 
-This document defines the `base-3-4` rule profile. A match has three or four human players, starts from an empty variable board and ends when a player wins. The 5–6 player behavior is implemented separately by `extended-5-6`; the two-player profile remains planned.
+This document defines the `base-3-4` rule profile. A match has two to four human players, starts from an empty variable board and ends when a player wins. Every seat count in that range plays the identical game; two seats simply means one opponent, with no neutral player and no rule of its own. The 5–6 player behavior is implemented separately by `extended-5-6`; the distinct `two-player` variant profile remains planned.
 
 ## Included match loop
 
@@ -21,7 +21,7 @@ A complete match includes:
 
 ## Explicit non-goals
 
-- `two-player` and `extended-5-6` profiles;
+- the `two-player` variant profile and `extended-5-6`;
 - bots, spectators, public matchmaking, accounts, ranking or chat;
 - persistence after the server process exits;
 - expansions, scenarios or house rules;

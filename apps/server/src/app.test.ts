@@ -10,6 +10,43 @@ afterEach(async () => {
 });
 
 describe("room API", () => {
+  it("starts a two-player match on the standard profile and still refuses a solo one", async () => {
+    const app = await buildApp();
+    apps.push(app);
+    const host = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "林" },
+    })).json<PlayerSessionResponse>();
+
+    // One seat is not a match: the profile floor is what turns it away.
+    const soloStart = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/start`,
+      payload: { seatToken: host.seatToken },
+    });
+    expect(soloStart.statusCode).toBe(400);
+    expect(soloStart.json()).toMatchObject({ error: { code: "NOT_ENOUGH_PLAYERS" } });
+
+    await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/join`,
+      payload: { playerName: "周" },
+    });
+    const started = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/start`,
+      payload: { seatToken: host.seatToken },
+    });
+    expect(started.statusCode).toBe(200);
+    const room = started.json<RoomView>();
+    // Two seats, but nothing else about the table changes.
+    expect(room.game?.players).toHaveLength(2);
+    expect(room.settings).toMatchObject({ ruleProfile: "base-3-4", playerLimit: 4 });
+    expect(room.game?.map.hexes).toHaveLength(19);
+    expect(room.game?.phase.kind).toBe("setup");
+  });
+
   it("releases lobby seats, transfers host ownership and deletes an empty room", async () => {
     const app = await buildApp();
     apps.push(app);
@@ -102,13 +139,13 @@ describe("room API", () => {
         seatToken: host.seatToken,
         expectedRevision: host.room.revision,
         ruleProfile: "base-3-4",
-        playerLimit: 3,
         victoryPointsToWin: 7,
       },
     });
     const configuredRoom = settingsResponse.json<RoomView>();
     expect(settingsResponse.statusCode).toBe(200);
-    expect(configuredRoom.settings).toMatchObject({ playerLimit: 3, victoryPointsToWin: 7 });
+    // The seat cap now rides on the profile rather than being set on its own.
+    expect(configuredRoom.settings).toMatchObject({ ruleProfile: "base-3-4", playerLimit: 4, victoryPointsToWin: 7 });
 
     const rerollResponse = await app.inject({
       method: "POST",
@@ -133,22 +170,25 @@ describe("room API", () => {
         seatToken: second.seatToken,
         expectedRevision: second.room.revision,
         ruleProfile: "base-3-4",
-        playerLimit: 4,
         victoryPointsToWin: 10,
       },
     });
     expect(nonHostSettingsResponse.statusCode).toBe(400);
     expect(nonHostSettingsResponse.json()).toMatchObject({ error: { code: "ONLY_HOST_CAN_CONFIGURE" } });
 
-    await app.inject({
-      method: "POST",
-      url: `/api/rooms/${host.roomId}/join`,
-      payload: { playerName: "陈" },
-    });
+    for (const playerName of ["陈", "赵"]) {
+      const seated = await app.inject({
+        method: "POST",
+        url: `/api/rooms/${host.roomId}/join`,
+        payload: { playerName },
+      });
+      expect(seated.statusCode).toBe(200);
+    }
+    // base-3-4 seats four; the fifth is what the profile's cap turns away.
     const fullResponse = await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/join`,
-      payload: { playerName: "赵" },
+      payload: { playerName: "钱" },
     });
     expect(fullResponse.statusCode).toBe(400);
     expect(fullResponse.json()).toMatchObject({ error: { code: "ROOM_FULL" } });

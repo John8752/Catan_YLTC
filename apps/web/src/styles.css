@@ -241,6 +241,56 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   backdrop-filter: blur(6px);
   cursor: default;
 }
+/* Bottom-left, opposite the zoom controls. Not the top-left corner: that is
+   inside the area people double-click to recentre the board, so a button there
+   swallowed the gesture. */
+.board-rules-entry {
+  position: absolute;
+  bottom: .5rem;
+  left: .5rem;
+  z-index: 2;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  background: rgba(11,42,44,.62);
+  backdrop-filter: blur(6px);
+}
+.board-rules-entry button { color: rgba(255,249,232,.86); }
+@media (max-width: 640px) { .board-rules-entry { bottom: .35rem; left: .35rem; } }
+/* Top-right of the stage, opposite the zoom controls: the roll is the one thing
+   every seat looks up at once, and it used to live in the acting player's dock. */
+.board-dice-result {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem .6rem .35rem .45rem;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  background: rgba(11,42,44,.66);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+.board-dice-faces { display: flex; gap: .2rem; }
+.board-die { width: 1.5rem; height: 1.5rem; }
+.board-die-body { fill: #fff6e0; stroke: rgba(20,48,46,.35); stroke-width: 4; }
+.board-die-pip { fill: #23423f; }
+.board-dice-total {
+  min-width: 1.5rem;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #ffe9ab;
+}
+@media (max-width: 640px) {
+  .board-dice-result { top: .35rem; right: .35rem; gap: .35rem; padding: .25rem .45rem .25rem .3rem; }
+  .board-die { width: 1.1rem; height: 1.1rem; }
+  .board-dice-total { min-width: 1.1rem; font-size: 1.1rem; }
+}
 .board-zoom-level {
   min-width: 2.9rem;
   text-align: center;

@@ -1,8 +1,7 @@
 import { describeAction, type GameView } from "@catan/protocol";
-import { ChevronDown, Dices, Hammer } from "lucide-react";
+import { ChevronDown, Hammer } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils.js";
-import { Badge } from "./ui/badge.js";
 import { Button } from "./ui/button.js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible.js";
 
@@ -30,9 +29,6 @@ export function DockActions({ game, compact, buildMode, selectedRobberHexId, chi
         <span data-action-title="true" title={title} className={cn("flex min-w-0 items-center gap-1 text-xs font-black text-[#5d665f] phone-landscape:basis-full lg:text-sm lg:text-[var(--game-rail-muted)]", prompt?.tone === "required" && "text-[#8c3f3a] lg:rounded lg:bg-[#f1d4cf] lg:px-1 lg:text-[#783d38]")}>
           <Hammer className="hidden size-3.5 shrink-0 lg:block" aria-hidden="true" /><span className="truncate">{title}</span>
         </span>
-        {game.lastRoll === null ? null : <Badge variant="secondary" className="shrink-0 gap-1 px-1.5" aria-label={`骰子：${game.lastRoll[0]} + ${game.lastRoll[1]}`}>
-          <Dices className="size-3.5" aria-hidden="true" />{game.lastRoll[0]} + {game.lastRoll[1]}
-        </Badge>}
         {compact && !mustResolve ? <CollapsibleTrigger asChild>
           <Button type="button" size="sm" variant="ghost" className="h-8 shrink-0 gap-0.5 px-1.5 text-xs" aria-label={open ? "收起本回合操作" : "展开本回合操作"}>
             {open ? "收起" : "操作"}<ChevronDown className={cn("size-3.5", open && "rotate-180")} />

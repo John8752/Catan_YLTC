@@ -68,14 +68,24 @@ it("explains every card in a dialog rather than in the cramped drawer", () => {
 it("counts the deck for the profile actually in play", () => {
   render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
   const base = openGuide();
-  expect(within(base).getByText(/这副牌共 25 张/)).toBeTruthy();
+  expect(within(base).getByText(/发展卡 · 共 25 张/)).toBeTruthy();
   expect(within(base).getByText("14 张")).toBeTruthy();
   cleanup();
 
   render(<DevelopmentControls game={handView({ extended: true })} busy={false} onCommand={() => {}} />);
   const extended = openGuide();
-  expect(within(extended).getByText(/这副牌共 34 张/)).toBeTruthy();
+  expect(within(extended).getByText(/发展卡 · 共 34 张/)).toBeTruthy();
   expect(within(extended).getByText("20 张")).toBeTruthy();
+});
+
+it("shows the build costs beside the cards, read from the engine", () => {
+  render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
+  const guide = openGuide();
+
+  expect(within(guide).getByText("砖+木")).toBeTruthy();
+  expect(within(guide).getByText("砖+木+羊+麦")).toBeTruthy();
+  expect(within(guide).getByText("2麦+3矿")).toBeTruthy();
+  expect(within(guide).getByText("羊+麦+矿")).toBeTruthy();
 });
 
 it("says when a card cannot be played", () => {

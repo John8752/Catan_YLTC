@@ -120,6 +120,81 @@ describe("room API", () => {
     expect(room.game?.phase.kind).toBe("setup");
   });
 
+  it("lets members choose unoccupied colors and lets only the host shuffle the authoritative seat order", async () => {
+    const app = await buildApp();
+    apps.push(app);
+    const host = (await app.inject({
+      method: "POST",
+      url: "/api/rooms",
+      payload: { playerName: "林" },
+    })).json<PlayerSessionResponse>();
+    const second = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/join`,
+      payload: { playerName: "周" },
+    })).json<PlayerSessionResponse>();
+    const third = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/join`,
+      payload: { playerName: "陈" },
+    })).json<PlayerSessionResponse>();
+
+    const hostColorResponse = await app.inject({
+      method: "PATCH",
+      url: `/api/rooms/${host.roomId}/player-color`,
+      payload: { seatToken: host.seatToken, expectedRevision: third.room.revision, color: "coral" },
+    });
+    const hostColoredRoom = hostColorResponse.json<RoomView>();
+    expect(hostColorResponse.statusCode).toBe(200);
+    expect(hostColoredRoom.members.find((member) => member.id === host.playerId)?.color).toBe("coral");
+
+    const occupiedResponse = await app.inject({
+      method: "PATCH",
+      url: `/api/rooms/${host.roomId}/player-color`,
+      payload: { seatToken: second.seatToken, expectedRevision: hostColoredRoom.revision, color: "coral" },
+    });
+    expect(occupiedResponse.statusCode).toBe(400);
+    expect(occupiedResponse.json()).toMatchObject({ error: { code: "PLAYER_COLOR_TAKEN" } });
+
+    const secondColorResponse = await app.inject({
+      method: "PATCH",
+      url: `/api/rooms/${host.roomId}/player-color`,
+      payload: { seatToken: second.seatToken, expectedRevision: hostColoredRoom.revision, color: "graphite" },
+    });
+    const recoloredRoom = secondColorResponse.json<RoomView>();
+    expect(secondColorResponse.statusCode).toBe(200);
+    expect(recoloredRoom.members.find((member) => member.id === second.playerId)?.color).toBe("graphite");
+
+    const guestShuffleResponse = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/shuffle-members`,
+      payload: { seatToken: second.seatToken, expectedRevision: recoloredRoom.revision },
+    });
+    expect(guestShuffleResponse.statusCode).toBe(400);
+    expect(guestShuffleResponse.json()).toMatchObject({ error: { code: "ONLY_HOST_CAN_SHUFFLE" } });
+
+    const orderBeforeShuffle = recoloredRoom.members.map((member) => member.id);
+    const colorsByPlayer = new Map(recoloredRoom.members.map((member) => [member.id, member.color]));
+    const shuffleResponse = await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/shuffle-members`,
+      payload: { seatToken: host.seatToken, expectedRevision: recoloredRoom.revision },
+    });
+    const shuffledRoom = shuffleResponse.json<RoomView>();
+    expect(shuffleResponse.statusCode).toBe(200);
+    expect(shuffledRoom.members.map((member) => member.id)).not.toEqual(orderBeforeShuffle);
+    expect(new Set(shuffledRoom.members.map((member) => member.id))).toEqual(new Set(orderBeforeShuffle));
+    for (const member of shuffledRoom.members) expect(member.color).toBe(colorsByPlayer.get(member.id));
+
+    const started = (await app.inject({
+      method: "POST",
+      url: `/api/rooms/${host.roomId}/start`,
+      payload: { seatToken: host.seatToken },
+    })).json<RoomView>();
+    expect(started.game?.players.map((player) => player.id)).toEqual(shuffledRoom.members.map((member) => member.id));
+    expect(started.game?.players.map((player) => player.color)).toEqual(shuffledRoom.members.map((member) => member.color));
+  });
+
   it("releases lobby seats, transfers host ownership and deletes an empty room", async () => {
     const app = await buildApp();
     apps.push(app);

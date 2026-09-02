@@ -3,17 +3,9 @@ import { BarChart3, ChevronDown, Crown, Dices, Route, ShieldCheck, Trophy } from
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Button } from "@/components/ui/button.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
+import { PLAYER_SWATCH_CLASSES } from "@/lib/player-palette.js";
 import { cn } from "@/lib/utils.js";
 import { ResourceIcon } from "./ResourceIcon.js";
-
-const PLAYER_COLORS = {
-  terracotta: "bg-[#c85d42]",
-  ocean: "bg-[#3886a5]",
-  pine: "bg-[#3f8057]",
-  wheat: "bg-[#d2a534]",
-  plum: "bg-[#81577d]",
-  charcoal: "bg-[#48504f]",
-} as const;
 
 const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
 const CONFETTI_COLORS = ["#f0c75e", "#d96b4e", "#75a889", "#72a9c0", "#f5e1a4"] as const;
@@ -91,7 +83,7 @@ function Overview({ game }: { readonly game: GameView }) {
         return (
           <article className={cn("result-player-row", winner && "is-winner")} key={player.id}>
             <span className="result-rank">{index + 1}</span>
-            <span className={cn("result-player-color", PLAYER_COLORS[player.color])} />
+            <span className={cn("result-player-color", PLAYER_SWATCH_CLASSES[player.color])} />
             <strong>{player.name}</strong>
             <span className="result-score">{summary.score.total}<small>总分</small></span>
             <span className="result-score-sources">
@@ -190,7 +182,7 @@ function ResultTable({ headings, children }: { readonly headings: readonly strin
 
 function PlayerCell({ game, playerId }: { readonly game: GameView; readonly playerId: string }) {
   const player = requirePlayer(game, playerId);
-  return <th scope="row"><span className={cn("result-player-color", PLAYER_COLORS[player.color])} />{player.name}</th>;
+  return <th scope="row"><span className={cn("result-player-color", PLAYER_SWATCH_CLASSES[player.color])} />{player.name}</th>;
 }
 
 function winnerTitle(summary: PlayerGameSummaryView, game: GameView): string {

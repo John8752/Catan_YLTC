@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible.js";
+import { PLAYER_TONE_CLASSES } from "@/lib/player-palette.js";
 import { cn } from "@/lib/utils.js";
 import {
   hasTradeResources,
@@ -15,15 +16,6 @@ import { TradeValidationNote, tradeProblem } from "./TradePresentation.js";
 
 type OpenTrade = NonNullable<GameView["openTrade"]>;
 type OfferResponse = OpenTrade["responses"][number];
-
-const PLAYER_RING = {
-  terracotta: "border-[#c85d42]/45 bg-[#c85d42]/10 text-[#8e3d2b]",
-  ocean: "border-[#3886a5]/45 bg-[#3886a5]/10 text-[#245e77]",
-  pine: "border-[#3f8057]/45 bg-[#3f8057]/10 text-[#285f3c]",
-  wheat: "border-[#d2a534]/45 bg-[#d2a534]/10 text-[#805f13]",
-  plum: "border-[#81577d]/45 bg-[#81577d]/10 text-[#60405d]",
-  charcoal: "border-[#48504f]/45 bg-[#48504f]/10 text-[#333b3a]",
-} as const;
 
 export function ActiveTradePanel({ game, busy, onCommand }: {
   readonly game: GameView;
@@ -124,7 +116,7 @@ function ProposerResponses({ game, offer, busy, selectedPartnerId, onSelectedPar
             aria-label={`${player.name}：${responseStatus(response)}`}
             className={cn(
               "grid gap-2 rounded-xl border-2 p-2.5 text-left transition",
-              PLAYER_RING[player.color],
+              PLAYER_TONE_CLASSES[player.color],
               selectable && affordable ? "hover:-translate-y-0.5 hover:shadow-sm" : "cursor-default opacity-60",
               selectedPartnerId === player.id && "ring-2 ring-[#276a5b] ring-offset-1",
             )}

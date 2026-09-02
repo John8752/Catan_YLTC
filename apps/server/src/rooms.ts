@@ -43,7 +43,7 @@ interface RoomMember {
   readonly id: string;
   readonly seatToken: string;
   readonly name: string;
-  readonly color: PlayerColor;
+  color: PlayerColor;
 }
 
 interface RoomRecord {
@@ -208,6 +208,47 @@ export class RoomRegistry {
   rerollMap(roomId: string, seatToken: string, expectedRevision: number): RoomView {
     const room = this.requireConfigurableRoom(roomId, seatToken, expectedRevision);
     room.seed = this.createSeed(room.seed);
+    room.revision += 1;
+    this.notify(room);
+    return this.projectRoom(room, room.hostPlayerId);
+  }
+
+  updatePlayerColor(
+    roomId: string,
+    seatToken: string,
+    expectedRevision: number,
+    color: PlayerColor,
+  ): RoomView {
+    const room = this.requireOpenLobby(roomId, seatToken, expectedRevision);
+    const member = this.requireCredential(room, seatToken);
+    if (member.color === color) return this.projectRoom(room, member.id);
+    if (room.members.some((candidate) => candidate.color === color)) {
+      throw new RoomError("PLAYER_COLOR_TAKEN", "这个颜色已经被其他玩家选择");
+    }
+
+    member.color = color;
+    room.revision += 1;
+    this.notify(room);
+    return this.projectRoom(room, member.id);
+  }
+
+  shuffleMembers(roomId: string, seatToken: string, expectedRevision: number): RoomView {
+    const room = this.requireOpenLobby(roomId, seatToken, expectedRevision);
+    const member = this.requireCredential(room, seatToken);
+    if (member.id !== room.hostPlayerId) {
+      throw new RoomError("ONLY_HOST_CAN_SHUFFLE", "只有房主可以打乱玩家顺序");
+    }
+    if (room.members.length < 2) return this.projectRoom(room, room.hostPlayerId);
+
+    const previousOrder = room.members.map((member) => member.id);
+    for (let index = room.members.length - 1; index > 0; index -= 1) {
+      const target = randomInt(index + 1);
+      [room.members[index], room.members[target]] = [room.members[target]!, room.members[index]!];
+    }
+    if (room.members.every((member, index) => member.id === previousOrder[index])) {
+      room.members.push(room.members.shift()!);
+    }
+
     room.revision += 1;
     this.notify(room);
     return this.projectRoom(room, room.hostPlayerId);
@@ -480,11 +521,17 @@ export class RoomRegistry {
   }
 
   private requireConfigurableRoom(roomId: string, seatToken: string, expectedRevision: number): RoomRecord {
-    const room = this.requireRoom(roomId);
+    const room = this.requireOpenLobby(roomId, seatToken, expectedRevision);
     const member = this.requireCredential(room, seatToken);
     if (member.id !== room.hostPlayerId) {
       throw new RoomError("ONLY_HOST_CAN_CONFIGURE", "Only the room host can change settings");
     }
+    return room;
+  }
+
+  private requireOpenLobby(roomId: string, seatToken: string, expectedRevision: number): RoomRecord {
+    const room = this.requireRoom(roomId);
+    this.requireCredential(room, seatToken);
     if (room.game !== null) {
       throw new RoomError("ROOM_ALREADY_STARTED", "Room settings are locked after the game starts");
     }

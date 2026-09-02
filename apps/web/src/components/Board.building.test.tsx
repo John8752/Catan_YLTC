@@ -56,7 +56,7 @@ describe("Board construction targets", () => {
     expect(onCommand).toHaveBeenLastCalledWith({ type: "BuildCity", vertexId: cityId });
   });
 
-  it("keeps initial placement targets on the same overlay system", () => {
+  it("requires confirmation before every initial settlement placement on all viewports", () => {
     const game = createBaseGame({ id: "game_setup_targets", seed: 45, players: PLAYERS });
     const onCommand = vi.fn();
     render(<Board game={projectGameForPlayer(game, "player_1")} onCommand={onCommand} />);
@@ -69,6 +69,12 @@ describe("Board construction targets", () => {
     expect(target.getAttribute("data-build-target-context")).toBe("setup");
     expect(target.classList.contains("construction-target-setup")).toBe(true);
     expect(target.querySelector(".construction-target-vertex-ring")?.getAttribute("r")).toBe("7");
+    expect(screen.getByRole("dialog", { name: "确认初始村庄位置" })).not.toBeNull();
+    expect(screen.getByText(initialSettlementAdjacencyText(game, target.getAttribute("data-build-target-id")))).not.toBeNull();
+    expect(onCommand).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "确认放置" }));
+    expect(onCommand).toHaveBeenCalledOnce();
     expect(onCommand).toHaveBeenCalledWith({
       type: "PlaceInitialSettlement",
       vertexId: target.getAttribute("data-build-target-id"),
@@ -89,6 +95,7 @@ describe("Board construction targets", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "在这里建造道路" }));
     expect(screen.getByRole("dialog", { name: "确认道路位置" })).not.toBeNull();
+    expect(document.querySelector("[data-initial-settlement-adjacency]")).toBeNull();
     expect(onCommand).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "确认放置" }));
@@ -96,6 +103,25 @@ describe("Board construction targets", () => {
     expect(onCommand).toHaveBeenCalledWith({ type: "BuildRoad", edgeId: roadId });
   });
 });
+
+function initialSettlementAdjacencyText(game: GameState, vertexId: string | null): string {
+  const vertex = game.map.vertices.find((candidate) => candidate.id === vertexId);
+  if (vertex === undefined) throw new Error("Missing selected setup vertex");
+  const labels: Readonly<Record<GameState["map"]["hexes"][number]["terrain"], string>> = {
+    brick: "砖",
+    lumber: "木",
+    wool: "羊",
+    grain: "麦",
+    ore: "矿",
+    desert: "荒漠",
+  };
+  const adjacent = vertex.adjacentHexIds.map((hexId) => {
+    const hex = game.map.hexes.find((candidate) => candidate.id === hexId);
+    if (hex === undefined) throw new Error(`Missing adjacent hex ${hexId}`);
+    return hex.numberToken === null ? labels[hex.terrain] : `${labels[hex.terrain]} ${hex.numberToken}`;
+  });
+  return `相邻地块：${adjacent.join("、")}`;
+}
 
 function constructionView(): GameView {
   const base = createBaseGame({ id: "game_build_targets", seed: 44, players: PLAYERS });

@@ -43,6 +43,8 @@ describe("lobby setup", () => {
         busy={false}
         onStart={vi.fn()}
         onSettingsChange={onSettingsChange}
+        onPlayerColorChange={vi.fn()}
+        onShufflePlayers={vi.fn()}
         onLeave={onLeave} onDisband={vi.fn()}
       />,
     );
@@ -63,6 +65,37 @@ describe("lobby setup", () => {
     expect(onLeave).toHaveBeenCalledOnce();
   });
 
+  it("renders real settlement colors, disables occupied choices and lets the host shuffle seats", () => {
+    const onPlayerColorChange = vi.fn();
+    const onShufflePlayers = vi.fn();
+    const view = render(
+      <RoomPanel
+        room={lobbyRoom()}
+        playerId="player_1"
+        connectionState="live"
+        busy={false}
+        onStart={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onPlayerColorChange={onPlayerColorChange}
+        onShufflePlayers={onShufflePlayers}
+        onLeave={vi.fn()}
+        onDisband={vi.fn()}
+      />,
+    );
+
+    expect(view.container.querySelectorAll('.piece-building-body')).toHaveLength(2);
+    expect(screen.getByText("第 1 位 · 你")).toBeTruthy();
+    expect(screen.getByText("第 2 位 · 玩家")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "随机打乱玩家顺序" }));
+    expect(onShufflePlayers).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole("button", { name: "选择玩家颜色，当前朱砂红" }));
+    expect((screen.getByRole("button", { name: "钴蓝，已被周选择" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getAllByRole("button", { name: /，可选择$/ })).toHaveLength(10);
+    fireEvent.click(screen.getByRole("button", { name: "珊瑚粉，可选择" }));
+    expect(onPlayerColorChange).toHaveBeenCalledWith("coral");
+  });
+
   it("does not duplicate the relocated disband control in the running-room panel", () => {
     const base = createBaseGame({ id: "disband", seed: 42, players: [
       { id: "player_1", name: "林", color: "terracotta" },
@@ -77,6 +110,8 @@ describe("lobby setup", () => {
         busy={false}
         onStart={vi.fn()}
         onSettingsChange={vi.fn()}
+        onPlayerColorChange={vi.fn()}
+        onShufflePlayers={vi.fn()}
         onLeave={vi.fn()}
         onDisband={vi.fn()}
       />,
@@ -96,6 +131,8 @@ describe("lobby setup", () => {
         busy={false}
         onStart={vi.fn()}
         onSettingsChange={vi.fn()}
+        onPlayerColorChange={vi.fn()}
+        onShufflePlayers={vi.fn()}
         onLeave={vi.fn()}
         onDisband={vi.fn()}
       />,
@@ -112,6 +149,8 @@ describe("lobby setup", () => {
         busy={false}
         onStart={vi.fn()}
         onSettingsChange={vi.fn()}
+        onPlayerColorChange={vi.fn()}
+        onShufflePlayers={vi.fn()}
         onLeave={vi.fn()}
         onDisband={vi.fn()}
       />,

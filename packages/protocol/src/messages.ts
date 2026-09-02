@@ -1,4 +1,5 @@
 import type { RoomSettingsInput, RoomView, TableIntentContent } from "./views.js";
+import type { PlayerColor } from "@catan/game-core";
 
 export interface CreateRoomRequest {
   readonly playerName: string;
@@ -25,6 +26,17 @@ export interface UpdateRoomSettingsRequest extends RoomSettingsInput {
 }
 
 export interface RerollRoomMapRequest {
+  readonly seatToken: string;
+  readonly expectedRevision: number;
+}
+
+export interface UpdatePlayerColorRequest {
+  readonly seatToken: string;
+  readonly expectedRevision: number;
+  readonly color: PlayerColor;
+}
+
+export interface ShuffleRoomMembersRequest {
   readonly seatToken: string;
   readonly expectedRevision: number;
 }

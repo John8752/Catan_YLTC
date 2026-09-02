@@ -49,10 +49,11 @@ Map topology is independent from map content. Vertices, edges, adjacency and coa
 - The default room limit is four players. The host may set it to three or four before the game starts, but never below the number of occupied seats.
 - The default victory target is 10 points. The host may select any whole-number target from 5 through 15 before the game starts.
 - Bank resource counts are public by default. Before starting, the host may hide live bank counts for all seats; this also applies to the extended profile. Hidden counts are redacted from HTTP/WebSocket projections, while resource icons and the bank effect anchor remain visible. Public action history and resource-transfer effects are unchanged, so this is not a promise that stock cannot be inferred from public actions. Supply, production and trade legality remain server-authoritative and unchanged.
-- Only the host may change settings or reroll the map. Every mutation uses the current room revision, is broadcast to all members and is rejected after the game starts.
+- Only the host may change settings, reroll the map or shuffle the seated order. Every mutation uses the current room revision, is broadcast to all members and is rejected after the game starts.
 - The rule profile remains `base-3-4`; switching to a 5–6-player game selects the separate `extended-5-6` profile and regenerates its larger map and supplies.
 - Before the game starts, an explicit leave releases that player's seat immediately. If the host leaves, ownership transfers to the earliest remaining seated player; if the last player leaves, the room is deleted.
-- A vacated player color becomes available to the next joining player. Existing members keep their colors and relative seat order.
+- The lobby offers more player colors than seats. Before the game starts, each member may change only their own color; the server rejects a color already held by another member. A vacated color immediately becomes available again.
+- The member list is the authoritative setup and turn order. The host may shuffle that order before starting; the resulting order is broadcast and then passed unchanged into the game state.
 
 ## Initial placement
 

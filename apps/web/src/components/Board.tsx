@@ -25,6 +25,7 @@ import { ConstructionTargets } from "./ConstructionTargets.js";
 import { BankSupply } from "./BankSupply.js";
 import { BoardZoomControls } from "./BoardZoomControls.js";
 import { DiceResult } from "./DiceResult.js";
+import { SettlementShape } from "./PlayerSettlementIcon.js";
 import { ActionAttentionBanner } from "@/effects/ActionAttentionBanner.js";
 
 export interface BoardProps {
@@ -44,6 +45,19 @@ export interface BoardProps {
   readonly onRobberHexSelect?: (hexId: string) => void;
 }
 
+type ConfirmablePlacementCommand = Extract<GameCommand, {
+  type: "PlaceInitialSettlement" | "PlaceInitialRoad" | "BuildRoad" | "BuildFreeRoad";
+}>;
+
+const SETTLEMENT_TERRAIN_LABELS: Readonly<Record<GameView["map"]["hexes"][number]["terrain"], string>> = {
+  brick: "砖",
+  lumber: "木",
+  wool: "羊",
+  grain: "麦",
+  ore: "矿",
+  desert: "荒漠",
+};
+
 export function Board({
   game,
   compact = false,
@@ -61,13 +75,14 @@ export function Board({
 }: BoardProps) {
   const robberHex = game.map.hexes.find((hex) => hex.id === game.map.robberHexId);
   const viewport = useBoardViewport(DEFAULT_BOARD_SCALE);
-  const [pendingRoadCommand, setPendingRoadCommand] = useState<Extract<GameCommand, { type: "PlaceInitialRoad" | "BuildRoad" | "BuildFreeRoad" }> | null>(null);
+  const [pendingPlacementCommand, setPendingPlacementCommand] = useState<ConfirmablePlacementCommand | null>(null);
+  const pendingSettlementAdjacency = initialSettlementAdjacencyText(game, pendingPlacementCommand);
 
-  useEffect(() => setPendingRoadCommand(null), [game.revision]);
+  useEffect(() => setPendingPlacementCommand(null), [game.revision]);
 
   const handleBoardCommand = (command: GameCommand) => {
-    if (isRoadCommand(command) && shouldConfirmRoadOnThisDevice()) {
-      setPendingRoadCommand(command);
+    if (command.type === "PlaceInitialSettlement" || (isRoadCommand(command) && shouldConfirmRoadOnThisDevice())) {
+      setPendingPlacementCommand(command);
       return;
     }
     onCommand?.(command);
@@ -232,22 +247,19 @@ export function Board({
                   aria-label={`${player.name}的${building.kind === "city" ? "城市" : "村庄"}`}
                 >
                   <title>{player.name}的{building.kind === "city" ? "城市" : "村庄"}</title>
-                  {building.kind === "settlement" ? (
-                    <>
-                      <path className="piece-building-shadow" d="M-11 9V-5L0-14L11-5V9Z" transform="translate(0 2)" />
-                      <path className="piece-building-body" d="M-11 9V-5L0-14L11-5V9Z" />
-                      <path className="piece-building-shine" d="M-8-4L0-11L8-4" />
-                      <rect className="piece-building-door" x="-2.5" y="2" width="5" height="7" rx="1" />
-                    </>
-                  ) : (
-                    <>
-                      <path className="piece-building-shadow" d="M-15 10V-5H-9V-13H1V-6H8L14-12L18-6V10Z" transform="translate(0 2)" />
-                      <path className="piece-building-body" d="M-15 10V-5H-9V-13H1V-6H8L14-12L18-6V10Z" />
-                      <path className="piece-building-shine" d="M-12-3H-7V-10H-1M9-4L14-9L17-5" />
-                      <rect className="piece-building-door" x="-4" y="1" width="6" height="9" rx="1" />
-                      <rect className="piece-building-window" x="8" y="1" width="4" height="4" rx=".7" />
-                    </>
-                  )}
+                  <g className="piece-building-art" transform="scale(1.16)">
+                    {building.kind === "settlement" ? (
+                      <SettlementShape />
+                    ) : (
+                      <>
+                        <path className="piece-building-shadow" d="M-15 10V-5H-9V-13H1V-6H8L14-12L18-6V10Z" transform="translate(0 2)" />
+                        <path className="piece-building-body" d="M-15 10V-5H-9V-13H1V-6H8L14-12L18-6V10Z" />
+                        <path className="piece-building-shine" d="M-12-3H-7V-10H-1M9-4L14-9L17-5" />
+                        <rect className="piece-building-door" x="-4" y="1" width="6" height="9" rx="1" />
+                        <rect className="piece-building-window" x="8" y="1" width="4" height="4" rx=".7" />
+                      </>
+                    )}
+                  </g>
                 </g>
               );
             })}
@@ -268,21 +280,33 @@ export function Board({
       {compact || infoHost !== null ? null : <div className="board-footer relative flex shrink-0 items-center justify-between gap-2">
         <p className="board-instruction flex-1" aria-live="polite">{boardInstruction(game, buildMode)}</p>
       </div>}
-      <Dialog open={pendingRoadCommand !== null} onOpenChange={(open) => !open && setPendingRoadCommand(null)}>
+      <Dialog open={pendingPlacementCommand !== null} onOpenChange={(open) => !open && setPendingPlacementCommand(null)}>
         <DialogContent className="border-2 border-[#d0a853] bg-[#fff0cd] text-[#263f3b] shadow-[0_20px_60px_rgba(4,24,25,.58)] sm:max-w-sm" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>确认道路位置</DialogTitle>
-            <DialogDescription className="font-medium leading-6 text-[#53645d]">手机点选道路容易误触，请再次确认高亮位置。确认后会立即提交这次放置。</DialogDescription>
+            <DialogTitle>{pendingPlacementCommand?.type === "PlaceInitialSettlement" ? "确认初始村庄位置" : "确认道路位置"}</DialogTitle>
+            <DialogDescription className="font-medium leading-6 text-[#53645d]">
+              {pendingPlacementCommand?.type === "PlaceInitialSettlement"
+                ? "初始村庄会影响道路起点和后续资源收益，请再次确认所选位置。确认后会立即提交这次放置。"
+                : "手机点选道路容易误触，请再次确认高亮位置。确认后会立即提交这次放置。"}
+            </DialogDescription>
+            {pendingSettlementAdjacency === null ? null : (
+              <div
+                className="rounded-md border border-[#d0a853]/70 bg-white/45 px-3 py-2 text-center text-base font-black tracking-wide text-[#294d45]"
+                data-initial-settlement-adjacency="true"
+              >
+                {pendingSettlementAdjacency}
+              </div>
+            )}
           </DialogHeader>
           <DialogFooter className="grid grid-cols-2 sm:grid-cols-2">
-            <Button type="button" variant="outline" onClick={() => setPendingRoadCommand(null)}>返回重选</Button>
+            <Button type="button" variant="outline" onClick={() => setPendingPlacementCommand(null)}>返回重选</Button>
             <Button
               type="button"
-              disabled={busy || pendingRoadCommand === null}
+              disabled={busy || pendingPlacementCommand === null}
               onClick={() => {
-                if (pendingRoadCommand === null) return;
-                const command = pendingRoadCommand;
-                setPendingRoadCommand(null);
+                if (pendingPlacementCommand === null) return;
+                const command = pendingPlacementCommand;
+                setPendingPlacementCommand(null);
                 onCommand?.(command);
               }}
             >
@@ -297,6 +321,19 @@ export function Board({
 
 function isRoadCommand(command: GameCommand): command is Extract<GameCommand, { type: "PlaceInitialRoad" | "BuildRoad" | "BuildFreeRoad" }> {
   return command.type === "PlaceInitialRoad" || command.type === "BuildRoad" || command.type === "BuildFreeRoad";
+}
+
+function initialSettlementAdjacencyText(game: GameView, command: ConfirmablePlacementCommand | null): string | null {
+  if (command?.type !== "PlaceInitialSettlement") return null;
+  const vertex = game.map.vertices.find((candidate) => candidate.id === command.vertexId);
+  if (vertex === undefined) return null;
+  const adjacent = vertex.adjacentHexIds.flatMap((hexId) => {
+    const hex = game.map.hexes.find((candidate) => candidate.id === hexId);
+    if (hex === undefined) return [];
+    const label = SETTLEMENT_TERRAIN_LABELS[hex.terrain];
+    return [hex.numberToken === null ? label : `${label} ${hex.numberToken}`];
+  });
+  return adjacent.length === 0 ? null : `相邻地块：${adjacent.join("、")}`;
 }
 
 function shouldConfirmRoadOnThisDevice(): boolean {

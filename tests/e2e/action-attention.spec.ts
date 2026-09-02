@@ -157,3 +157,42 @@ test("mandatory actions, paired actions and incoming trades have distinct prompt
     expect(run.errors).toEqual([]);
   } finally { await run.context.close(); }
 });
+
+test("initial settlement confirmation fits the iPhone 16 browser area @primary-phone", async ({ browser }) => {
+  const viewport = primaryPhoneCases.find((candidate) => candidate.name === "iPhone 16 portrait browser-area @primary-phone");
+  if (viewport === undefined) throw new Error("Missing iPhone 16 browser-area viewport");
+  const run = await openScenario(browser, viewport.width, viewport.height, "no-preference", viewport.options);
+  const { page } = run;
+  try {
+    const setupPhase = base.phase;
+    if (setupPhase.kind !== "setup") throw new Error("Expected setup");
+    const setupRoom = scenario(2, setupPhase);
+    run.push(setupRoom);
+    const target = page.getByRole("button", { name: "在这里放置定居点" }).first();
+    await expect(target).toBeVisible();
+    const targetVertexId = await target.getAttribute("data-build-target-id");
+    if (targetVertexId === null) throw new Error("Initial settlement target is missing its vertex id");
+
+    await target.click();
+    const dialog = page.getByRole("dialog", { name: "确认初始村庄位置" });
+    await expect(dialog).toBeVisible();
+    expect(await dialog.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= innerWidth && bounds.top >= 0 && bounds.bottom <= innerHeight;
+    })).toBe(true);
+    await expect(page.getByRole("button", { name: "返回重选" })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: "确认放置" })).toBeInViewport({ ratio: 1 });
+    await page.getByRole("button", { name: "返回重选" }).click();
+    await expect(dialog).toBeHidden();
+
+    const submitted: unknown[] = [];
+    await page.route(/\/api\/rooms\/NOTICE\/commands$/, (route) => {
+      submitted.push(route.request().postDataJSON().command);
+      return route.fulfill({ json: { room: setupRoom } });
+    });
+    await target.click();
+    await page.getByRole("button", { name: "确认放置" }).click();
+    await expect.poll(() => submitted).toEqual([{ type: "PlaceInitialSettlement", vertexId: targetVertexId }]);
+    expect(run.errors).toEqual([]);
+  } finally { await run.context.close(); }
+});

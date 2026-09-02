@@ -1,6 +1,7 @@
+import type { PlayerColor } from "@catan/game-core";
 import type { RoomSettingsInput, RoomView } from "@catan/protocol";
 import type { ReactNode } from "react";
-import { Crown, LogOut, Route, Settings2, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Crown, LogOut, Route, Settings2, ShieldCheck, Shuffle, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card.js";
@@ -16,6 +17,8 @@ import {
 } from "@/components/ui/dialog.js";
 import { cn } from "@/lib/utils.js";
 import { DisbandRoomControl } from "./DisbandRoomControl.js";
+import { PlayerColorPicker } from "./PlayerColorPicker.js";
+import { PlayerSettlementIcon } from "./PlayerSettlementIcon.js";
 import { PublicHistory } from "./PublicHistory.js";
 
 export interface RoomPanelProps {
@@ -25,6 +28,8 @@ export interface RoomPanelProps {
   readonly busy: boolean;
   readonly onStart: () => void;
   readonly onSettingsChange: (settings: RoomSettingsInput) => void;
+  readonly onPlayerColorChange: (color: PlayerColor) => void;
+  readonly onShufflePlayers: () => void;
   readonly onLeave: () => void | Promise<void>;
   readonly onDisband: () => void | Promise<void>;
   readonly embedded?: boolean;
@@ -33,15 +38,6 @@ export interface RoomPanelProps {
   readonly headerAction?: ReactNode;
 }
 
-const PLAYER_COLORS = {
-  terracotta: "bg-[#c85d42]",
-  ocean: "bg-[#3886a5]",
-  pine: "bg-[#3f8057]",
-  wheat: "bg-[#d2a534]",
-  plum: "bg-[#81577d]",
-  charcoal: "bg-[#48504f]",
-} as const;
-
 export function RoomPanel({
   room,
   playerId,
@@ -49,6 +45,8 @@ export function RoomPanel({
   busy,
   onStart,
   onSettingsChange,
+  onPlayerColorChange,
+  onShufflePlayers,
   onLeave,
   onDisband,
   embedded = false,
@@ -163,23 +161,47 @@ export function RoomPanel({
           {showPlayers ? <section aria-label="落座玩家">
             <div className="mb-2 flex items-center justify-between text-xs font-black tracking-[.12em] text-[#5d665f] uppercase">
               <span className="flex items-center gap-2"><Users className="size-4 text-[#b45c42]" />落座玩家</span>
-              <span>{room.members.length}/{room.settings.playerLimit}</span>
+              <span className="flex items-center gap-1.5">
+                {room.game === null && isHost ? (
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    className="h-6 px-1.5 text-[10px] tracking-normal text-[#49615a] hover:bg-white/55"
+                    aria-label="随机打乱玩家顺序"
+                    disabled={busy || room.members.length < 2}
+                    onClick={onShufflePlayers}
+                  >
+                    <Shuffle className="size-3" />乱序
+                  </Button>
+                ) : null}
+                <span>{room.members.length}/{room.settings.playerLimit}</span>
+              </span>
             </div>
             <div className="space-y-1">
-              {room.members.map((member) => {
+              {room.members.map((member, memberIndex) => {
                 const gamePlayer = room.game?.players.find((player) => player.id === member.id);
                 return (
                   <div className={cn(
                     "flex items-center gap-3 rounded-xl px-2.5 py-2",
                     member.id === playerId ? "bg-white/55 ring-1 ring-[#5b7f73]/20" : "bg-transparent",
                   )} key={member.id} data-player-id={member.id} data-player-target={member.id} data-current-player={member.id === playerId ? "true" : undefined}>
-                    <span className={cn("size-3.5 shrink-0 rounded-[5px] shadow-sm ring-2 ring-white/70", PLAYER_COLORS[member.color])} aria-hidden="true" />
+                    {room.game === null && member.id === playerId ? (
+                      <PlayerColorPicker
+                        currentColor={member.color}
+                        members={room.members}
+                        busy={busy}
+                        onChange={onPlayerColorChange}
+                      />
+                    ) : (
+                      <PlayerSettlementIcon color={member.color} className="size-8" label={`${member.name}的村庄颜色`} />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <strong className="truncate text-sm text-[#263d39]">{member.name}</strong>
                         {member.isHost ? <Crown className="size-3.5 text-[#ba8131]" aria-label="房主" /> : null}
                       </div>
-                      <span className="text-[11px] text-[#757b73]">{member.id === playerId ? "你" : "玩家"}</span>
+                      <span className="text-[11px] text-[#757b73]">第 {memberIndex + 1} 位 · {member.id === playerId ? "你" : "玩家"}</span>
                     </div>
                     {gamePlayer === undefined ? null : (
                       <div className="text-right">

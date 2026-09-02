@@ -1,3 +1,4 @@
+import type { PlayerColor } from "@catan/game-core";
 import type { GameCommand, RoomSettingsInput, RoomView } from "@catan/protocol";
 import { useEffect, useState } from "react";
 import {
@@ -9,8 +10,10 @@ import {
   disbandRoom,
   leaveRoom,
   rerollRoomMap,
+  shuffleRoomMembers,
   startRoom,
   submitGameCommand,
+  updatePlayerColor,
   updateRoomSettings,
   type PlayerSession,
 } from "./api.js";
@@ -181,6 +184,30 @@ export function App() {
     });
   }
 
+  async function handlePlayerColorChange(color: PlayerColor) {
+    if (session === null || room === null || room.game !== null) return;
+    await runBusy(async () => {
+      try {
+        setRoom(await updatePlayerColor(session, room.revision, color));
+      } catch (caught) {
+        if (isStaleStateError(caught)) setRoom(await getRoom(session));
+        throw caught;
+      }
+    });
+  }
+
+  async function handleShufflePlayers() {
+    if (session === null || room === null || room.game !== null) return;
+    await runBusy(async () => {
+      try {
+        setRoom(await shuffleRoomMembers(session, room.revision));
+      } catch (caught) {
+        if (isStaleStateError(caught)) setRoom(await getRoom(session));
+        throw caught;
+      }
+    });
+  }
+
   async function handleGameCommand(command: GameCommand) {
     if (session === null || room?.game === null || room?.game === undefined) return;
     await runBusy(async () => {
@@ -276,7 +303,9 @@ export function App() {
     : <BankSupplyButton resources={liveGame.bankResources} />;
   const roomControls = <ResponsiveRoomPanel
     room={room} playerId={session.playerId} connectionState={connectionState} busy={busy}
-    onStart={handleStart} onSettingsChange={handleRoomSettingsChange} onLeave={handleLeave} onDisband={handleDisband}
+    onStart={handleStart} onSettingsChange={handleRoomSettingsChange}
+    onPlayerColorChange={handlePlayerColorChange} onShufflePlayers={handleShufflePlayers}
+    onLeave={handleLeave} onDisband={handleDisband}
     embedded showPlayers={false} className="min-h-0 flex-1"
     headerAction={liveGame === null ? null : <AiCommentaryControl
       session={session}
@@ -352,6 +381,8 @@ export function App() {
         busy={busy}
         onStart={handleStart}
         onSettingsChange={handleRoomSettingsChange}
+        onPlayerColorChange={handlePlayerColorChange}
+        onShufflePlayers={handleShufflePlayers}
         onLeave={handleLeave} onDisband={handleDisband}
       /> : <GameSidebar
         bankSupply={bankInSidebar ? bankSupply : null}

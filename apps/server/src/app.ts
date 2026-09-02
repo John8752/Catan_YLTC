@@ -7,6 +7,7 @@ import Fastify, {
   type FastifyServerOptions,
 } from "fastify";
 import { z } from "zod";
+import { PLAYER_COLORS } from "@catan/game-core";
 import { AI_COMMENTARY_MODES } from "@catan/protocol";
 import { AiCommentaryUpstreamError, type AiCommentator } from "./ai-commentary.js";
 import { buildTableIntentInput } from "./ai-intent.js";
@@ -47,6 +48,17 @@ const roomSettingsSchema = z.object({
 });
 
 const rerollRoomMapSchema = z.object({
+  seatToken: z.string().min(1),
+  expectedRevision: z.number().int().positive(),
+});
+
+const playerColorSchema = z.object({
+  seatToken: z.string().min(1),
+  expectedRevision: z.number().int().positive(),
+  color: z.enum(PLAYER_COLORS),
+});
+
+const shuffleRoomMembersSchema = z.object({
   seatToken: z.string().min(1),
   expectedRevision: z.number().int().positive(),
 });
@@ -271,6 +283,33 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
       const body = rerollRoomMapSchema.parse(request.body);
       return reply.code(200).send(
         registry.rerollMap(request.params.roomId, body.seatToken, body.expectedRevision),
+      );
+    } catch (error) {
+      return sendError(reply, error);
+    }
+  });
+
+  app.patch<{ Params: { roomId: string } }>("/api/rooms/:roomId/player-color", async (request, reply) => {
+    try {
+      const body = playerColorSchema.parse(request.body);
+      return reply.code(200).send(
+        registry.updatePlayerColor(
+          request.params.roomId,
+          body.seatToken,
+          body.expectedRevision,
+          body.color,
+        ),
+      );
+    } catch (error) {
+      return sendError(reply, error);
+    }
+  });
+
+  app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/shuffle-members", async (request, reply) => {
+    try {
+      const body = shuffleRoomMembersSchema.parse(request.body);
+      return reply.code(200).send(
+        registry.shuffleMembers(request.params.roomId, body.seatToken, body.expectedRevision),
       );
     } catch (error) {
       return sendError(reply, error);

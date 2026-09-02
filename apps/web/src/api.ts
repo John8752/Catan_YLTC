@@ -10,6 +10,7 @@ import type {
   RoomSettingsInput,
   RoomView,
 } from "@catan/protocol";
+import type { PlayerColor } from "@catan/game-core";
 import { randomId } from "./lib/random-id.js";
 
 export interface PlayerSession {
@@ -64,6 +65,29 @@ export async function rerollRoomMap(
   expectedRevision: number,
 ): Promise<RoomView> {
   return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}/reroll-map`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ seatToken: session.seatToken, expectedRevision }),
+  });
+}
+
+export async function updatePlayerColor(
+  session: PlayerSession,
+  expectedRevision: number,
+  color: PlayerColor,
+): Promise<RoomView> {
+  return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}/player-color`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ seatToken: session.seatToken, expectedRevision, color }),
+  });
+}
+
+export async function shuffleRoomMembers(
+  session: PlayerSession,
+  expectedRevision: number,
+): Promise<RoomView> {
+  return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}/shuffle-members`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ seatToken: session.seatToken, expectedRevision }),

@@ -88,9 +88,48 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await expect(second.getByRole("combobox", { name: "银行剩余数量" })).toBeDisabled();
     const artifactDir = path.join(process.cwd(), "output", "playwright");
     await mkdir(artifactDir, { recursive: true });
+
+    await second.getByRole("button", { name: "选择玩家颜色，当前钴蓝" }).click();
+    await expect(second.locator('[data-player-color-option]')).toHaveCount(12);
+    await second.getByRole("button", { name: "珊瑚粉，可选择" }).click();
+    await expect(second.getByRole("button", { name: "选择玩家颜色，当前珊瑚粉" })).toBeVisible();
+    await expect(host.getByRole("img", { name: "岚的村庄颜色" })).toBeVisible();
+
+    await host.setViewportSize({ width: 393, height: 852 });
+    await host.getByRole("button", { name: "选择玩家颜色，当前朱砂红" }).click();
+    await expect(host.getByRole("button", { name: "珊瑚粉，已被岚选择" })).toBeDisabled();
+    await expect(host.getByRole("button", { name: "朱砂红，当前颜色" })).toHaveCSS("color", "rgb(41, 77, 69)");
+    const royalPurpleOption = host.getByRole("button", { name: "皇家紫，可选择" });
+    await royalPurpleOption.hover();
+    await expect(royalPurpleOption).toHaveCSS("color", "rgb(61, 81, 76)");
+    const colorPicker = host.getByLabel("选择玩家颜色", { exact: true });
+    await expect(colorPicker).toBeVisible();
+    expect(await colorPicker.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= innerWidth && bounds.top >= 0 && bounds.bottom <= innerHeight;
+    })).toBe(true);
+    await host.screenshot({ path: path.join(artifactDir, "mobile-player-color-picker.png"), fullPage: true });
+    await host.getByRole("button", { name: "石墨黑，可选择" }).click();
+    await expect(host.getByRole("button", { name: "选择玩家颜色，当前石墨黑" })).toBeVisible();
+    await host.setViewportSize({ width: 1280, height: 720 });
+    await expect(second.getByRole("button", { name: "随机打乱玩家顺序" })).toHaveCount(0);
+
+    const lobbyRows = host.locator('[aria-label="落座玩家"] [data-player-id]');
+    const orderBeforeShuffle = await lobbyRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-player-id")));
+    await host.getByRole("button", { name: "随机打乱玩家顺序" }).click();
+    await expect.poll(() => lobbyRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-player-id"))))
+      .not.toEqual(orderBeforeShuffle);
+    const shuffledOrder = await lobbyRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-player-id")));
+    for (const page of [second, third]) {
+      await expect.poll(() => page.locator('[aria-label="落座玩家"] [data-player-id]').evaluateAll((rows) => rows.map((row) => row.getAttribute("data-player-id"))))
+        .toEqual(shuffledOrder);
+    }
+    const firstPlayerName = (await lobbyRows.first().locator("strong").textContent())?.trim();
+    const expectedFirstPage = firstPlayerName === "林" ? host : firstPlayerName === "岚" ? second : third;
+
     await host.screenshot({ path: path.join(artifactDir, "e2e-lobby-settings.png"), fullPage: true });
     await host.getByRole("button", { name: "使用当前地图开局" }).click();
-    await expect(host.getByRole("button", { name: "在这里放置定居点" }).first()).toBeVisible();
+    await expect(expectedFirstPage.getByRole("button", { name: "在这里放置定居点" }).first()).toBeVisible();
     for (const page of pages) {
       await expect(page.locator('[data-resource-source="bank"] [data-resource-card]')).toHaveCount(5);
       await expect(page.locator('[data-resource-source="bank"] [data-resource-count]')).toHaveCount(0);
@@ -101,6 +140,14 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     for (let placement = 0; placement < 6; placement += 1) {
       const settlementPage = await pageWithAction(pages, "在这里放置定居点");
       await clickFirstActionable(settlementPage, "在这里放置定居点");
+      const confirmSettlementDialog = settlementPage.getByRole("dialog", { name: "确认初始村庄位置" });
+      await expect(confirmSettlementDialog).toBeVisible();
+      if (placement === 0) {
+        await settlementPage.waitForTimeout(250);
+        await settlementPage.screenshot({ path: path.join(artifactDir, "initial-settlement-confirm.png"), fullPage: true });
+      }
+      await settlementPage.getByRole("button", { name: "确认放置" }).click();
+      await expect(confirmSettlementDialog).toBeHidden();
       if (placement >= 3 && !capturedResourceEffect) {
         const flights = settlementPage.locator("[data-resource-flight]");
         if (await flights.count() > 0) {
@@ -151,15 +198,17 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     }
     expect(capturedResourceEffect).toBe(true);
 
-    await expect(host.getByRole("button", { name: "掷骰子" })).toBeVisible();
+    const activePage = expectedFirstPage;
+    const observerPage = pages.find((page) => page !== activePage)!;
+    await expect(activePage.getByRole("button", { name: "掷骰子" })).toBeVisible();
     // Operation order no longer carries time. The same authoritative timer is
     // attached to the active player's information on every seat.
-    const hostPlayerId = await host.locator('[data-current-player="true"]').getAttribute("data-player-id");
-    if (hostPlayerId === null) throw new Error("Host player id is missing from the local seat");
-    const ownForecast = host.locator("[data-turn-forecast]");
-    const observedForecast = second.locator("[data-turn-forecast]");
-    const ownRollTimer = host.locator(`[data-turn-timer-player="${hostPlayerId}"]:visible`);
-    const observedRollTimer = second.locator(`[data-turn-timer-player="${hostPlayerId}"]:visible`);
+    const activePlayerId = await activePage.locator('[data-current-player="true"]').getAttribute("data-player-id");
+    if (activePlayerId === null) throw new Error("Active player id is missing from the local seat");
+    const ownForecast = activePage.locator("[data-turn-forecast]");
+    const observedForecast = observerPage.locator("[data-turn-forecast]");
+    const ownRollTimer = activePage.locator(`[data-turn-timer-player="${activePlayerId}"]:visible`);
+    const observedRollTimer = observerPage.locator(`[data-turn-timer-player="${activePlayerId}"]:visible`);
     await expect(ownRollTimer).toHaveAttribute("aria-label", /掷骰倒计时/);
     await expect(observedRollTimer).toHaveAttribute("aria-label", /掷骰倒计时/);
     await expect(ownForecast.locator('[role="timer"]')).toHaveCount(0);
@@ -167,8 +216,8 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await expect(ownForecast).toHaveAttribute("data-turn-forecast-distance", "0");
     await expect(observedForecast).not.toHaveAttribute("data-turn-forecast-distance", "0");
     await Promise.all([
-      host.setViewportSize({ width: 390, height: 844 }),
-      second.setViewportSize({ width: 390, height: 844 }),
+      activePage.setViewportSize({ width: 390, height: 844 }),
+      observerPage.setViewportSize({ width: 390, height: 844 }),
     ]);
     await expect(ownRollTimer).toBeVisible();
     await expect(observedRollTimer).toBeVisible();
@@ -187,19 +236,19 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
       expect(timer.y).toBeGreaterThanOrEqual(info.y - 1);
       expect(timer.y + timer.height).toBeLessThanOrEqual(info.y + info.height + 1);
     }
-    await host.screenshot({ path: path.join(artifactDir, "mobile-roll-timer.png"), fullPage: true });
-    await second.screenshot({ path: path.join(artifactDir, "mobile-opponent-roll-timer.png"), fullPage: true });
+    await activePage.screenshot({ path: path.join(artifactDir, "mobile-roll-timer.png"), fullPage: true });
+    await observerPage.screenshot({ path: path.join(artifactDir, "mobile-opponent-roll-timer.png"), fullPage: true });
     await Promise.all([
-      host.setViewportSize({ width: 1280, height: 720 }),
-      second.setViewportSize({ width: 1280, height: 720 }),
+      activePage.setViewportSize({ width: 1280, height: 720 }),
+      observerPage.setViewportSize({ width: 1280, height: 720 }),
     ]);
-    await expect(host.getByLabel(/骰子：\d \+ \d/)).toBeVisible({ timeout: 8_000 });
-    const postRollTimer = host.locator(`[data-turn-timer-player="${hostPlayerId}"]:visible`);
+    await expect(activePage.getByLabel(/骰子：\d \+ \d/)).toBeVisible({ timeout: 8_000 });
+    const postRollTimer = activePage.locator(`[data-turn-timer-player="${activePlayerId}"]:visible`);
     if (await postRollTimer.count() > 0) {
       await expect(postRollTimer).toHaveAttribute("aria-label", /操作倒计时/);
     }
-    await expect(host.getByRole("img", { name: "由十九块六边形地形组成的游戏棋盘" })).toBeVisible();
-    await host.screenshot({ path: path.join(artifactDir, "e2e-desktop.png"), fullPage: true });
+    await expect(activePage.getByRole("img", { name: "由十九块六边形地形组成的游戏棋盘" })).toBeVisible();
+    await activePage.screenshot({ path: path.join(artifactDir, "e2e-desktop.png"), fullPage: true });
 
     await second.reload();
     await expect(second.locator(".room-code")).toHaveText(roomCode ?? "");

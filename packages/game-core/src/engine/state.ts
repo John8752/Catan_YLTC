@@ -14,6 +14,12 @@ export const PLAYER_COLORS = [
   "wheat",
   "plum",
   "charcoal",
+  "coral",
+  "orange",
+  "navy",
+  "emerald",
+  "lavender",
+  "graphite",
 ] as const;
 
 export type PlayerColor = (typeof PLAYER_COLORS)[number];

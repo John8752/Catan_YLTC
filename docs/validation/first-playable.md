@@ -18,7 +18,7 @@
 - `pnpm validate:full` passed: TypeScript checks, 117 package tests, production builds, canonical replay, architecture boundaries and 4 Chromium multiplayer/responsive scenarios.
 - Protocol coverage verifies that paid build/development costs, post-setup score gains and robber source/destination coordinates are projected through player-safe effects. A rival cannot see a hidden victory-point purchase or a stolen resource identity.
 - Web coverage verifies two-second resource travel, two-second robber movement, spend direction/targets, the prominent score overlay, reduced-motion fallback and mobile road confirmation before command submission.
-- A real 390×844 Chromium setup flow confirms that the first road tap opens a high-contrast confirmation card and only the explicit second confirmation submits the placement.
+- Every initial-settlement target opens a confirmation dialog before submission on desktop and mobile layouts. A real 390×844 Chromium setup flow also confirms that the first road tap opens a high-contrast confirmation card and only the explicit second confirmation submits the placement.
 - Finished-game projection tests cover dice frequencies, resource-card flows, per-resource production, activity counts and deterministic winner copy without development-card identities.
 
 ## Server turn-timer validation (2026-08-25)
@@ -55,6 +55,7 @@ Browser artifacts are intentionally local-only under `output/playwright/`:
 - `resource-production-fx.png`
 - `resource-arrival-fx.png`
 - `mobile-road-confirm.png`
+- `initial-settlement-confirm.png`
 - `mobile-roll-timer.png`
 - `mobile-opponent-roll-timer.png`
 

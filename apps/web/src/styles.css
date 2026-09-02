@@ -358,7 +358,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .section-label { display: flex; justify-content: space-between; margin: 0 0 .7rem; color: #66716b; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .player-row { display: flex; align-items: center; gap: .7rem; padding: .7rem 0; border-bottom: 1px solid var(--line); }
 .player-pawn { width: 14px; height: 19px; border-radius: 7px 7px 3px 3px; box-shadow: inset 0 1px rgba(255,255,255,.4), 0 2px 4px rgba(0,0,0,.16); }
-.color-terracotta { background: #b65f43; }.color-ocean { background: #387d95; }.color-pine { background: #3f7452; }.color-wheat { background: #d4a93f; }.color-plum { background: #74526f; }.color-charcoal { background: #424a49; }
+.color-terracotta { background: #c94f3d; }.color-ocean { background: #3e6fb0; }.color-pine { background: #36afa6; }.color-wheat { background: #d6a12b; }.color-plum { background: #805a9d; }.color-charcoal { background: #e3dccb; }.color-coral { background: #c95c7b; }.color-orange { background: #d9782d; }.color-navy { background: #274c77; }.color-emerald { background: #2f8f62; }.color-lavender { background: #a579b7; }.color-graphite { background: #4a5052; }
 .player-name { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .player-name small { color: #7b817b; margin-top: .12rem; }
 .resource-count { color: #6d756d; font-size: .75rem; }
@@ -453,12 +453,18 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .port-resource-icon.resource-icon-unknown .resource-icon-line { stroke-width: 3; }
 .resource-card-icon,.resource-analysis-icon { color: #fffdf0; --resource-icon-primary: rgba(255,253,240,.92); --resource-icon-secondary: rgba(255,253,240,.65); --resource-icon-outline: rgba(28,52,47,.5); --resource-icon-highlight: #fff; filter: drop-shadow(0 2px 1px rgba(20,35,31,.25)); }
 .placed-roads,.placed-buildings { pointer-events: none; }
-.piece-color-terracotta { --piece: #c85d42; --piece-dark: #7f3025; --piece-light: #ffd1bd; }
-.piece-color-ocean { --piece: #3383a5; --piece-dark: #17506a; --piece-light: #bcecff; }
-.piece-color-pine { --piece: #43845a; --piece-dark: #245237; --piece-light: #c9f0d4; }
-.piece-color-wheat { --piece: #d4a42e; --piece-dark: #876316; --piece-light: #fff0aa; }
-.piece-color-plum { --piece: #865c82; --piece-dark: #52364f; --piece-light: #efd0eb; }
-.piece-color-charcoal { --piece: #4e5857; --piece-dark: #293130; --piece-light: #d9e2df; }
+.piece-color-terracotta { --piece: #c94f3d; --piece-dark: #7c2c23; --piece-light: #ffcbc0; }
+.piece-color-ocean { --piece: #3e6fb0; --piece-dark: #24446f; --piece-light: #c8ddff; }
+.piece-color-pine { --piece: #36afa6; --piece-dark: #17645e; --piece-light: #bff2ec; }
+.piece-color-wheat { --piece: #d6a12b; --piece-dark: #7d5a11; --piece-light: #fff0aa; }
+.piece-color-plum { --piece: #805a9d; --piece-dark: #4b3561; --piece-light: #ebd8f5; }
+.piece-color-charcoal { --piece: #e3dccb; --piece-dark: #635d52; --piece-light: #fffdf5; }
+.piece-color-coral { --piece: #c95c7b; --piece-dark: #793047; --piece-light: #ffd0dc; }
+.piece-color-orange { --piece: #d9782d; --piece-dark: #814114; --piece-light: #ffd7b6; }
+.piece-color-navy { --piece: #274c77; --piece-dark: #152c47; --piece-light: #b9d8f5; }
+.piece-color-emerald { --piece: #2f8f62; --piece-dark: #19563a; --piece-light: #bce8d2; }
+.piece-color-lavender { --piece: #a579b7; --piece-dark: #62456e; --piece-light: #efd9f6; }
+.piece-color-graphite { --piece: #4a5052; --piece-dark: #282d2f; --piece-light: #dce3e4; }
 .piece-road-shadow { stroke: rgba(12,29,29,.55); stroke-width: 12; stroke-linecap: round; }
 .piece-road-body { stroke: var(--piece); stroke-width: 9; stroke-linecap: round; filter: drop-shadow(0 2px 1px rgba(0,0,0,.3)); }
 .piece-road-shine { stroke: var(--piece-light); stroke-width: 2.2; stroke-linecap: round; opacity: .72; }

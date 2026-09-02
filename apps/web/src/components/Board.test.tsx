@@ -74,6 +74,7 @@ describe("Board", () => {
     expect(markup).toContain("piece-color-terracotta");
     expect(markup).toContain("piece-color-ocean");
     expect(markup).toContain("piece-color-pine");
+    expect(markup.match(/class="piece-building-art" transform="scale\(1\.16\)"/g)).toHaveLength(2);
     expect(markup).toContain("林的村庄");
     expect(markup).toContain("周的城市");
   });

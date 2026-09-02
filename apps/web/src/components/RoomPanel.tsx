@@ -69,7 +69,7 @@ export function RoomPanel({
       <Card className={cn("min-h-0 flex-1 gap-0 overflow-hidden border-white/20 bg-[#f3e6c8]/96 py-0 shadow-2xl backdrop-blur-sm", !embedded && "lg:h-full", embedded && "lg:rounded-none lg:border-transparent lg:bg-transparent lg:shadow-none lg:backdrop-blur-none")}>
         <CardHeader className={cn("border-b border-[var(--sidebar-line,#5f4b3126)] px-5 py-4", room.game !== null && "grid-rows-1 gap-0 px-3 py-2 [.border-b]:pb-2")}>
           <div className="flex items-start justify-between gap-4">
-            <div className={cn(room.game !== null && "flex items-baseline gap-2")}>
+            <div className={cn("min-w-0", room.game !== null && "flex shrink-0 items-baseline gap-2 whitespace-nowrap")}>
               <p className={cn("mb-1 text-[11px] font-black tracking-[.18em] text-[var(--sidebar-muted,#aa543d)] uppercase", room.game !== null && "mb-0")}>房间码</p>
               <strong className={cn("room-code font-serif text-2xl tracking-[.16em] text-[var(--sidebar-ink,#163c3a)]", room.game !== null && "text-lg")}>{room.id}</strong>
             </div>

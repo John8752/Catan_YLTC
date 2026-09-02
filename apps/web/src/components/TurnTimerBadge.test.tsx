@@ -4,7 +4,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBaseGame, type GameState } from "@catan/game-core";
 import { projectGameForPlayer } from "@catan/protocol";
-import { TurnForecastBar } from "./TurnForecastBar.js";
+import { OpponentStrip } from "./OpponentStrip.js";
 import { TurnTimerBadge } from "./TurnTimerBadge.js";
 
 const PLAYERS = [
@@ -51,16 +51,16 @@ describe("TurnTimerBadge", () => {
     expect(screen.getByRole("timer").getAttribute("aria-label")).toContain("操作倒计时");
   });
 
-  it("places the active timer in the persistent turn forecast", () => {
+  it("places the active timer beside that player's public information", () => {
     const opponentGame = turnView("player_2", "roll");
-    const { container: opponents } = render(<TurnForecastBar game={opponentGame} />);
-    expect(opponents.querySelector('[data-turn-queue-current="true"] [role="timer"]')).not.toBeNull();
-    expect(opponents.querySelector('[data-turn-queue-player="player_3"] [role="timer"]')).toBeNull();
+    const { container: opponents } = render(<OpponentStrip game={opponentGame} />);
+    expect(opponents.querySelector('[data-seat-of="player_2"] [role="timer"]')).not.toBeNull();
+    expect(opponents.querySelector('[data-seat-of="player_3"] [role="timer"]')).toBeNull();
     cleanup();
 
     const ownGame = turnView("player_1", "action");
-    const { container: dock } = render(<TurnForecastBar game={ownGame} />);
-    expect(dock.querySelector('[data-turn-queue-current="true"] [role="timer"]')).not.toBeNull();
+    const { container: ownSeat } = render(<OpponentStrip game={ownGame} />);
+    expect(ownSeat.querySelector('[data-seat-of="player_1"] [role="timer"]')).not.toBeNull();
   });
 });
 

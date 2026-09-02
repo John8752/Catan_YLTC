@@ -24,6 +24,7 @@ import { LobbySetup } from "./components/LobbySetup.js";
 import { GameSidebar } from "./components/GameSidebar.js";
 import { OpponentStrip } from "./components/OpponentStrip.js";
 import { TurnForecastBar } from "./components/TurnForecastBar.js";
+import { TableUtilities } from "./components/TableUtilities.js";
 import { PlayerDock } from "./components/PlayerDock.js";
 import { RoomPanel } from "./components/RoomPanel.js";
 import { ActiveTradePanel } from "./components/ActiveTradePanel.js";
@@ -297,7 +298,15 @@ export function App() {
       </div> : null}
       {liveGame === null ? null : (
         <div className="seat-column col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col gap-1 phone-landscape:col-span-2 xl:min-h-0">
-          <TurnForecastBar game={liveGame} />
+          <TurnForecastBar
+            game={liveGame}
+            actions={<TableUtilities
+              room={room}
+              playerId={session.playerId}
+              busy={busy}
+              onDisband={handleDisband}
+            />}
+          />
           <OpponentStrip game={liveGame} />
         </div>
       )}

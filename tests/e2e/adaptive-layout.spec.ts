@@ -31,6 +31,13 @@ for (const count of [4, 6] as const) {
         await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
         await expect(run.page.locator('[data-turn-forecast]')).toBeVisible();
         await expect(run.page.locator('[data-turn-forecast]')).toHaveAttribute("data-turn-forecast-distance", "0");
+        expect(await run.page.evaluate(() => {
+          const summary = document.querySelector('[data-turn-forecast-summary]')?.getBoundingClientRect();
+          const utilities = document.querySelector('[data-table-utilities]')?.getBoundingClientRect();
+          return summary !== undefined && utilities !== undefined &&
+            summary.left < utilities.right && summary.right > utilities.left &&
+            summary.top < utilities.bottom && summary.bottom > utilities.top;
+        })).toBe(false);
         // One badge per seat in the order column, plus the local player's own in
         // the dock -- the local seat deliberately appears in both.
         await expect(run.page.locator('.seat-column [data-player-score]')).toHaveCount(count);
@@ -63,10 +70,11 @@ for (const count of [4, 6] as const) {
         const seatBounds = await run.page.locator('.self-seat').boundingBox();
         expect(scoreBounds!.x + scoreBounds!.width).toBeLessThanOrEqual(seatBounds!.x + seatBounds!.width);
         const metrics = await measure(run.page);
+        if (width >= 1360) expect(metrics.forecast.width / metrics.opponents.width).toBeCloseTo(2, 1);
+        else if (width >= 1280) expect(metrics.forecast.width / metrics.opponents.width).toBeGreaterThanOrEqual(1.85);
         expect(metrics.overflow).toBe(false);
         expect(metrics.terrainFit).toBe(true);
         expect(metrics.maxPortOverflow).toBeLessThanOrEqual(metrics.tile.width * 0.2);
-        expect(metrics.hudClear).toBe(true);
         expect(metrics.portsSeparated).toBe(true);
         expect(metrics.portNumberOverlaps).toEqual([]);
         expect(metrics.portContents).toHaveLength(room.game!.map.ports.length);

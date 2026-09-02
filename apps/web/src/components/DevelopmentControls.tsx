@@ -1,8 +1,6 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import { useState } from "react";
-import { Button } from "@/components/ui/button.js";
-import { BookOpen } from "lucide-react";
-import { cardLabel, RulesReference } from "./RulesReference.js";
+import { cardLabel } from "./RulesReference.js";
 
 const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
 type Resource = (typeof RESOURCES)[number];
@@ -30,14 +28,6 @@ export function DevelopmentControls({ game, busy, onCommand }: DevelopmentContro
     <details className="development-drawer min-w-0 rounded-md border border-[var(--sidebar-line,#4e39232e)] bg-[var(--sidebar-control,#fffaf0b3)]" data-resource-sink="development">
       <summary className="h-8 cursor-pointer list-inside content-center px-2 text-sm font-bold whitespace-nowrap">发展卡（{game.you.developmentCards.length}）</summary>
       <div className="development-stack p-2">
-        <RulesReference
-          ruleProfile={game.ruleProfile}
-          trigger={
-            <Button type="button" size="sm" variant="outline" className="h-7 w-full justify-center gap-1 px-1 text-xs">
-              <BookOpen className="size-3.5 shrink-0" />说明
-            </Button>
-          }
-        />
         {game.you.developmentCards.length === 0 ? <p>尚无发展卡</p> : null}
         {game.you.developmentCards.map((card) => {
           const playable =

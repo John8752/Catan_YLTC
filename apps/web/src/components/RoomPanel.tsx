@@ -1,6 +1,6 @@
 import type { RoomSettingsInput, RoomView } from "@catan/protocol";
 import type { ReactNode } from "react";
-import { Crown, DoorClosed, LogOut, Route, Settings2, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Crown, LogOut, Route, Settings2, ShieldCheck, Trophy, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card.js";
@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog.js";
 import { cn } from "@/lib/utils.js";
+import { DisbandRoomControl } from "./DisbandRoomControl.js";
 import { PublicHistory } from "./PublicHistory.js";
 
 export interface RoomPanelProps {
@@ -74,7 +75,6 @@ export function RoomPanel({
               <strong className={cn("room-code font-serif text-2xl tracking-[.16em] text-[var(--sidebar-ink,#163c3a)]", room.game !== null && "text-lg")}>{room.id}</strong>
             </div>
             <div className="flex items-center gap-1">
-              {room.game !== null && isHost ? <DisbandDialog room={room} busy={busy} onDisband={onDisband} compact /> : null}
               {headerAction}
               <Badge variant="outline" className="gap-1.5 border-[var(--sidebar-line,#386f6240)] bg-[var(--sidebar-soft,#ffffff59)] text-[var(--sidebar-muted,#37685d)]">
                 <span className={cn(
@@ -247,74 +247,11 @@ export function RoomPanel({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            {isHost ? <DisbandDialog room={room} busy={busy} onDisband={onDisband} /> : null}
+            {isHost ? <DisbandRoomControl room={room} busy={busy} onDisband={onDisband} /> : null}
           </CardFooter>
         ) : null}
       </Card>
     </aside>
-  );
-}
-
-/**
- * The host's exit. `compact` is the in-game placement: it rides in the header row
- * that already exists, because a footer there squeezed the public history below
- * the height the layout tests require.
- */
-function DisbandDialog({ room, busy, onDisband, compact = false }: {
-  readonly room: RoomView;
-  readonly busy: boolean;
-  readonly onDisband: () => void | Promise<void>;
-  readonly compact?: boolean;
-}) {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        {compact ? (
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="ghost"
-            aria-label="解散房间"
-            title="解散房间"
-            className="text-[#8d4632] hover:bg-[#a94f3a]/12 hover:text-[#8d4632]"
-            disabled={busy}
-          >
-            <DoorClosed />
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            className="w-full text-[#8d4632] hover:bg-[#a94f3a]/12 hover:text-[#8d4632]"
-            disabled={busy}
-          >
-            <DoorClosed className="size-4" />解散房间
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="border-[#f7e6bf]/30 bg-[#f8ecd2] text-[#263d39] sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>确认解散房间？</DialogTitle>
-          <DialogDescription className="leading-relaxed text-[#66716b]">
-            {room.game === null
-              ? `房间会立即关闭，其余 ${room.members.length - 1} 人会被退回首页。`
-              : `进行中的这局会立即结束且无法恢复，桌上 ${room.members.length} 人全部退回首页。`}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="outline">再想想</Button>
-          </DialogClose>
-          <Button
-            type="button"
-            className="bg-[#a94f3a] text-white hover:bg-[#93432f]"
-            disabled={busy}
-            onClick={onDisband}
-          >
-            {busy ? "正在解散…" : "解散房间"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 

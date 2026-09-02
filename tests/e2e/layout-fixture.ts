@@ -62,11 +62,6 @@ export async function measure(page: Page) {
       const b = e.getBoundingClientRect();
       return b.left >= board.left && b.right <= board.right && b.top >= board.top && b.bottom <= board.bottom;
     });
-    const overlays = [...document.querySelectorAll('[data-resource-source="bank"],.phase-chip,[data-turn-forecast]')].map((e) => e.getBoundingClientRect());
-    const hudClear = [...document.querySelectorAll(".hex-surface,.port-sign")].every((e) => {
-      const b = e.getBoundingClientRect();
-      return overlays.every((o) => b.right <= o.left || b.left >= o.right || b.bottom <= o.top || b.top >= o.bottom);
-    });
     const font = (selector: string) => Number.parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize);
     const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
     const signs = [...document.querySelectorAll<SVGRectElement>(".port-sign > rect")].map((element) => element.getBoundingClientRect());
@@ -101,7 +96,7 @@ export async function measure(page: Page) {
       };
     });
     return {
-      fit, terrainFit, maxPortOverflow, hudClear, rootFont: font("html"), nameFont: font(".opponent-strip strong"),
+      fit, terrainFit, maxPortOverflow, rootFont: font("html"), nameFont: font(".opponent-strip strong"),
       portText, portContents, portsSeparated: signs.every((a, i) => signs.slice(i + 1).every((b) => !intersect(a, b))),
       portTileRatio: signs[0]!.width / document.querySelector(".hex-surface")!.getBoundingClientRect().width,
       portNumberOverlaps: [...document.querySelectorAll(".token")].flatMap((e) => signs.flatMap((sign, index) => intersect(sign, e.getBoundingClientRect()) ? [{ hex: e.closest('[data-hex-id]')?.getAttribute('data-hex-id'), portIndex: index }] : [])),

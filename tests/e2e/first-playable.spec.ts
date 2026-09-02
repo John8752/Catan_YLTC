@@ -152,43 +152,40 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     expect(capturedResourceEffect).toBe(true);
 
     await expect(host.getByRole("button", { name: "掷骰子" })).toBeVisible();
-    // The dock and opponent-card countdowns were folded into the turn forecast,
-    // so each seat now reads the same server timer from its own forecast bar.
-    // The bar keeps a full and a compact queue in the DOM and hides one by
-    // breakpoint, hence :visible; the badge names its player, so both seats can
-    // be asserted to be watching the host's clock rather than merely some clock.
+    // Operation order no longer carries time. The same authoritative timer is
+    // attached to the active player's information on every seat.
     const hostPlayerId = await host.locator('[data-current-player="true"]').getAttribute("data-player-id");
     if (hostPlayerId === null) throw new Error("Host player id is missing from the local seat");
     const ownForecast = host.locator("[data-turn-forecast]");
     const observedForecast = second.locator("[data-turn-forecast]");
-    const ownRollTimer = ownForecast.locator(`[data-turn-timer-player="${hostPlayerId}"]:visible`);
-    const observedRollTimer = observedForecast.locator(`[data-turn-timer-player="${hostPlayerId}"]:visible`);
+    const ownRollTimer = host.locator(`[data-turn-timer-player="${hostPlayerId}"]:visible`);
+    const observedRollTimer = second.locator(`[data-turn-timer-player="${hostPlayerId}"]:visible`);
     await expect(ownRollTimer).toHaveAttribute("aria-label", /掷骰倒计时/);
     await expect(observedRollTimer).toHaveAttribute("aria-label", /掷骰倒计时/);
-    // One authoritative countdown, but the surrounding read stays per-seat.
+    await expect(ownForecast.locator('[role="timer"]')).toHaveCount(0);
+    await expect(observedForecast.locator('[role="timer"]')).toHaveCount(0);
     await expect(ownForecast).toHaveAttribute("data-turn-forecast-distance", "0");
     await expect(observedForecast).not.toHaveAttribute("data-turn-forecast-distance", "0");
     await Promise.all([
       host.setViewportSize({ width: 390, height: 844 }),
       second.setViewportSize({ width: 390, height: 844 }),
     ]);
-    // The resize swaps which of the two queues the breakpoint shows. Measuring
-    // straight after it can land in the gap where the old badge is already hidden
-    // and the new one is not yet painted, so settle on the new one first.
     await expect(ownRollTimer).toBeVisible();
     await expect(observedRollTimer).toBeVisible();
-    const [ownTimerBox, ownForecastBox, observedTimerBox, observedForecastBox] = await Promise.all([
+    const ownTimerInfo = ownRollTimer.locator("xpath=ancestor::*[@data-current-player='true' or @data-seat-of][1]");
+    const observedTimerInfo = observedRollTimer.locator("xpath=ancestor::*[@data-current-player='true' or @data-seat-of][1]");
+    const [ownTimerBox, ownInfoBox, observedTimerBox, observedInfoBox] = await Promise.all([
       ownRollTimer.boundingBox(),
-      ownForecast.boundingBox(),
+      ownTimerInfo.boundingBox(),
       observedRollTimer.boundingBox(),
-      observedForecast.boundingBox(),
+      observedTimerInfo.boundingBox(),
     ]);
-    if (ownTimerBox === null || ownForecastBox === null || observedTimerBox === null || observedForecastBox === null) {
+    if (ownTimerBox === null || ownInfoBox === null || observedTimerBox === null || observedInfoBox === null) {
       throw new Error("Missing timer layout bounds");
     }
-    for (const [timer, forecast] of [[ownTimerBox, ownForecastBox], [observedTimerBox, observedForecastBox]] as const) {
-      expect(timer.y).toBeGreaterThanOrEqual(forecast.y - 1);
-      expect(timer.y + timer.height).toBeLessThanOrEqual(forecast.y + forecast.height + 1);
+    for (const [timer, info] of [[ownTimerBox, ownInfoBox], [observedTimerBox, observedInfoBox]] as const) {
+      expect(timer.y).toBeGreaterThanOrEqual(info.y - 1);
+      expect(timer.y + timer.height).toBeLessThanOrEqual(info.y + info.height + 1);
     }
     await host.screenshot({ path: path.join(artifactDir, "mobile-roll-timer.png"), fullPage: true });
     await second.screenshot({ path: path.join(artifactDir, "mobile-opponent-roll-timer.png"), fullPage: true });
@@ -197,7 +194,7 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
       second.setViewportSize({ width: 1280, height: 720 }),
     ]);
     await expect(host.getByLabel(/骰子：\d \+ \d/)).toBeVisible({ timeout: 8_000 });
-    const postRollTimer = host.locator(`[data-turn-forecast] [data-turn-timer-player="${hostPlayerId}"]:visible`);
+    const postRollTimer = host.locator(`[data-turn-timer-player="${hostPlayerId}"]:visible`);
     if (await postRollTimer.count() > 0) {
       await expect(postRollTimer).toHaveAttribute("aria-label", /操作倒计时/);
     }

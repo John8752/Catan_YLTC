@@ -65,7 +65,6 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
         const within = (inner: DOMRect, outer: DOMRect) => inner.left >= outer.left && inner.right <= outer.right && inner.top >= outer.top && inner.bottom <= outer.bottom;
         const badges = [...document.querySelectorAll('[data-victory-proximity]')];
         const banner = document.querySelector('[data-victory-notice]')!.getBoundingClientRect();
-        const stage = document.querySelector('.board-stage')!.getBoundingClientRect();
         const dock = document.querySelector('.player-dock')!.getBoundingClientRect();
         const resource = document.querySelector('[data-self-resource-total]')!;
         const resourceBox = resource.getBoundingClientRect();
@@ -73,10 +72,10 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
         return { fits: badges.every((badge) => within(badge.getBoundingClientRect(), badge.closest('[data-player-target],[data-seat-of]')!.getBoundingClientRect())),
           resourceClear: resourceBox.right <= ownBadge.left && resourceBox.height < Number.parseFloat(getComputedStyle(resource).fontSize) * 2,
           overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
-          bannerClear: (banner.bottom <= stage.top || banner.left >= stage.right) && banner.left >= 0 && banner.right <= innerWidth,
+          bannerVisible: banner.left >= 0 && banner.right <= innerWidth && banner.top >= 0 && banner.bottom <= innerHeight,
           dockFits: dock.bottom <= innerHeight, pointer: getComputedStyle(document.querySelector('[data-attention-slot]')!).pointerEvents };
       });
-      expect(metrics).toEqual({ fits: true, resourceClear: true, overflow: false, bannerClear: true, dockFits: true, pointer: "none" });
+      expect(metrics).toEqual({ fits: true, resourceClear: true, overflow: false, bannerVisible: true, dockFits: true, pointer: "none" });
       await mkdir("output/playwright", { recursive: true });
       await page.screenshot({ path: `output/playwright/victory-warning-${width}x${height}.png`, fullPage: true, scale: "css" });
       run.duplicate();

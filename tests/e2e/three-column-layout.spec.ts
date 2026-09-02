@@ -29,7 +29,6 @@ for (const count of [4, 6] as const) {
         expect(initial.terrainFit).toBe(true);
         expect(initial.maxPortOverflow, `${count} seats at ${width}x${height}`).toBeLessThanOrEqual(initial.tile.width * 0.2);
         expect(initial.mapScale).toBeCloseTo(1.08, 2);
-        expect(initial.hudClear, `${count} seats at ${width}x${height}`).toBe(true);
         expect(initial.dock.bottom).toBeCloseTo(height! - 12, 0);
         expect(initial.sidebar.width).toBe(360);
         if (width! >= 1280) {

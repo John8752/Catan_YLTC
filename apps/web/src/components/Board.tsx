@@ -25,7 +25,6 @@ import { ConstructionTargets } from "./ConstructionTargets.js";
 import { BankSupply } from "./BankSupply.js";
 import { BoardZoomControls } from "./BoardZoomControls.js";
 import { DiceResult } from "./DiceResult.js";
-import { RulesReference } from "./RulesReference.js";
 import { ActionAttentionBanner } from "@/effects/ActionAttentionBanner.js";
 
 export interface BoardProps {
@@ -262,13 +261,6 @@ export function Board({
             onCommand={handleBoardCommand}
           />
           </svg>
-        </div>
-        <div
-          className="board-rules-entry"
-          onPointerDown={(event) => event.stopPropagation()}
-          onDoubleClick={(event) => event.stopPropagation()}
-        >
-          <RulesReference ruleProfile={game.ruleProfile} />
         </div>
         <DiceResult roll={game.lastRoll} />
         <BoardZoomControls {...viewport.zoom} />

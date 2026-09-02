@@ -96,7 +96,6 @@ export function GameControls({
             </Button>
           ))}
         </div>
-        <small className="col-span-3 text-xs leading-tight max-lg:hidden">道路：砖+木　定居点：砖+木+羊+麦　城市：2麦+3矿</small>
       </div>
     );
   }

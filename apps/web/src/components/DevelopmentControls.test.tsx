@@ -3,7 +3,7 @@
 import { createBaseGame, createGame } from "@catan/game-core";
 import type { GameView } from "@catan/protocol";
 import { projectGameForPlayer } from "@catan/protocol";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { DevelopmentControls } from "./DevelopmentControls.js";
 
@@ -46,53 +46,12 @@ function handView(overrides: {
   return projectGameForPlayer(state as never, "p1");
 }
 
-function openGuide() {
-  fireEvent.click(screen.getByRole("button", { name: "说明" }));
-  return screen.getByRole("dialog");
-}
-
-it("explains every card in a dialog rather than in the cramped drawer", () => {
+it("does not repeat the table-level rules guide inside the development drawer", () => {
   render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
 
-  // Nothing spells out effects until the guide is opened.
+  expect(screen.queryByRole("button", { name: "说明" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "规则速查" })).toBeNull();
   expect(screen.queryByText(/移动强盗/)).toBeNull();
-
-  const guide = openGuide();
-  expect(within(guide).getByText(/移动强盗，从被压住的一位手上抽 1 张/)).toBeTruthy();
-  expect(within(guide).getByText(/立刻免费建 2 条路/)).toBeTruthy();
-  expect(within(guide).getByText(/其他所有人手里的这种牌全部交给你/)).toBeTruthy();
-  expect(within(guide).getByText(/从银行取 2 张资源，可以要同一种/)).toBeTruthy();
-  expect(within(guide).getByText(/一直盖在手里，直接算 1 分/)).toBeTruthy();
-});
-
-it("counts the deck for the profile actually in play", () => {
-  render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
-  const base = openGuide();
-  expect(within(base).getByText(/发展卡 · 共 25 张/)).toBeTruthy();
-  expect(within(base).getByText("14 张")).toBeTruthy();
-  cleanup();
-
-  render(<DevelopmentControls game={handView({ extended: true })} busy={false} onCommand={() => {}} />);
-  const extended = openGuide();
-  expect(within(extended).getByText(/发展卡 · 共 34 张/)).toBeTruthy();
-  expect(within(extended).getByText("20 张")).toBeTruthy();
-});
-
-it("shows the build costs beside the cards, read from the engine", () => {
-  render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
-  const guide = openGuide();
-
-  expect(within(guide).getByText("砖+木")).toBeTruthy();
-  expect(within(guide).getByText("砖+木+羊+麦")).toBeTruthy();
-  expect(within(guide).getByText("2麦+3矿")).toBeTruthy();
-  expect(within(guide).getByText("羊+麦+矿")).toBeTruthy();
-});
-
-it("says when a card cannot be played", () => {
-  render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
-  const guide = openGuide();
-  expect(within(guide).getByText("当回合刚买到的卡，要等下个回合。")).toBeTruthy();
-  expect(within(guide).getByText("每回合只能打出一张。")).toBeTruthy();
 });
 
 it("names what the resource pickers are choosing", () => {

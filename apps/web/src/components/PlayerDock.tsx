@@ -9,6 +9,7 @@ import { emptyResourceSelection, incrementResource } from "./ResourceCardPicker.
 import { PlayerPublicStats } from "./PlayerPublicStats.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
 import { PlayerScoreBadge } from "./PlayerScoreBadge.js";
+import { TurnTimerBadge } from "./TurnTimerBadge.js";
 import { cn } from "@/lib/utils.js";
 
 export interface PlayerDockProps {
@@ -66,7 +67,10 @@ export function PlayerDock({
             <strong className={cn("block truncate text-xs text-[#243d39] lg:text-base lg:text-[var(--game-rail-ink)]", nearVictory && "max-md:col-span-2")} title={game.you.name}>{game.you.name}</strong>
             <span data-self-resource-total="true" className={cn("block text-[9px] font-bold text-[#6c6d62] lg:text-xs lg:text-[var(--game-rail-muted)]", nearVictory && "max-md:col-span-2 max-md:whitespace-nowrap")}>资源总数 {game.you.resourceCardCount}</span>
           </div>
-          <PlayerScoreBadge player={game.you} victoryPointsToWin={game.victoryPointsToWin} active={game.phase.kind === "turn"} className="ml-auto" />
+          <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
+            <PlayerScoreBadge player={game.you} victoryPointsToWin={game.victoryPointsToWin} active={game.phase.kind === "turn"} />
+            {game.turnTimer?.playerId === game.you.id ? <TurnTimerBadge timer={game.turnTimer} className="xl:hidden" /> : null}
+          </div>
         </div>
 
         <section className="grid grid-cols-5 gap-1 md:col-start-1 md:row-start-2" aria-label="你的资源">

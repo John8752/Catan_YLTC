@@ -1,41 +1,49 @@
 import type { GameView, TurnQueueEntryView } from "@catan/protocol";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
-import { TurnTimerBadge } from "./TurnTimerBadge.js";
 
-export function TurnForecastBar({ game }: { readonly game: GameView }) {
-  if (game.phase.kind !== "turn" || game.turnQueue.length === 0) return null;
+export function TurnForecastBar({ game, actions }: {
+  readonly game: GameView;
+  readonly actions?: ReactNode;
+}) {
+  if (game.phase.kind !== "turn" || game.turnQueue.length === 0) {
+    return actions === undefined ? null : (
+      <section className="flex w-fit shrink-0 items-center rounded-xl border border-[#f0c56b]/35 bg-[#102f31]/94 px-1 py-0.5 shadow-[0_5px_16px_rgba(6,31,32,.2)]" data-turn-forecast-utilities-only="true">
+        {actions}
+      </section>
+    );
+  }
 
   const selfIndex = game.turnQueue.findIndex((entry) => entry.playerId === game.you.id);
-  const indexes = visibleIndexes(selfIndex, game.turnQueue.length);
+  const indexes = visibleIndexes(game.turnQueue.length);
   const current = game.turnQueue[0];
   if (current === undefined) return null;
 
   return (
     <section
       className={cn(
-        "order-3 flex min-w-0 basis-full items-center gap-2 rounded-xl border border-[#f0c56b]/35 bg-[#102f31]/94 px-2 py-1.5 text-[#fff8df] shadow-[0_5px_16px_rgba(6,31,32,.2)]",
+        "relative order-3 flex min-w-0 basis-full items-center gap-2 rounded-xl border border-[#f0c56b]/35 bg-[#102f31]/94 px-2 py-1.5 text-[#fff8df] shadow-[0_5px_16px_rgba(6,31,32,.2)]",
         "phone-landscape:order-0 phone-landscape:w-[14.25rem] phone-landscape:min-w-0 phone-landscape:flex-none phone-landscape:basis-auto phone-landscape:px-1.5 phone-landscape:py-1",
-        "lg:order-0 lg:w-full lg:basis-auto lg:flex-col lg:items-stretch lg:gap-1.5 lg:border-[#d1b793]/20 lg:bg-[#142c2c] lg:px-2.5 lg:py-2 lg:shadow-none",
+        "lg:order-0 lg:grid lg:w-full lg:basis-auto lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-x-2 lg:gap-y-1 lg:border-[#d1b793]/20 lg:bg-[#142c2c] lg:px-2.5 lg:py-1.5 lg:shadow-none",
+        "xl:z-10 xl:w-[25rem] xl:flex-none",
         selfIndex === 0 && "border-[#f2b3aa]/80 bg-[#493837] ring-1 ring-[#f2b3aa]/45 lg:bg-[#3b3131]",
       )}
       aria-label={`操作队列，${forecastSummary(game, selfIndex)}`}
       data-turn-forecast="true"
       data-turn-forecast-distance={selfIndex}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2 phone-landscape:hidden lg:flex-col lg:items-stretch lg:gap-1.5">
-        {/* Stacked, not side by side: this now lives in the seat column, which is
-            far narrower than the sidebar it was first written for. */}
-        <div className="min-w-0 shrink-0">
-          <span className="block whitespace-nowrap text-[9px] font-black tracking-[.12em] text-[#d9c397] uppercase lg:text-xs">
+      <div className="flex min-w-0 flex-1 items-center gap-2 phone-landscape:hidden lg:contents">
+        <div className="min-w-0 shrink-0 lg:col-start-1 lg:row-start-1 lg:flex lg:items-baseline lg:gap-1.5">
+          <span className="block whitespace-nowrap text-[9px] font-black tracking-[.12em] text-[#d9c397] uppercase lg:inline lg:text-xs">
             第 {current.turnNumber} 回合
           </span>
-          <strong className="block whitespace-nowrap text-[11px] leading-tight text-[#fff4d6] lg:text-sm" data-turn-forecast-summary="true">
+          <strong className="block whitespace-nowrap text-[11px] leading-tight text-[#fff4d6] lg:inline lg:text-sm" data-turn-forecast-summary="true">
             {forecastSummary(game, selfIndex)}
           </strong>
         </div>
 
-        <ol className="flex min-w-0 flex-1 items-center justify-end gap-1 lg:justify-start" aria-label="接下来的操作顺序">
+        <ol className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-x-auto lg:col-span-2 lg:col-start-1 lg:row-start-2 lg:justify-start lg:pb-0.5" aria-label="接下来的操作顺序">
           {indexes.map((index, visibleIndex) => {
             const entry = game.turnQueue[index];
             if (entry === undefined) return null;
@@ -55,6 +63,11 @@ export function TurnForecastBar({ game }: { readonly game: GameView }) {
         </ol>
       </div>
       <LandscapeQueue game={game} selfIndex={selfIndex} />
+      {actions === undefined ? null : (
+        <div className="flex shrink-0 items-center lg:col-start-2 lg:row-start-1 lg:self-start">
+          {actions}
+        </div>
+      )}
     </section>
   );
 }
@@ -64,7 +77,7 @@ function LandscapeQueue({ game, selfIndex }: { readonly game: GameView; readonly
   const target = selfIndex === 0 ? game.turnQueue[1] : game.turnQueue[selfIndex];
   if (current === undefined || target === undefined) return null;
   return (
-    <div className="hidden min-w-0 flex-1 items-center justify-between gap-1 phone-landscape:flex lg:hidden">
+    <div className="hidden min-w-0 flex-1 items-center justify-between gap-1 phone-landscape:flex phone-landscape:overflow-x-auto lg:hidden" data-landscape-turn-queue="true">
       <strong className="shrink-0 whitespace-nowrap text-[10px] text-[#fff4d6]">
         {compactForecastSummary(game, selfIndex)}
       </strong>
@@ -86,13 +99,11 @@ function CompactQueuePlayer({ game, entry, self }: {
 }) {
   const player = game.players.find((candidate) => candidate.id === entry.playerId);
   if (player === undefined) return null;
-  const timer = entry === game.turnQueue[0] && game.turnTimer?.playerId === entry.playerId ? game.turnTimer : null;
   return (
-    <span className={cn("flex min-w-0 items-center gap-0.5 rounded-md border border-white/10 bg-white/5 px-1 py-0.5 text-[9px] font-black", self && "border-[#f2b3aa]/65 bg-[#f2b3aa]/14 text-[#ffe2dc]")}>
+    <span className={cn("flex min-w-0 shrink-0 items-center gap-0.5 rounded-md border border-white/10 bg-white/5 px-1 py-0.5 text-[9px] font-black", self && "border-[#f2b3aa]/65 bg-[#f2b3aa]/14 text-[#ffe2dc]")}>
       <PlayerColorDot color={player.color} className="size-2 shrink-0 rounded-sm" />
       <span className="max-w-8 truncate">{self ? "你" : player.name}</span>
       <b className="shrink-0 text-[8px] text-[#ead6aa]">{entry.kind === "primary" ? "主" : "搭"}</b>
-      {timer === null ? null : <TurnTimerBadge timer={timer} className="border-0 bg-transparent p-0 text-[8px] shadow-none [&_svg]:hidden" />}
     </span>
   );
 }
@@ -107,12 +118,11 @@ function QueuePlayer({ game, entry, current, self }: {
   if (player === undefined) return null;
   const kind = entry.kind === "primary" ? "主" : "搭";
   const name = self ? "你" : player.name;
-  const timer = current && game.turnTimer?.playerId === entry.playerId ? game.turnTimer : null;
 
   return (
     <span
       className={cn(
-        "flex min-w-0 max-w-[5rem] items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-1.5 py-1 text-[10px] font-black lg:max-w-[6rem] lg:text-xs",
+        "flex min-w-0 max-w-[5rem] shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-1.5 py-1 text-[10px] font-black lg:max-w-[6rem] lg:text-xs",
         current && "border-[#f0c56b]/60 bg-[#f0c56b]/14 text-[#fff0bd]",
         self && "border-[#f2b3aa]/65 bg-[#f2b3aa]/14 text-[#ffe2dc]",
       )}
@@ -125,7 +135,6 @@ function QueuePlayer({ game, entry, current, self }: {
       <PlayerColorDot color={player.color} className="size-2 shrink-0 rounded-sm lg:size-2.5" />
       <span className="min-w-0 truncate">{name}</span>
       <b className="shrink-0 rounded bg-black/15 px-0.5 text-[9px] text-[#ead6aa] lg:text-[10px]">{kind}</b>
-      {timer === null ? null : <TurnTimerBadge timer={timer} className="border-0 bg-transparent p-0 text-[8px] shadow-none lg:text-[10px] [&_svg]:hidden" />}
     </span>
   );
 }
@@ -148,9 +157,6 @@ function compactForecastSummary(game: GameView, selfIndex: number): string {
   return `再过 ${selfIndex - 1} 次 · ${kind}`;
 }
 
-function visibleIndexes(selfIndex: number, queueLength: number): readonly number[] {
-  if (queueLength <= 1) return [0];
-  if (selfIndex <= 0) return [0, 1];
-  if (selfIndex === 1) return [0, 1];
-  return [0, 1, selfIndex];
+function visibleIndexes(queueLength: number): readonly number[] {
+  return Array.from({ length: queueLength }, (_, index) => index);
 }

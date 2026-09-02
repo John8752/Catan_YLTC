@@ -2,6 +2,7 @@ import { victoryWarningTier, type GameView } from "@catan/protocol";
 import { cn } from "@/lib/utils.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
 import { PlayerScoreBadge } from "./PlayerScoreBadge.js";
+import { TurnTimerBadge } from "./TurnTimerBadge.js";
 
 const MAX_VISIBLE_PLAYER_NAME_LENGTH = 6;
 
@@ -22,6 +23,7 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
       {seats.map((player) => {
         const active = player.id === activePlayerId;
         const self = player.id === game.you.id;
+        const timer = game.turnTimer?.playerId === player.id ? game.turnTimer : null;
         const nearVictory = game.phase.kind === "turn" && victoryWarningTier(player.visibleVictoryPoints, game.victoryPointsToWin) !== null;
         return (
           <article
@@ -59,6 +61,7 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
                 >长 {player.longestRoadLength}</span>
               </span>
               <PlayerScoreBadge player={player} victoryPointsToWin={game.victoryPointsToWin} active={game.phase.kind === "turn"} />
+              {timer === null ? null : <TurnTimerBadge timer={timer} className="ml-0.5" />}
             </div>
             <div className="mt-1 grid grid-cols-3 gap-0.5 text-[8px] font-bold text-[#d7e2da] lg:text-xs xl:text-[var(--game-rail-muted)] xl:[&>span]:bg-white/5 xl:[&_b]:text-[var(--game-rail-ink)]" data-opponent-supply={player.id}>
               <span className="rounded bg-white/8 px-1 py-0.5 text-center" aria-label={`剩余城市 ${player.remainingPieces.cities}`}>城市 <b className="text-[#fff4c9]">{player.remainingPieces.cities}</b></span>

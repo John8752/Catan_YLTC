@@ -25,9 +25,12 @@ describe("TurnForecastBar", () => {
 
     expect(markup).toContain("再过 2 次操作 · 搭档行动");
     expect(markup).toContain('data-turn-queue-player="p1"');
+    expect(markup).toContain('data-turn-queue-player="p2"');
+    expect(markup).toContain('data-turn-queue-player="p3"');
     expect(markup).toContain('data-turn-queue-player="p4"');
     expect(markup).toContain('data-turn-queue-player="p5"');
-    expect(markup).toContain("+1");
+    expect(markup).toContain('data-turn-queue-player="p6"');
+    expect(markup).not.toContain("+1");
     expect(markup).toContain("你");
   });
 
@@ -46,7 +49,7 @@ describe("TurnForecastBar", () => {
     expect(markup).toContain('data-turn-queue-self="true"');
   });
 
-  it("keeps the active player's server timer in the queue", () => {
+  it("shows only operation order and leaves the timer to player information", () => {
     const base = createGame({ id: "forecast_timer", seed: 42, players, ruleProfile: "extended-5-6" });
     const game = projectGameForPlayer({
       ...base,
@@ -57,7 +60,7 @@ describe("TurnForecastBar", () => {
 
     const markup = renderToStaticMarkup(<TurnForecastBar game={game} />);
 
-    expect(markup).toContain('data-turn-timer-player="p1"');
-    expect(markup).toContain("2:00");
+    expect(markup).not.toContain('data-turn-timer-player="p1"');
+    expect(markup).not.toContain('role="timer"');
   });
 });

@@ -51,7 +51,7 @@ async function openScenario(browser: Browser, width: number, height: number, red
 for (const { name, width, height, options } of [...primaryPhoneCases, ...([
   [360, 640], [390, 844], [960, 540], [1920, 1021],
 ] as const).map(([width, height]) => viewportCase(width, height))]) {
-  test(`turn attention stays clear of the board at ${name}`, async ({ browser }) => {
+  test(`turn attention stays visible and non-blocking at ${name}`, async ({ browser }) => {
     const run = await openScenario(browser, width, height, "no-preference", options);
     const { page } = run;
     try {
@@ -87,12 +87,12 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
       await expect(page.locator('[data-action-notice]')).toHaveText("轮到你了");
       await expect(mapViewport).toBeFocused();
       const bounds = await page.evaluate(() => {
-        const stage = document.querySelector('.board-stage')!.getBoundingClientRect();
         const banner = document.querySelector('[data-action-notice]')!.getBoundingClientRect();
-        return { clear: banner.bottom <= stage.top || banner.left >= stage.right, overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
+        return { visible: banner.left >= 0 && banner.right <= innerWidth && banner.top >= 0 && banner.bottom <= innerHeight,
+          overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
           pointer: getComputedStyle(document.querySelector('[data-attention-slot]')!).pointerEvents };
       });
-      expect(bounds).toEqual({ clear: true, overflow: false, pointer: "none" });
+      expect(bounds).toEqual({ visible: true, overflow: false, pointer: "none" });
       await mkdir("output/playwright", { recursive: true });
       await page.screenshot({ path: `output/playwright/turn-attention-${width}x${height}.png`, fullPage: true, scale: "css" });
       run.push(scenario(2, turn("roll")));

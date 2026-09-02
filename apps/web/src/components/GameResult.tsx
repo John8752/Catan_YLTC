@@ -81,7 +81,8 @@ export function GameResult({ game }: { readonly game: GameView }) {
 }
 
 function Overview({ game }: { readonly game: GameView }) {
-  const ranked = [...requireSummary(game).players].sort((first, second) => second.visibleVictoryPoints - first.visibleVictoryPoints);
+  // Ranked by what actually won the game, not by what was on the board.
+  const ranked = [...requireSummary(game).players].sort((first, second) => second.score.total - first.score.total);
   return (
     <div className="result-ranking">
       {ranked.map((summary, index) => {
@@ -92,10 +93,11 @@ function Overview({ game }: { readonly game: GameView }) {
             <span className="result-rank">{index + 1}</span>
             <span className={cn("result-player-color", PLAYER_COLORS[player.color])} />
             <strong>{player.name}</strong>
-            <span className="result-score">{summary.visibleVictoryPoints}<small>明分</small></span>
+            <span className="result-score">{summary.score.total}<small>总分</small></span>
             <span className="result-score-sources">
               {summary.score.settlements > 0 ? `${summary.score.settlements} 村庄` : ""}
               {summary.score.cities > 0 ? `${summary.score.cities} 城市` : ""}
+              {summary.score.victoryPointCards > 0 ? `${summary.score.victoryPointCards} 分卡` : ""}
               {summary.score.longestRoad ? <Route aria-label="最长道路" /> : null}
               {summary.score.largestArmy ? <ShieldCheck aria-label="最大骑士力" /> : null}
             </span>
@@ -216,10 +218,11 @@ function scoreBreakdown(summary: PlayerGameSummaryView): string {
   const points = [
     `${summary.score.settlements} 村庄`,
     `${summary.score.cities} 城市`,
+    summary.score.victoryPointCards > 0 ? `${summary.score.victoryPointCards} 分卡` : null,
     summary.score.longestRoad ? "最长道路" : null,
     summary.score.largestArmy ? "最大骑士力" : null,
   ].filter((item): item is string => item !== null);
-  return points.join(" · ");
+  return `${summary.score.total} 分 · ${points.join(" · ")}`;
 }
 
 function requireSummary(game: GameView) {

@@ -22,6 +22,10 @@ export interface PlayerGameSummaryView {
     readonly cities: number;
     readonly longestRoad: boolean;
     readonly largestArmy: boolean;
+    /** Revealed only here: the match is over, so hidden points are no longer hidden. */
+    readonly victoryPointCards: number;
+    /** What actually decided the game -- `visibleVictoryPoints` plus the cards. */
+    readonly total: number;
   };
   readonly resourceCards: {
     readonly starting: number;
@@ -148,6 +152,7 @@ export function projectGameSummary(
     players: state.players.map((player): PlayerGameSummaryView => {
       const summary = requireSummary(mutable, player.id);
       const buildings = state.buildings.filter((building) => building.ownerId === player.id);
+      const victoryPointCards = player.developmentCards.filter((card) => card.type === "victory-point").length;
       return {
         playerId: player.id,
         visibleVictoryPoints: player.visibleVictoryPoints,
@@ -156,6 +161,8 @@ export function projectGameSummary(
           cities: buildings.filter((building) => building.kind === "city").length,
           longestRoad: state.awards.longestRoad.holderId === player.id,
           largestArmy: state.awards.largestArmy.holderId === player.id,
+          victoryPointCards,
+          total: player.visibleVictoryPoints + victoryPointCards,
         },
         resourceCards: { ...summary.resourceCards, finalHand: resourceCardCount(player.resources) },
         productionByResource: { ...summary.productionByResource },

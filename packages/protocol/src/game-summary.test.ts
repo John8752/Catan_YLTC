@@ -9,6 +9,37 @@ const PLAYERS = [
 ];
 
 describe("finished game summary projection", () => {
+  it("counts the hidden victory point cards into the final total", () => {
+    const base = createBaseGame({ id: "hidden_points", seed: 81, players: PLAYERS });
+    const state: GameState = {
+      ...base,
+      phase: { kind: "finished", winnerId: "player_1" },
+      players: base.players.map((player) => player.id === "player_1"
+        // 8 on the board plus two cards nobody could see is what actually won.
+        ? {
+            ...player,
+            visibleVictoryPoints: 8,
+            developmentCards: [
+              { id: "vp_1", type: "victory-point", acquiredTurn: 3 },
+              { id: "vp_2", type: "victory-point", acquiredTurn: 5 },
+              { id: "k_1", type: "knight", acquiredTurn: 4 },
+            ],
+          }
+        : { ...player, visibleVictoryPoints: 9 }),
+    };
+
+    const summary = projectGameSummary(state, []);
+    const winner = summary?.players.find((player) => player.playerId === "player_1");
+    const runnerUp = summary?.players.find((player) => player.playerId === "player_2");
+
+    expect(winner?.score).toMatchObject({ victoryPointCards: 2, total: 10 });
+    // The knight is not a point, and a seat with no cards totals its visible score.
+    expect(runnerUp?.score).toMatchObject({ victoryPointCards: 0, total: 9 });
+    // Ranking by total is what puts the winner above a higher visible score.
+    expect(winner!.score.total).toBeGreaterThan(runnerUp!.score.total);
+    expect(winner!.visibleVictoryPoints).toBeLessThan(runnerUp!.visibleVictoryPoints);
+  });
+
   it("aggregates public dice, resource-card, resource and activity statistics", () => {
     const base = createBaseGame({ id: "game_summary", seed: 81, players: PLAYERS });
     const state: GameState = {

@@ -24,8 +24,10 @@ export function TurnForecastBar({ game }: { readonly game: GameView }) {
       data-turn-forecast-distance={selfIndex}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 phone-landscape:hidden lg:flex-col lg:items-stretch lg:gap-1.5">
-        <div className="min-w-[6.5rem] shrink-0 lg:flex lg:items-baseline lg:justify-between lg:gap-2">
-          <span className="block text-[9px] font-black tracking-[.12em] text-[#d9c397] uppercase lg:text-xs">
+        {/* Stacked, not side by side: this now lives in the seat column, which is
+            far narrower than the sidebar it was first written for. */}
+        <div className="min-w-0 shrink-0">
+          <span className="block whitespace-nowrap text-[9px] font-black tracking-[.12em] text-[#d9c397] uppercase lg:text-xs">
             第 {current.turnNumber} 回合
           </span>
           <strong className="block whitespace-nowrap text-[11px] leading-tight text-[#fff4d6] lg:text-sm" data-turn-forecast-summary="true">

@@ -225,7 +225,7 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await host.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => host.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect.poll(() => host.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
-    const opponentStrip = host.getByRole("region", { name: "其他玩家" });
+    const opponentStrip = host.getByRole("region", { name: "座位顺序" });
     await expect(opponentStrip).toBeVisible();
     await expect.poll(() => opponentStrip.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
     const playerDock = host.locator(".player-dock");

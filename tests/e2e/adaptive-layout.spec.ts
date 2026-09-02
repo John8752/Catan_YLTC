@@ -31,7 +31,9 @@ for (const count of [4, 6] as const) {
         await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
         await expect(run.page.locator('[data-turn-forecast]')).toBeVisible();
         await expect(run.page.locator('[data-turn-forecast]')).toHaveAttribute("data-turn-forecast-distance", "0");
-        await expect(run.page.locator('[data-player-score]')).toHaveCount(count);
+        // One badge per seat in the order column, plus the local player's own in
+        // the dock -- the local seat deliberately appears in both.
+        await expect(run.page.locator('.seat-column [data-player-score]')).toHaveCount(count);
         await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("0");
         const bankHost = width >= 1024 ? '[data-game-sidebar]' : '.board-heading';
         await expect(run.page.locator(`${bankHost} [data-resource-source="bank"]`)).toBeVisible();
@@ -102,7 +104,9 @@ for (const count of [4, 6] as const) {
           } else {
             expect(metrics.opponents.bottom).toBeLessThanOrEqual(metrics.board.y);
           }
-          await expect(run.page.locator('[data-game-sidebar] [data-turn-forecast]')).toBeVisible();
+          // The forecast reads as turn order, so it sits above the seat column now.
+          await expect(run.page.locator('.seat-column [data-turn-forecast]')).toBeVisible();
+          await expect(run.page.locator('[data-game-sidebar] [data-turn-forecast]')).toHaveCount(0);
           await expect(run.page.locator('[data-game-sidebar] [data-attention-slot]')).toHaveCount(0);
           await expect(run.page.locator('[data-game-sidebar]')).not.toContainText("轮到你了，请掷骰子");
           await expect(run.page.locator('[data-game-sidebar] [aria-label="放大地图"]')).toHaveCount(0);

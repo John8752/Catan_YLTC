@@ -34,7 +34,7 @@ test("six-player board keeps five opponents, the map and the private dock in one
   try {
     await page.goto("/");
     await expect(page.getByRole("img", { name: "由三十块六边形地形组成的游戏棋盘" })).toBeVisible();
-    const opponentStrip = page.getByRole("region", { name: "其他玩家" });
+    const opponentStrip = page.getByRole("region", { name: "座位顺序" });
     await expect(opponentStrip.locator("[data-player-id]")).toHaveCount(5);
     await expect.poll(() => opponentStrip.evaluate((element) => ({
       contained: getComputedStyle(element).overflowX === "auto",

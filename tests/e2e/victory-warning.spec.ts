@@ -70,7 +70,7 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
         const resource = document.querySelector('[data-self-resource-total]')!;
         const resourceBox = resource.getBoundingClientRect();
         const ownBadge = document.querySelector('.self-seat [data-player-score]')!.getBoundingClientRect();
-        return { fits: badges.every((badge) => within(badge.getBoundingClientRect(), badge.closest('[data-player-target]')!.getBoundingClientRect())),
+        return { fits: badges.every((badge) => within(badge.getBoundingClientRect(), badge.closest('[data-player-target],[data-seat-of]')!.getBoundingClientRect())),
           resourceClear: resourceBox.right <= ownBadge.left && resourceBox.height < Number.parseFloat(getComputedStyle(resource).fontSize) * 2,
           overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
           bannerClear: (banner.bottom <= stage.top || banner.left >= stage.right) && banner.left >= 0 && banner.right <= innerWidth,

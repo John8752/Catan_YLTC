@@ -23,6 +23,7 @@ import { GameResult } from "./components/GameResult.js";
 import { LobbySetup } from "./components/LobbySetup.js";
 import { GameSidebar } from "./components/GameSidebar.js";
 import { OpponentStrip } from "./components/OpponentStrip.js";
+import { TurnForecastBar } from "./components/TurnForecastBar.js";
 import { PlayerDock } from "./components/PlayerDock.js";
 import { RoomPanel } from "./components/RoomPanel.js";
 import { ActiveTradePanel } from "./components/ActiveTradePanel.js";
@@ -294,7 +295,12 @@ export function App() {
         <span aria-hidden="true">⬡</span>
         <strong>Catan YLTC</strong>
       </div> : null}
-      {liveGame === null ? null : <OpponentStrip game={liveGame} />}
+      {liveGame === null ? null : (
+        <div className="seat-column col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col gap-1 phone-landscape:col-span-2 xl:min-h-0">
+          <TurnForecastBar game={liveGame} />
+          <OpponentStrip game={liveGame} />
+        </div>
+      )}
       <div className={liveGame === null ? "playfield min-h-[420px] lg:col-start-1 lg:row-start-2 lg:min-h-0" : "playfield live-playfield col-start-1 row-start-2 min-h-0 min-w-0 overflow-hidden xl:col-start-2 xl:row-start-1"}>
         {room.game === null ? (
           <LobbySetup

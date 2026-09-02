@@ -11,27 +11,39 @@ export function OpponentStrip({ game }: { readonly game: GameView }) {
     : game.phase.kind === "setup"
       ? game.phase.placementOrder[game.phase.placementIndex]
       : game.phase.winnerId;
-  const opponents = game.players.filter((player) => player.id !== game.you.id);
+  // Everyone, in seat order, so the column reads as the turn order rather than as
+  // "the other people". The local seat keeps its detail in the dock, so this row
+  // carries no `data-player-target`: that anchor has to stay unique for the
+  // resource-flight animation.
+  const seats = game.players;
 
   return (
-    <section className="opponent-strip col-start-1 row-start-1 grid min-w-0 shrink-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 phone-landscape:col-span-2 lg:auto-cols-[14rem] xl:min-h-0 xl:shrink xl:auto-rows-max xl:grid-flow-row xl:grid-cols-1 xl:auto-cols-auto xl:content-start xl:gap-0 xl:overflow-x-hidden xl:overflow-y-auto xl:rounded-xl xl:bg-[var(--game-rail-bg)] xl:pb-0 xl:ring-1 xl:ring-inset xl:ring-[var(--game-rail-line)]" aria-label="其他玩家" tabIndex={0}>
-      {opponents.map((player) => {
+    <section className="opponent-strip col-start-1 row-start-1 grid min-w-0 shrink-0 grid-flow-col auto-cols-[minmax(10.5rem,1fr)] gap-1 overflow-x-auto pb-0.5 phone-landscape:col-span-2 lg:auto-cols-[14rem] xl:min-h-0 xl:shrink xl:auto-rows-max xl:grid-flow-row xl:grid-cols-1 xl:auto-cols-auto xl:content-start xl:gap-0 xl:overflow-x-hidden xl:overflow-y-auto xl:rounded-xl xl:bg-[var(--game-rail-bg)] xl:pb-0 xl:ring-1 xl:ring-inset xl:ring-[var(--game-rail-line)]" aria-label="座位顺序" tabIndex={0}>
+      {seats.map((player) => {
         const active = player.id === activePlayerId;
+        const self = player.id === game.you.id;
         const nearVictory = game.phase.kind === "turn" && victoryWarningTier(player.visibleVictoryPoints, game.victoryPointsToWin) !== null;
         return (
           <article
             className={cn(
               "relative min-w-0 overflow-visible rounded-lg border border-white/15 bg-[#173f42]/72 px-1.5 py-1 text-[#fff8df] shadow-sm backdrop-blur-sm lg:rounded-xl lg:px-2.5 lg:py-1.5 xl:rounded-none xl:border-transparent xl:border-b-[var(--game-rail-line)] xl:bg-transparent xl:text-[var(--game-rail-ink)] xl:shadow-none xl:backdrop-blur-none xl:first:rounded-t-xl",
-              active && "border-[#f0c56b]/80 bg-[#285d59]/94 ring-1 ring-[#f0c56b]/55 xl:bg-[#304b43] xl:ring-inset xl:ring-[#6b8270]",
+              // Only the xl rail is a vertical column with room for an extra seat.
+            // Below that the strip scrolls sideways and the dock already shows the
+            // local player directly underneath it.
+            self && "max-xl:hidden border-[#f2b3aa]/55 xl:border-b-[var(--game-rail-line)]",
+            active && "border-[#f0c56b]/80 bg-[#285d59]/94 ring-1 ring-[#f0c56b]/55 xl:bg-[#304b43] xl:ring-inset xl:ring-[#6b8270]",
             )}
             key={player.id}
-            data-player-id={player.id}
-            data-player-target={player.id}
-            aria-label={`${player.name}，${player.visibleVictoryPoints} 分，${player.resourceCardCount} 张资源卡，${player.developmentCardCount} 张发展卡，已出 ${player.playedKnights} 张骑士，最长道路 ${player.longestRoadLength}${active ? "，当前行动" : ""}`}
+            data-seat-of={player.id}
+            {...(self ? { "data-seat-self": "true" } : { "data-player-id": player.id, "data-player-target": player.id })}
+            aria-label={`${self ? "你，" : ""}${player.name}，${player.visibleVictoryPoints} 分，${player.resourceCardCount} 张资源卡，${player.developmentCardCount} 张发展卡，已出 ${player.playedKnights} 张骑士，最长道路 ${player.longestRoadLength}${active ? "，当前行动" : ""}`}
           >
             <div className={cn("flex min-w-0 items-center gap-1 lg:flex-wrap lg:gap-x-2", nearVictory && "flex-wrap")} data-opponent-summary={player.id}>
               <PlayerColorDot color={player.color} className="size-2.5 rounded-sm lg:size-3" />
-              <strong className="min-w-0 flex-1 truncate text-[10px] lg:text-base" title={player.name}>{truncatePlayerName(player.name)}</strong>
+              <strong className="min-w-0 flex-1 truncate text-[10px] lg:text-base" title={player.name}>
+                {truncatePlayerName(player.name)}
+                {self ? <span className="ml-1 rounded bg-white/20 px-1 text-[8px] align-middle lg:text-[10px]">你</span> : null}
+              </strong>
               <span className={cn("flex shrink-0 items-center gap-1 text-[8px] font-bold text-[#d7e2da] lg:order-3 lg:mt-1 lg:grid lg:w-full lg:grid-cols-4 lg:gap-1 lg:text-sm xl:text-[var(--game-rail-muted)]", nearVictory && "order-3 grid w-full grid-cols-4")}>
                 <span title="资源卡">资 {player.resourceCardCount}</span>
                 <span title="发展卡">发 {player.developmentCardCount}</span>

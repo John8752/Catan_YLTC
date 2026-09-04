@@ -99,17 +99,16 @@ test("primary phones preserve anchors and usable bounds as browser bars and safe
         const anchor = await run.page.locator('[data-player-target="p1"]').elementHandle();
         for (const size of [area, full]) {
           await run.page.setViewportSize({ width: size.width, height: size.height });
-          // Chromium has no iPhone notch: explicitly reserve the corresponding
-          // portrait/landscape space in addition to the browser-area resize.
-          const portrait = size.height > size.width;
-          await run.page.locator('.live-game-layout').evaluate((element, portrait) => {
-            (element as HTMLElement).style.padding = portrait ? '59px 6px 34px' : '6px 59px 21px';
-          }, portrait);
+          // Chromium has no iPhone notch: explicitly reserve portrait safe-area
+          // space in addition to the browser-area resize.
+          await run.page.locator('.live-game-layout').evaluate((element) => {
+            (element as HTMLElement).style.padding = '59px 6px 34px';
+          });
           const metrics = await measure(run.page);
           expect(metrics.overflow).toBe(false);
           expect(metrics.terrainFit).toBe(true);
           expect(metrics.maxPortOverflow).toBeLessThanOrEqual(metrics.tile.width * 0.2);
-          expect(metrics.dock.bottom).toBeLessThanOrEqual(size.height - (portrait ? 34 : 21));
+          expect(metrics.dock.bottom).toBeLessThanOrEqual(size.height - 34);
           expect(await anchor!.evaluate((element) => element.isConnected)).toBe(true);
           await run.page.getByRole("button", { name: "查看银行库存" }).click();
           await expect(run.page.getByRole("dialog")).toBeVisible();

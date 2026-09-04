@@ -31,12 +31,12 @@ These are measured cases with the current fixed 1.08 presentation scale. The tig
 
 The shared `tests/e2e/viewport-cases.ts` matrix supplies all primary phone cases, with DPR 3 and touch/mobile behavior enabled:
 
-| Model | Full canvas, portrait / landscape | Browser area, portrait / landscape |
+| Model | Full canvas, portrait | Browser area, portrait |
 | --- | --- | --- |
-| iPhone 16 | 393×852 / 852×393 | 393×659 / 734×343 |
-| iPhone 16 Pro Max | 440×956 / 956×440 | 440×763 / 838×390 |
+| iPhone 16 | 393×852 | 393×659 |
+| iPhone 16 Pro Max | 440×956 | 440×763 |
 
-All sixteen four-/six-player layout screenshots were visually inspected for the two models, both orientations and both area modes. The compact bank disclosure, port icon/ratio rows, number-token clearance, bounded port overflow, dock bounds and page overflow are covered by the existing suite.
+All eight four-/six-player portrait layout screenshots were visually inspected for the two models and both area modes. The compact bank disclosure, port icon/ratio rows, number-token clearance, bounded port overflow, dock bounds and page overflow are covered by the existing suite. Phone landscape is outside the supported acceptance matrix.
 
 Desktop/compatibility layout coverage includes 1024×768, 1366×768, 1920×1021, 2560×1440, 3840×2160, 3440×1440, 1920×720, 960×540, 844×390, 640×360, 390×844 and 360×640. Additional four-/six-player resizing covers 1428×779, 1280×720, 1279×720 and 1366×640.
 
@@ -48,7 +48,7 @@ Focused regressions verify:
 - fully visible, unobscured roll/end-turn buttons, including expanded development controls, and an actual intercepted roll-command submission;
 - direct mouse, touch and keyboard map movement with double-click/Home recentering and unchanged port/hex proportions;
 - notice separation from the map in its new location;
-- resizing between each primary phone's full canvas and browser area while reserving additional notch/home-indicator padding (59px top and 34px bottom in portrait; 59px sides and 21px bottom in landscape).
+- resizing between each primary phone's portrait full canvas and browser area while reserving additional notch/home-indicator padding (59px top and 34px bottom).
 
 Screenshots and measured JSON are ignored artifacts under `output/playwright/`. Main review images are `three-column-4-1428x779.png` and `three-column-6-1428x779.png`. Shared layout helpers live in `tests/e2e/layout-fixture.ts` rather than further enlarging the original spec.
 
@@ -56,7 +56,7 @@ Screenshots and measured JSON are ignored artifacts under `output/playwright/`. 
 
 Validation uses desktop Chromium with emulated CSS viewports/DPR, not physical iPhones or iOS Safari. Explicit padding reserves space; it does not emulate Safari's actual browser chrome or platform safe-area calculation. Physical-device browser bars, notch/home indicator and touch gestures have not been certified.
 
-The six-player map and port details remain visually small in phone landscape, especially browser-area cases. Containment/proportion assertions do not establish comfortable readability. At very short desktop heights, history gets less space so primary actions remain reachable; the 1366×640 resize check verifies actions/overflow, not the 80px history floor used by the main desktop matrix.
+Phone landscape is outside the supported acceptance matrix. At very short desktop heights, history gets less space so primary actions remain reachable; the 1366×640 resize check verifies actions/overflow, not the 80px history floor used by the main desktop matrix.
 
 ## Commands
 

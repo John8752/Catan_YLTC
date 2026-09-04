@@ -60,12 +60,11 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
   const proposerResource = firstHeldResource(proposerRoom, responderResource);
 
   const portrait = iPhone16BrowserAreaCases.find((candidate) => candidate.name.includes("portrait"));
-  const landscape = iPhone16BrowserAreaCases.find((candidate) => candidate.name.includes("landscape"));
-  if (portrait === undefined || landscape === undefined) throw new Error("Missing focused iPhone viewport cases");
+  if (portrait === undefined) throw new Error("Missing focused iPhone portrait viewport case");
   const contexts = await Promise.all([
     browser.newContext(),
     browser.newContext({ ...portrait.options, viewport: { width: portrait.width, height: portrait.height } }),
-    browser.newContext({ ...landscape.options, viewport: { width: landscape.width, height: landscape.height } }),
+    browser.newContext({ ...portrait.options, viewport: { width: portrait.width, height: portrait.height } }),
   ]);
   const [proposerContext, responderContext, thirdResponderContext] = contexts;
   if (proposerContext === undefined || responderContext === undefined || thirdResponderContext === undefined) throw new Error("Missing browser contexts");

@@ -54,28 +54,54 @@ it("does not repeat the table-level rules guide inside the development drawer", 
   expect(screen.queryByText(/移动强盗/)).toBeNull();
 });
 
-it("names what the resource pickers are choosing", () => {
+it("uses resource cards instead of dropdowns for the harvest choice", () => {
   render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
 
   expect(screen.getByRole("combobox", { name: "垄断要抢的资源" })).toBeTruthy();
-  expect(screen.getByRole("combobox", { name: "丰收的第一张资源" })).toBeTruthy();
-  expect(screen.getByRole("combobox", { name: "丰收的第二张资源" })).toBeTruthy();
+  expect(screen.queryByRole("combobox", { name: /丰收/ })).toBeNull();
+  expect(screen.getAllByRole("button", { name: /在丰收资源中加入 1 张/ })).toHaveLength(5);
 });
 
-it("keeps both harvest selections switchable and submits their latest values", () => {
+it("requires two harvest cards, submits them and clears the selection", () => {
   const onCommand = vi.fn();
   render(<DevelopmentControls game={handView()} busy={false} onCommand={onCommand} />);
 
-  fireEvent.change(screen.getByRole("combobox", { name: "丰收的第一张资源" }), { target: { value: "brick" } });
-  fireEvent.change(screen.getByRole("combobox", { name: "丰收的第二张资源" }), { target: { value: "wool" } });
   const plentyCard = screen.getByText("丰收").closest(".development-card");
   if (plentyCard === null) throw new Error("Missing harvest card");
-  fireEvent.click(within(plentyCard as HTMLElement).getByRole("button", { name: "使用" }));
+  const harvest = within(plentyCard as HTMLElement);
+  const confirm = harvest.getByRole("button", { name: "确定" });
+  expect((confirm as HTMLButtonElement).disabled).toBe(true);
+
+  fireEvent.click(harvest.getByRole("button", { name: /在丰收资源中加入 1 张砖/ }));
+  expect((confirm as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(harvest.getByRole("button", { name: /在丰收资源中加入 1 张羊/ }));
+  expect((confirm as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(confirm);
 
   expect(onCommand).toHaveBeenCalledWith({
     type: "PlayResourceChoice",
     cardId: "c_plenty",
     resources: ["brick", "wool"],
+  });
+  expect(harvest.getByText("选择 2 张资源 · 已选 0/2")).toBeTruthy();
+});
+
+it("allows harvest to choose two cards of the same resource", () => {
+  const onCommand = vi.fn();
+  render(<DevelopmentControls game={handView()} busy={false} onCommand={onCommand} />);
+
+  const plentyCard = screen.getByText("丰收").closest(".development-card");
+  if (plentyCard === null) throw new Error("Missing harvest card");
+  const harvest = within(plentyCard as HTMLElement);
+  const addOre = harvest.getByRole("button", { name: /在丰收资源中加入 1 张矿/ });
+  fireEvent.click(addOre);
+  fireEvent.click(addOre);
+  fireEvent.click(harvest.getByRole("button", { name: "确定" }));
+
+  expect(onCommand).toHaveBeenCalledWith({
+    type: "PlayResourceChoice",
+    cardId: "c_plenty",
+    resources: ["ore", "ore"],
   });
 });
 
@@ -96,11 +122,12 @@ it("puts the reason on a disabled card instead of only greying it out", () => {
 it("leaves a playable card unexplained and enabled", () => {
   render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
 
-  // The victory point card never gets a button; the other four do.
+  // The victory point card never gets a button; the harvest card uses a separate confirmation label.
   const buttons = screen.getAllByRole("button", { name: "使用" });
-  expect(buttons).toHaveLength(4);
+  expect(buttons).toHaveLength(3);
   for (const button of buttons) {
     expect((button as HTMLButtonElement).disabled).toBe(false);
     expect(button.getAttribute("title")).toBeNull();
   }
+  expect((screen.getByRole("button", { name: "确定" }) as HTMLButtonElement).disabled).toBe(true);
 });

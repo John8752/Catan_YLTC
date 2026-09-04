@@ -21,6 +21,17 @@
 
 Resolved after M0: the 5–6 player profile follows the revised paired-player turn, with the player third to the primary player's left acting second and trading only with the bank.
 
+## Post-M0 account decisions
+
+| ID | Decision | Result |
+|---|---|---|
+| D6 | Account availability | Optional; guest room entry remains supported |
+| D7 | Concurrent login policy | One session and one live room seat per account; newest successful login takes over |
+| D8 | Initial persistence scope | SQLite persists accounts and login sessions, not rooms or canonical matches |
+| D9 | Initial transport | Bare-IP HTTP is temporarily accepted with an explicit warning; credentials are not secure against network interception until HTTPS |
+
+The implementation and regression requirements for D6–D9 are recorded in [the account system plan](./account-system-plan.md) and proposed ADR-0010. The HTTP choice is a known security exposure, not a mitigation target that can be solved by password hashing or cookie flags alone.
+
 ### O3 disconnected mandatory-resolution direction (partially superseded 2026-08-25)
 
 A regular phase clock is now defined independently of connection state: primary rolls

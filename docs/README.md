@@ -15,5 +15,6 @@ Read documents in this order:
 11. [Deployment manual](./deployment.md)
 12. [Adaptive game surface validation](./validation/adaptive-game-surface.md)
 13. [Three-column layout validation](./validation/three-column-layout.md)
+14. [Account system implementation plan](./account-system-plan.md)
 
 Rule behavior belongs in `docs/rules`. Long-lived technical decisions belong in `docs/adr`. A feature that changes both should update both in the same change.

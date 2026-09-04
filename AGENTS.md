@@ -75,6 +75,19 @@ hazard when adding anything that touches a browser API.
 This constraint is lifted only by an ADR that also moves the deployment to HTTPS; see
 `docs/deployment.md` for what that migration involves.
 
+## Account and SQLite constraints
+
+The proposed account milestone is specified by `docs/account-system-plan.md` and ADR-0010. When implementing it:
+
+- Accounts remain optional; preserve the anonymous create/join path and existing room-scoped seat recovery.
+- `accountId`, room `playerId` and `seatToken` are separate concepts. Never place account credentials, usernames or database records in `game-core` state or player-visible projections.
+- The newest successful login wins globally. Replacing a session must rotate the linked room's `seatToken` before closing old subscriptions, or the previous device can reconnect with its stored room credential.
+- Account session secrets belong only in a server-managed HttpOnly cookie and their hashes in SQLite. Never put an account session, password, password hash or reset credential in browser storage, URLs, protocol views or logs.
+- Until HTTPS is actually deployed, the account cookie must not use `Secure` or a `__Host-` prefix. Treat this as an explicitly insecure temporary mode, keep the UI warning, and do not claim transport security.
+- SQLite stores account identity and sessions only in the first milestone. Rooms and games remain in memory under ADR-0007; do not silently add partial game persistence.
+- Keep the database outside the repository and expose it through a server repository interface. Migrations, filesystem permissions, backup/restore and deployment rollback are part of the feature, not follow-up chores.
+- Account transport DTOs belong in `packages/protocol`; secret records and authentication logic stay in `apps/server`.
+
 ## Domain modularity
 
 `packages/game-core` is one package for now, but it must contain explicit domain modules rather than one connected rules blob:

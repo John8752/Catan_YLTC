@@ -54,6 +54,10 @@ Player count is never used as a substitute for a named rule profile.
 - final artwork, sound, monetization or public deployment;
 - copying official artwork, logos or rulebook text.
 
+## Post-M0 account milestone
+
+Accounts are an optional enhancement rather than a new entry requirement. Guest players must still be able to open a link, choose a display name and enter a room without registering. A registered account provides a durable profile and one active login across devices; the newest successful login takes over any live room seat and invalidates the previous device. Account persistence does not imply durable room or match recovery.
+
 ## Visual direction
 
 The interface should feel like a warmly lit wooden game table: parchment surfaces, muted ocean blue, pine green, terracotta and wheat accents. Geometry is crisp and tactile, motion is restrained, and the result must not resemble an admin dashboard.

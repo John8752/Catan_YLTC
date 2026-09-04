@@ -94,6 +94,20 @@ describe("TradeControls", () => {
     expect(onCommand).not.toHaveBeenCalledWith(expect.objectContaining({ type: "CompleteTradeOffer" }));
   });
 
+  it("disables responses and counteroffer submissions that are already public", () => {
+    const accepted = render(<ActiveTradePanel game={tradeView("player_2")} busy={false} onCommand={vi.fn()} />);
+    expect((screen.getByRole("button", { name: "同意" }) as HTMLButtonElement).disabled).toBe(true);
+    accepted.unmount();
+
+    const declined = render(<ActiveTradePanel game={tradeView("player_3")} busy={false} onCommand={vi.fn()} />);
+    expect((screen.getByRole("button", { name: "拒绝" }) as HTMLButtonElement).disabled).toBe(true);
+    declined.unmount();
+
+    render(<ActiveTradePanel game={counterTradeView("player_2")} busy={false} onCommand={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "反报价" }));
+    expect((screen.getByRole("button", { name: "提交反报价" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("lets a responder compose and replace their response with a counteroffer", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
     render(<ActiveTradePanel game={tradeView("player_2")} busy={false} onCommand={onCommand} />);

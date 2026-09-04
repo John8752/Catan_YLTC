@@ -1,6 +1,6 @@
 import type { PlayerColor } from "@catan/game-core";
 import type { GameCommand, RoomSettingsInput, RoomView } from "@catan/protocol";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
   connectToRoom,
@@ -38,6 +38,7 @@ import { DevelopmentEffectLayer, isDevelopmentEffect } from "./effects/Developme
 import { useGameEffectQueue } from "./effects/use-game-effect-queue.js";
 import { useActionAttention } from "./effects/use-action-attention.js";
 import { useVictoryWarnings } from "./effects/use-victory-warnings.js";
+import { canRetryStaleTradeCommand } from "./lib/trade-command-retry.js";
 import {
   adoptLegacyTabSession,
   createPlayerSessionStore,
@@ -56,6 +57,7 @@ export function App() {
     "offline",
   );
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [buildMode, setBuildMode] = useState<"road" | "settlement" | "city" | null>(null);
   const [selectedRobberHexId, setSelectedRobberHexId] = useState<string | null>(null);
@@ -209,13 +211,25 @@ export function App() {
   }
 
   async function handleGameCommand(command: GameCommand) {
-    if (session === null || room?.game === null || room?.game === undefined) return;
+    const submittedGame = room?.game;
+    if (session === null || submittedGame === null || submittedGame === undefined) return;
     await runBusy(async () => {
       try {
-        const response = await submitGameCommand(session, room.game?.revision ?? 0, command);
+        const response = await submitGameCommand(session, submittedGame.revision, command);
         setRoom(response.room);
       } catch (caught) {
-        if (isStaleStateError(caught)) setRoom(await getRoom(session));
+        if (isStaleStateError(caught)) {
+          const latestRoom = await getRoom(session);
+          setRoom(latestRoom);
+          if (
+            latestRoom.game !== null &&
+            canRetryStaleTradeCommand(command, submittedGame.openTrade, latestRoom.game.openTrade, session.playerId)
+          ) {
+            const response = await submitGameCommand(session, latestRoom.game.revision, command);
+            setRoom(response.room);
+            return;
+          }
+        }
         throw caught;
       }
     });
@@ -265,6 +279,8 @@ export function App() {
   }
 
   async function runBusy(action: () => Promise<void>) {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError(null);
 
@@ -273,6 +289,7 @@ export function App() {
     } catch (caught) {
       setError(errorMessage(caught));
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }

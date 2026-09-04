@@ -49,6 +49,10 @@ export function hasTradeResources(hand: TradeBasket, cost: TradeBasket): boolean
   return TRADE_RESOURCES.every((resource) => hand[resource] >= cost[resource]);
 }
 
+export function equalTradeResources(first: TradeBasket, second: TradeBasket): boolean {
+  return TRADE_RESOURCES.every((resource) => first[resource] === second[resource]);
+}
+
 export function overlappingTradeResources(first: TradeBasket, second: TradeBasket): readonly TradeResource[] {
   return TRADE_RESOURCES.filter((resource) => first[resource] > 0 && second[resource] > 0);
 }

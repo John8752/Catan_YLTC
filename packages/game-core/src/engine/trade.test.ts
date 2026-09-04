@@ -88,6 +88,46 @@ describe("atomic trading", () => {
     })).toMatchObject({ accepted: false, error: { code: "INVALID_TRADE" } });
   });
 
+  it("treats an unchanged player response as an idempotent no-op", () => {
+    let game = withHands(actionState(), {
+      player_1: resourceAmounts({ brick: 1 }),
+      player_2: resourceAmounts({ ore: 1 }),
+    });
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_idempotent",
+      give: resourceAmounts({ brick: 1 }),
+      receive: resourceAmounts({ ore: 1 }),
+    }));
+
+    const firstAccept = executeGameCommand(game, "player_2", {
+      type: "AcceptTradeOffer",
+      offerId: "offer_idempotent",
+    });
+    game = accept(firstAccept);
+    const acceptedRevision = game.revision;
+    const repeatedAccept = executeGameCommand(game, "player_2", {
+      type: "AcceptTradeOffer",
+      offerId: "offer_idempotent",
+    });
+    expect(repeatedAccept).toMatchObject({ accepted: true, events: [] });
+    expect(repeatedAccept.state).toEqual(game);
+    expect(repeatedAccept.state.revision).toBe(acceptedRevision);
+
+    game = accept(executeGameCommand(game, "player_2", {
+      type: "DeclineTradeOffer",
+      offerId: "offer_idempotent",
+    }));
+    const declinedRevision = game.revision;
+    const repeatedDecline = executeGameCommand(game, "player_2", {
+      type: "DeclineTradeOffer",
+      offerId: "offer_idempotent",
+    });
+    expect(repeatedDecline).toMatchObject({ accepted: true, events: [] });
+    expect(repeatedDecline.state).toEqual(game);
+    expect(repeatedDecline.state.revision).toBe(declinedRevision);
+  });
+
   it("records one replaceable counteroffer per player and completes its terms", () => {
     let game = withHands(actionState(), {
       player_1: resourceAmounts({ brick: 2, lumber: 1 }),
@@ -139,6 +179,33 @@ describe("atomic trading", () => {
       .toEqual(resourceAmounts({ brick: 1, lumber: 1, ore: 1 }));
     expect(game.players.find((player) => player.id === "player_2")?.resources)
       .toEqual(resourceAmounts({ brick: 1, grain: 2 }));
+  });
+
+  it("does not record an unchanged counteroffer twice", () => {
+    let game = withHands(actionState(), {
+      player_1: resourceAmounts({ brick: 1 }),
+      player_2: resourceAmounts({ ore: 1 }),
+    });
+    game = accept(executeGameCommand(game, "player_1", {
+      type: "OpenTradeOffer",
+      offerId: "offer_same_counter",
+      give: resourceAmounts({ brick: 1 }),
+      receive: resourceAmounts({ ore: 1 }),
+    }));
+    const counter = {
+      type: "CounterTradeOffer" as const,
+      offerId: "offer_same_counter",
+      proposerGives: resourceAmounts({ brick: 1 }),
+      proposerReceives: resourceAmounts({ ore: 1 }),
+    };
+    game = accept(executeGameCommand(game, "player_2", counter));
+    const revision = game.revision;
+
+    const repeated = executeGameCommand(game, "player_2", counter);
+
+    expect(repeated).toMatchObject({ accepted: true, events: [] });
+    expect(repeated.state).toEqual(game);
+    expect(repeated.state.revision).toBe(revision);
   });
 
   it("validates only the countering player's promise until completion", () => {

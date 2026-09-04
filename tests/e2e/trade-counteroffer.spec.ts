@@ -1,7 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { GameCommand, GameCommandResponse, PlayerSessionResponse, RoomView } from "@catan/protocol";
-import { expect, test, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type BrowserContext, type Page, type Route } from "@playwright/test";
+import { iPhone16BrowserAreaCases } from "./viewport-cases.js";
 
 const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
 type Resource = Extract<GameCommand, { readonly type: "MaritimeTrade" }>["give"];
@@ -50,26 +51,38 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
   const proposer = requireSession(sessions, proposerId);
   const responder = sessions.find((session) => session.playerId !== proposer.playerId);
   if (responder === undefined) throw new Error("Missing trade responder");
+  const thirdResponder = sessions.find((session) => session.playerId !== proposer.playerId && session.playerId !== responder.playerId);
+  if (thirdResponder === undefined) throw new Error("Missing third trade responder");
   const proposerRoom = await getRoom(request, proposer);
   const responderRoom = await getRoom(request, responder);
   const responderResource = firstHeldResource(responderRoom);
   if (responderResource === undefined) throw new Error("Responder received no setup resources");
   const proposerResource = firstHeldResource(proposerRoom, responderResource);
 
-  const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
-  const [proposerContext, responderContext] = contexts;
-  if (proposerContext === undefined || responderContext === undefined) throw new Error("Missing browser contexts");
+  const portrait = iPhone16BrowserAreaCases.find((candidate) => candidate.name.includes("portrait"));
+  const landscape = iPhone16BrowserAreaCases.find((candidate) => candidate.name.includes("landscape"));
+  if (portrait === undefined || landscape === undefined) throw new Error("Missing focused iPhone viewport cases");
+  const contexts = await Promise.all([
+    browser.newContext(),
+    browser.newContext({ ...portrait.options, viewport: { width: portrait.width, height: portrait.height } }),
+    browser.newContext({ ...landscape.options, viewport: { width: landscape.width, height: landscape.height } }),
+  ]);
+  const [proposerContext, responderContext, thirdResponderContext] = contexts;
+  if (proposerContext === undefined || responderContext === undefined || thirdResponderContext === undefined) throw new Error("Missing browser contexts");
   await Promise.all([
     seedSession(proposerContext, proposer),
     seedSession(responderContext, responder),
+    seedSession(thirdResponderContext, thirdResponder),
   ]);
-  const [proposerPage, responderPage] = await Promise.all([
+  const [proposerPage, responderPage, thirdResponderPage] = await Promise.all([
     proposerContext.newPage(),
     responderContext.newPage(),
+    thirdResponderContext.newPage(),
   ]);
+  if (proposerPage === undefined || responderPage === undefined || thirdResponderPage === undefined) throw new Error("Missing browser pages");
 
   try {
-    await Promise.all([proposerPage.goto("/"), responderPage.goto("/")]);
+    await Promise.all([proposerPage.goto("/"), responderPage.goto("/"), thirdResponderPage.goto("/")]);
     await expect(proposerPage.getByRole("button", { name: "发起交易" })).toBeVisible();
 
     await proposerPage.getByRole("button", { name: "发起交易" }).click();
@@ -92,8 +105,41 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await proposerPage.getByRole("button", { name: "向所有玩家发布报价" }).click();
     await proposerPage.setViewportSize({ width: 1280, height: 720 });
 
-    await responderPage.setViewportSize({ width: 390, height: 844 });
     await expect(responderPage.getByRole("region", { name: "查看报价并回应" })).toBeVisible();
+    await expect(thirdResponderPage.getByRole("region", { name: "查看报价并回应" })).toBeVisible();
+    await expect.poll(() => thirdResponderPage.evaluate(() => ({
+      horizontal: document.documentElement.scrollWidth <= window.innerWidth,
+      vertical: document.documentElement.scrollHeight <= window.innerHeight + 1,
+    }))).toEqual({ horizontal: true, vertical: true });
+
+    let forcedStaleRevision = false;
+    const commandUrl = new RegExp(`/api/rooms/${responder.roomId}/commands$`);
+    const forceOneStaleRevision = async (route: Route) => {
+      if (!forcedStaleRevision) {
+        forcedStaleRevision = true;
+        const thirdRoom = await getRoom(request, thirdResponder);
+        await command(request, thirdResponder, thirdRoom, ++commandNumber, {
+          type: "DeclineTradeOffer",
+          offerId: thirdRoom.game?.openTrade?.offerId ?? "",
+        });
+      }
+      await route.continue();
+    };
+    await responderPage.route(commandUrl, forceOneStaleRevision);
+    await responderPage.getByRole("button", { name: "同意" }).evaluate((button) => {
+      (button as HTMLButtonElement).click();
+      (button as HTMLButtonElement).click();
+    });
+    await expect(responderPage.getByRole("button", { name: "同意" })).toBeDisabled();
+    await expect(responderPage.getByRole("alert")).toHaveCount(0);
+    await responderPage.unroute(commandUrl, forceOneStaleRevision);
+    expect(forcedStaleRevision).toBe(true);
+    await expect(thirdResponderPage.getByRole("button", { name: "拒绝" })).toBeDisabled();
+    const acceptedRoom = await getRoom(request, responder);
+    const responderName = acceptedRoom.members.find((member) => member.id === responder.playerId)?.name;
+    if (responderName === undefined) throw new Error("Missing responder name");
+    expect(acceptedRoom.game?.history.filter((entry) => entry.message === `${responderName} 接受报价`)).toHaveLength(1);
+
     await responderPage.getByRole("button", { name: "反报价" }).click();
 
     const proposerGives = emptyResources();
@@ -109,6 +155,21 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await expect.poll(() => responderPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await responderPage.screenshot({ path: path.join(artifactDir, "trade-counter-mobile.png"), fullPage: true });
     await responderPage.getByRole("button", { name: "提交反报价" }).click();
+    await expect(responderPage.getByText("反报价已公开，可以继续修改")).toBeVisible();
+    await responderPage.getByRole("button", { name: "反报价" }).click();
+    await expect(responderPage.getByRole("button", { name: "提交反报价" })).toBeDisabled();
+    await expect(responderPage.getByText("反报价条款尚未改变")).toBeVisible();
+
+    const counterRoom = await getRoom(request, responder);
+    const repeatedCounter = await command(request, responder, counterRoom, ++commandNumber, {
+      type: "CounterTradeOffer",
+      offerId: counterRoom.game?.openTrade?.offerId ?? "",
+      proposerGives,
+      proposerReceives,
+    });
+    expect(repeatedCounter.revision).toBe(counterRoom.revision);
+    expect(repeatedCounter.game?.revision).toBe(counterRoom.game?.revision);
+    expect(repeatedCounter.game?.history).toEqual(counterRoom.game?.history);
 
     await expect(proposerPage.getByRole("button", { name: "岚：提出反报价" })).toBeVisible();
     await proposerPage.screenshot({ path: path.join(artifactDir, "trade-counter-desktop.png"), fullPage: true });

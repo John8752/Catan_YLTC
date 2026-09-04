@@ -3,8 +3,8 @@
 import { createBaseGame, createGame } from "@catan/game-core";
 import type { GameView } from "@catan/protocol";
 import { projectGameForPlayer } from "@catan/protocol";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
 import { DevelopmentControls } from "./DevelopmentControls.js";
 
 afterEach(() => cleanup());
@@ -60,6 +60,23 @@ it("names what the resource pickers are choosing", () => {
   expect(screen.getByRole("combobox", { name: "垄断要抢的资源" })).toBeTruthy();
   expect(screen.getByRole("combobox", { name: "丰收的第一张资源" })).toBeTruthy();
   expect(screen.getByRole("combobox", { name: "丰收的第二张资源" })).toBeTruthy();
+});
+
+it("keeps both harvest selections switchable and submits their latest values", () => {
+  const onCommand = vi.fn();
+  render(<DevelopmentControls game={handView()} busy={false} onCommand={onCommand} />);
+
+  fireEvent.change(screen.getByRole("combobox", { name: "丰收的第一张资源" }), { target: { value: "brick" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "丰收的第二张资源" }), { target: { value: "wool" } });
+  const plentyCard = screen.getByText("丰收").closest(".development-card");
+  if (plentyCard === null) throw new Error("Missing harvest card");
+  fireEvent.click(within(plentyCard as HTMLElement).getByRole("button", { name: "使用" }));
+
+  expect(onCommand).toHaveBeenCalledWith({
+    type: "PlayResourceChoice",
+    cardId: "c_plenty",
+    resources: ["brick", "wool"],
+  });
 });
 
 it("puts the reason on a disabled card instead of only greying it out", () => {

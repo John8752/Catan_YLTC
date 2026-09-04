@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { PLAYER_TONE_CLASSES } from "@/lib/player-palette.js";
 import { cn } from "@/lib/utils.js";
 import {
+  equalTradeResources,
   hasTradeResources,
   TradeResourceBasket,
   TradeResourceSummary,
@@ -155,14 +156,18 @@ function ResponderActions({ game, offer, busy, response, onCommand }: {
 
   const canAccept = hasTradeResources(game.you.resources, offer.receive);
   const counterProblem = tradeProblem(proposerGives, proposerReceives, undefined, game.you.resources);
+  const counterUnchanged = response?.response === "countered" &&
+    equalTradeResources(proposerGives, response.proposerGives) &&
+    equalTradeResources(proposerReceives, response.proposerReceives);
+  const counterSubmissionProblem = counterProblem ?? (counterUnchanged ? "反报价条款尚未改变" : null);
 
   return (
     <section className="mt-3 grid gap-3" aria-label="你的回应">
       <p className="m-0 text-center text-xs font-bold text-[#65706a]">{ownResponseMessage(response)}</p>
       <div className="grid grid-cols-3 gap-1.5">
-        <Button variant="outline" size="sm" className={cn("h-auto flex-col gap-1 py-2 border-emerald-700/25", response?.response === "accepted" ? "bg-emerald-700 text-white" : "bg-emerald-50 text-emerald-800")} disabled={busy || !canAccept} onClick={() => { setCounterOpen(false); onCommand({ type: "AcceptTradeOffer", offerId: offer.offerId }); }}><Check className="size-4" />同意</Button>
+        <Button variant="outline" size="sm" className={cn("h-auto flex-col gap-1 py-2 border-emerald-700/25", response?.response === "accepted" ? "bg-emerald-700 text-white" : "bg-emerald-50 text-emerald-800")} disabled={busy || !canAccept || response?.response === "accepted"} onClick={() => { setCounterOpen(false); onCommand({ type: "AcceptTradeOffer", offerId: offer.offerId }); }}><Check className="size-4" />同意</Button>
         <Button variant="outline" size="sm" className={cn("h-auto flex-col gap-1 py-2 border-amber-700/25", response?.response === "countered" || counterOpen ? "bg-amber-700 text-white" : "bg-amber-50 text-amber-800")} disabled={busy} onClick={() => setCounterOpen((current) => !current)}><MessageSquareReply className="size-4" />反报价</Button>
-        <Button variant="outline" size="sm" className={cn("h-auto flex-col gap-1 py-2 border-rose-700/20", response?.response === "declined" ? "bg-rose-700 text-white" : "bg-rose-50 text-rose-800")} disabled={busy} onClick={() => { setCounterOpen(false); onCommand({ type: "DeclineTradeOffer", offerId: offer.offerId }); }}><X className="size-4" />拒绝</Button>
+        <Button variant="outline" size="sm" className={cn("h-auto flex-col gap-1 py-2 border-rose-700/20", response?.response === "declined" ? "bg-rose-700 text-white" : "bg-rose-50 text-rose-800")} disabled={busy || response?.response === "declined"} onClick={() => { setCounterOpen(false); onCommand({ type: "DeclineTradeOffer", offerId: offer.offerId }); }}><X className="size-4" />拒绝</Button>
       </div>
       {!canAccept ? <p className="m-0 text-center text-xs font-bold text-rose-700">资源不足，不能同意原报价，但可以提出其他条件。</p> : null}
       {response?.response === "countered" && !counterOpen ? <CompactTerms give={response.proposerGives} receive={response.proposerReceives} responderView /> : null}
@@ -176,8 +181,8 @@ function ResponderActions({ game, offer, busy, response, onCommand }: {
           <div><strong className="font-serif text-[#694723]">调整你的条件</strong><p className="m-0 text-[11px] text-[#766956]">点击上方资源增加，点击已选卡片撤回。</p></div>
           <section className="grid gap-1.5"><small className="font-black text-[#8e5d48]">你希望获得</small><TradeResourceBasket label="反报价中你希望获得" value={proposerGives} onChange={setProposerGives} /></section>
           <section className="grid gap-1.5"><small className="font-black text-[#35645d]">你愿意交出</small><TradeResourceBasket label="反报价中你愿意交出" value={proposerReceives} maximums={game.you.resources} onChange={setProposerReceives} /></section>
-          <TradeValidationNote problem={counterProblem} fallback="提交不会立刻交换资源，由发起者决定。" />
-          <Button type="submit" size="sm" className="bg-[#8a5b24] text-white hover:bg-[#71491d]" disabled={busy || counterProblem !== null}><Send className="size-4" />提交反报价</Button>
+          <TradeValidationNote problem={counterSubmissionProblem} fallback="提交不会立刻交换资源，由发起者决定。" />
+          <Button type="submit" size="sm" className="bg-[#8a5b24] text-white hover:bg-[#71491d]" disabled={busy || counterSubmissionProblem !== null}><Send className="size-4" />提交反报价</Button>
         </form>
       ) : null}
     </section>

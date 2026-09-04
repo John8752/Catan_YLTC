@@ -423,6 +423,11 @@ export class RoomRegistry {
     const result = executeGameCommand(room.game, playerId, command);
     if (!result.accepted) throw new RoomError(result.error.code, result.error.message);
 
+    if (result.state.revision === room.game.revision && result.events.length === 0) {
+      room.appliedCommands.add(cacheKey);
+      return { commandId, room: this.projectRoom(room, playerId) };
+    }
+
     room.victoryWarnings.push(...collectVictoryWarnings(room.game, result.state, room.victoryWarnings));
     room.game = result.state;
     room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));

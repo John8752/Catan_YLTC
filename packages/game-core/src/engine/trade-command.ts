@@ -114,6 +114,14 @@ function counterOffer(
   if (!validTradeTerms(proposerGives, proposerReceives)) {
     return reject(state, "INVALID_TRADE", "The counteroffer is invalid");
   }
+  const previous = offer.responses.find((candidate) => candidate.playerId === actorId);
+  if (
+    previous?.response === "countered" &&
+    equalResourceHands(previous.proposerGives, proposerGives) &&
+    equalResourceHands(previous.proposerReceives, proposerReceives)
+  ) {
+    return unchanged(state);
+  }
   const responder = requirePlayer(state, actorId);
   if (!hasResources(responder.resources, proposerReceives)) return insufficient(state);
 
@@ -138,6 +146,9 @@ function respondToOffer(
   if (offer.proposerId === actorId) return reject(state, "INVALID_TRADE", "The proposer cannot answer their own offer");
   if (state.phase.kind !== "turn" || state.phase.activePlayerId !== offer.proposerId) {
     return reject(state, "INVALID_TRADE", "The offer is no longer active");
+  }
+  if (offer.responses.some((candidate) => candidate.playerId === actorId && candidate.response === response)) {
+    return unchanged(state);
   }
   const responder = requirePlayer(state, actorId);
   if (response === "accepted" && !hasResources(responder.resources, offer.receive)) {
@@ -262,6 +273,14 @@ function maritimeTrade(
 function accepted(state: GameState, event: GameEvent): GameCommandResult {
   assertGameInvariant(state);
   return { accepted: true, state, events: [event] };
+}
+
+function unchanged(state: GameState): GameCommandResult {
+  return { accepted: true, state, events: [] };
+}
+
+function equalResourceHands(first: ResourceHand, second: ResourceHand): boolean {
+  return RESOURCE_TYPES.every((resource) => first[resource] === second[resource]);
 }
 
 function requirePlayer(state: GameState, playerId: PlayerId): PlayerState {

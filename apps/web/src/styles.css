@@ -222,7 +222,8 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   transition: transform 120ms ease-out;
   will-change: transform;
 }
-.board-stage:active .board-transform { transition: none; }
+.board-stage:active .board-transform,
+.board-stage[data-gesture-active="true"] .board-transform { transition: none; }
 
 /* Bottom-right of the stage, above the board and outside the pan transform so it
    stays put while the map moves under it. */

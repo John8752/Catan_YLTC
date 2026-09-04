@@ -14,62 +14,131 @@ interface Point {
   readonly y: number;
 }
 
-interface GestureStart {
+interface PanGestureStart {
+  readonly kind: "pan";
+  readonly pointerId: number;
   readonly view: Point;
   readonly point: Point;
+}
+
+interface PinchGestureStart {
+  readonly kind: "pinch";
+  readonly view: Point;
+  readonly scale: number;
+  readonly center: Point;
+  readonly distance: number;
+  readonly stageCenter: Point;
+}
+
+type GestureStart = PanGestureStart | PinchGestureStart;
+
+interface ViewportState {
+  readonly scale: number;
+  readonly view: Point;
 }
 
 const CENTER: Point = { x: 0, y: 0 };
 
 export function useBoardViewport(defaultScale = 1) {
-  const [scale, setScale] = useState(defaultScale);
-  const [view, setView] = useState<Point>(CENTER);
+  const [viewport, setViewport] = useState<ViewportState>({ scale: defaultScale, view: CENTER });
+  const viewportRef = useRef(viewport);
   const pointers = useRef(new Map<number, Point>());
   const gesture = useRef<GestureStart | null>(null);
   const suppressClick = useRef(false);
+  const clickReleaseTimer = useRef<number | null>(null);
+  const [gestureActive, setGestureActive] = useState(false);
+
+  const commitViewport = (next: ViewportState) => {
+    viewportRef.current = next;
+    setViewport(next);
+  };
 
   useEffect(() => {
-    setScale(defaultScale);
-    setView(CENTER);
+    const next = { scale: defaultScale, view: CENTER };
+    viewportRef.current = next;
+    setViewport(next);
   }, [defaultScale]);
 
-  // Zooming out shrinks the room a pan can use, so clamp rather than recenter:
-  // yanking the board back to the middle on every zoom step loses the player's place.
-  useEffect(() => setView((current) => boundedPoint(current, scale)), [scale]);
+  useEffect(() => () => {
+    if (clickReleaseTimer.current !== null) window.clearTimeout(clickReleaseTimer.current);
+  }, []);
 
   const reset = () => {
-    setScale(defaultScale);
-    setView(CENTER);
+    commitViewport({ scale: defaultScale, view: CENTER });
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 && event.pointerType === "mouse") return;
+    if (clickReleaseTimer.current !== null) {
+      window.clearTimeout(clickReleaseTimer.current);
+      clickReleaseTimer.current = null;
+    }
     pointers.current.set(event.pointerId, eventPoint(event));
-    gesture.current = gestureFromPointers(pointers.current, view);
+    if (pointers.current.size > 1) {
+      suppressClick.current = true;
+      capturePointers(event.currentTarget, pointers.current.keys());
+    }
+    gesture.current = gestureFromPointers(
+      pointers.current,
+      viewportRef.current,
+      centerOf(event.currentTarget),
+    );
+    setGestureActive(true);
   };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!pointers.current.has(event.pointerId) || gesture.current === null) return;
     pointers.current.set(event.pointerId, eventPoint(event));
-    const points = [...pointers.current.values()];
     const start = gesture.current;
-    const first = points[0];
-    if (first === undefined) return;
 
-    const dx = first.x - start.point.x;
-    const dy = first.y - start.point.y;
+    if (start.kind === "pinch") {
+      const [first, second] = [...pointers.current.values()];
+      if (first === undefined || second === undefined) return;
+      const currentCenter = midpoint(first, second);
+      const nextScale = clampScale(start.scale * distance(first, second) / start.distance);
+      const anchor = {
+        x: (start.center.x - start.stageCenter.x - start.view.x) / start.scale,
+        y: (start.center.y - start.stageCenter.y - start.view.y) / start.scale,
+      };
+      const nextView = boundedPoint({
+        x: currentCenter.x - start.stageCenter.x - anchor.x * nextScale,
+        y: currentCenter.y - start.stageCenter.y - anchor.y * nextScale,
+      }, nextScale);
+      suppressClick.current = true;
+      capturePointers(event.currentTarget, pointers.current.keys());
+      commitViewport({ scale: nextScale, view: nextView });
+      return;
+    }
+
+    const current = pointers.current.get(start.pointerId);
+    if (current === undefined) return;
+    const dx = current.x - start.point.x;
+    const dy = current.y - start.point.y;
     if (Math.hypot(dx, dy) > 5) {
       suppressClick.current = true;
-      if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
+      capturePointers(event.currentTarget, [event.pointerId]);
     }
-    setView(boundedPoint({ x: start.view.x + dx, y: start.view.y + dy }, scale));
+    commitViewport({
+      scale: viewportRef.current.scale,
+      view: boundedPoint({ x: start.view.x + dx, y: start.view.y + dy }, viewportRef.current.scale),
+    });
   };
 
   const finishPointer = (event: PointerEvent<HTMLDivElement>) => {
     pointers.current.delete(event.pointerId);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    gesture.current = gestureFromPointers(pointers.current, view);
-    window.setTimeout(() => { suppressClick.current = false; }, 0);
+    gesture.current = gestureFromPointers(
+      pointers.current,
+      viewportRef.current,
+      centerOf(event.currentTarget),
+    );
+    if (gesture.current !== null) return;
+
+    setGestureActive(false);
+    clickReleaseTimer.current = window.setTimeout(() => {
+      suppressClick.current = false;
+      clickReleaseTimer.current = null;
+    }, 0);
   };
 
   const onClickCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -91,11 +160,21 @@ export function useBoardViewport(defaultScale = 1) {
       reset();
     } else if (delta !== undefined) {
       event.preventDefault();
-      setView((current) => boundedPoint({ x: current.x + delta.x, y: current.y + delta.y }, scale));
+      const current = viewportRef.current;
+      commitViewport({
+        scale: current.scale,
+        view: boundedPoint({ x: current.view.x + delta.x, y: current.view.y + delta.y }, current.scale),
+      });
     }
   };
 
-  const zoomTo = (next: number) => setScale(Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(next.toFixed(2)))));
+  const zoomTo = (next: number) => {
+    const current = viewportRef.current;
+    const scale = clampScale(next);
+    commitViewport({ scale, view: boundedPoint(current.view, scale) });
+  };
+
+  const { scale, view } = viewport;
 
   return {
     zoom: {
@@ -115,6 +194,7 @@ export function useBoardViewport(defaultScale = 1) {
     viewportProps: {
       role: "region" as const,
       "aria-label": "可移动地图视口",
+      "data-gesture-active": gestureActive ? "true" : undefined,
       tabIndex: 0,
       onPointerDown,
       onPointerMove,
@@ -127,12 +207,49 @@ export function useBoardViewport(defaultScale = 1) {
   };
 }
 
-function gestureFromPointers(pointers: ReadonlyMap<number, Point>, view: Point): GestureStart | null {
-  const points = [...pointers.values()];
-  if (points.length === 0) return null;
-  const first = points[0];
+function gestureFromPointers(
+  pointers: ReadonlyMap<number, Point>,
+  viewport: ViewportState,
+  stageCenter: Point,
+): GestureStart | null {
+  const entries = [...pointers.entries()];
+  const first = entries[0];
   if (first === undefined) return null;
-  return { view, point: first };
+  const second = entries[1];
+  if (second === undefined) {
+    return { kind: "pan", pointerId: first[0], view: viewport.view, point: first[1] };
+  }
+  return {
+    kind: "pinch",
+    view: viewport.view,
+    scale: viewport.scale,
+    center: midpoint(first[1], second[1]),
+    distance: Math.max(1, distance(first[1], second[1])),
+    stageCenter,
+  };
+}
+
+function clampScale(scale: number): number {
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(scale.toFixed(2))));
+}
+
+function midpoint(first: Point, second: Point): Point {
+  return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+}
+
+function distance(first: Point, second: Point): number {
+  return Math.hypot(second.x - first.x, second.y - first.y);
+}
+
+function centerOf(element: HTMLDivElement): Point {
+  const bounds = element.getBoundingClientRect();
+  return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+}
+
+function capturePointers(element: HTMLDivElement, pointerIds: Iterable<number>): void {
+  for (const pointerId of pointerIds) {
+    if (!element.hasPointerCapture(pointerId)) element.setPointerCapture(pointerId);
+  }
 }
 
 function boundedPoint(view: Point, scale: number): Point {

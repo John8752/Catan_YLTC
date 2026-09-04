@@ -14,7 +14,7 @@ The later [three-column layout validation](./three-column-layout.md) supersedes 
 - The local seat shows the same public-score badge as opponents; hidden victory-point cards are excluded.
 - Public near-victory progress starts three points below the room target and escalates at two and one. Amber trophy badges show public score/target; each seat receives at most one notice per tier and the same milestone is appended to public history. Action notices take priority over the three-second warning.
 - SVG fits terrain and port bounds into the remaining space. Port signs use a compact 48×56 icon-over-ratio design with 24-unit icons and 21-unit ratio type. The icon and ratio are pulled together with only a small measured gap, while rendered bounds remain non-overlapping at every tested size. Dedicated ports show only their resource icon; generic ports use the existing SVG question-mark icon. Chinese port descriptions remain accessible but are not visible text. Every map element scales together, without independent port-size/font compensation. Number tokens use 24-unit type instead of 15-unit type.
-- Game controls use bounded viewport-responsive rem sizing. Compact bank details open on demand; map-tool buttons and the repeated board footer are removed. The map uses a fixed enlarged presentation scale and moves directly by drag or arrow keys, with double-click/Home returning it to center. Optional actions collapse while required roll/discard/victim controls remain accessible. Selecting a build returns space to the map. Short phone landscapes move the dock beside the map.
+- Game controls use bounded viewport-responsive rem sizing. Compact bank details open on demand; map-tool buttons and the repeated board footer are removed. The map starts at a fixed enlarged presentation scale, moves directly by drag or arrow keys and supports midpoint-anchored two-finger pinch zoom, with double-click/Home returning it to center. Optional actions collapse while required roll/discard/victim controls remain accessible. Selecting a build returns space to the map. Short phone landscapes move the dock beside the map.
 - History retains the latest 30 projected entries, appends below, follows the bottom, pauses while reading older entries and offers a return-to-latest button.
 - Result tabs use light text in inactive, hover, selected and keyboard-focus states.
 - No game legality, canonical game state, server authority or proprietary artwork changed. Protocol changes are limited to bank-count visibility, player-safe current-action cues and public near-victory milestones.
@@ -53,6 +53,7 @@ The old one-line-port tile-width benchmark is superseded by the icon-over-ratio 
 
 ## Additional regressions
 
+- Two-finger pointer sequences change scale around the gesture midpoint, clamp to the existing zoom range, continue as a one-finger pan after either finger lifts and suppress the post-gesture click over actionable map targets.
 - History starts at the bottom, follows appended events, pauses on upward scroll and resumes explicitly.
 - A retained visible log row keeps its offset when old entries leave the 30-row window; repeated snapshots do not cause a jump.
 - Mobile history opens at the newest entry and retains Radix Escape behavior.

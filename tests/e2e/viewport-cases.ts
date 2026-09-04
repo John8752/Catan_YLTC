@@ -20,31 +20,24 @@ const phones = [
   { model: "iPhone 16 Pro Max", width: 440, height: 956 },
 ] as const;
 
-// The full game-surface matrix stays portrait-only: the board wants height, and
-// the short axis leaves no room for the HUD strip once the turn forecast is in
-// it. Focused local-panel checks can still use the browser-area cases below to
-// catch controls that become unreachable in either orientation.
 export const primaryPhoneCases: readonly ViewportCase[] = phones.flatMap((phone) => {
-  const { defaultBrowserType: _engine, ...device } = devices[phone.model]!;
-  const screen = { width: phone.width, height: phone.height };
-  return (["full-canvas", "browser-area"] as const).map((area) => {
-    const viewport = area === "full-canvas" ? screen : device.viewport;
-    return {
-      name: `${phone.model} portrait ${area} @primary-phone`,
-      ...viewport,
-      options: { ...device, screen, viewport },
-    };
+  return (["portrait", "landscape"] as const).flatMap((orientation) => {
+    const descriptor = orientation === "portrait" ? phone.model : `${phone.model} landscape`;
+    const { defaultBrowserType: _engine, ...device } = devices[descriptor]!;
+    const screen = orientation === "portrait"
+      ? { width: phone.width, height: phone.height }
+      : { width: phone.height, height: phone.width };
+    return (["full-canvas", "browser-area"] as const).map((area) => {
+      const viewport = area === "full-canvas" ? screen : device.viewport;
+      return {
+        name: `${phone.model} ${orientation} ${area} @primary-phone`,
+        ...viewport,
+        options: { ...device, screen, viewport },
+      };
+    });
   });
 });
 
-export const iPhone16BrowserAreaCases: readonly ViewportCase[] = [
-  { orientation: "portrait", descriptor: "iPhone 16" },
-  { orientation: "landscape", descriptor: "iPhone 16 landscape" },
-].map(({ orientation, descriptor }) => {
-  const { defaultBrowserType: _engine, ...device } = devices[descriptor]!;
-  return {
-    name: `iPhone 16 ${orientation} browser-area`,
-    ...device.viewport,
-    options: device,
-  };
-});
+export const iPhone16BrowserAreaCases: readonly ViewportCase[] = primaryPhoneCases
+  .filter(({ name }) => /^iPhone 16 (portrait|landscape) browser-area /.test(name))
+  .map((item) => ({ ...item, name: item.name.replace(" @primary-phone", "") }));

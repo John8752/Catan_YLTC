@@ -54,55 +54,94 @@ it("does not repeat the table-level rules guide inside the development drawer", 
   expect(screen.queryByText(/移动强盗/)).toBeNull();
 });
 
-it("uses resource cards instead of dropdowns for the harvest choice", () => {
+function openCard(label: string) {
+  const card = within(screen.getByText(label).closest(".development-card") as HTMLElement);
+  fireEvent.click(card.getByRole("button", { name: "使用" }));
+  return within(screen.getByRole("dialog"));
+}
+
+it("keeps every resource selector out of the sidebar and shows it only inside its card dialog", () => {
   render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
-
-  expect(screen.getByRole("combobox", { name: "垄断要抢的资源" })).toBeTruthy();
-  expect(screen.queryByRole("combobox", { name: /丰收/ })).toBeNull();
-  expect(screen.getAllByRole("button", { name: /在丰收资源中加入 1 张/ })).toHaveLength(5);
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByRole("button", { name: /在丰收资源中加入/ })).toBeNull();
+  expect(screen.getAllByRole("button", { name: "使用" })).toHaveLength(4);
+  const dialog = openCard("丰收");
+  expect(dialog.getAllByRole("button", { name: /在丰收资源中加入 1 张/ })).toHaveLength(5);
+  expect(dialog.queryByRole("combobox")).toBeNull();
 });
 
-it("requires two harvest cards, submits them and clears the selection", () => {
+it("requires two harvest resources in the dialog, submits once and clears selection", () => {
   const onCommand = vi.fn();
   render(<DevelopmentControls game={handView()} busy={false} onCommand={onCommand} />);
-
-  const plentyCard = screen.getByText("丰收").closest(".development-card");
-  if (plentyCard === null) throw new Error("Missing harvest card");
-  const harvest = within(plentyCard as HTMLElement);
-  const confirm = harvest.getByRole("button", { name: "确定" });
-  expect((confirm as HTMLButtonElement).disabled).toBe(true);
-
+  const harvest = openCard("丰收");
+  const confirm = harvest.getByRole("button", { name: "确认使用" }) as HTMLButtonElement;
+  expect(confirm.disabled).toBe(true);
   fireEvent.click(harvest.getByRole("button", { name: /在丰收资源中加入 1 张砖/ }));
-  expect((confirm as HTMLButtonElement).disabled).toBe(true);
+  expect(confirm.disabled).toBe(true);
   fireEvent.click(harvest.getByRole("button", { name: /在丰收资源中加入 1 张羊/ }));
-  expect((confirm as HTMLButtonElement).disabled).toBe(false);
+  expect(confirm.disabled).toBe(false);
+  expect(onCommand).not.toHaveBeenCalled();
   fireEvent.click(confirm);
-
-  expect(onCommand).toHaveBeenCalledWith({
-    type: "PlayResourceChoice",
-    cardId: "c_plenty",
-    resources: ["brick", "wool"],
-  });
-  expect(harvest.getByText("选择 2 张资源 · 已选 0/2")).toBeTruthy();
+  fireEvent.click(confirm);
+  expect(onCommand).toHaveBeenCalledExactlyOnceWith({ type: "PlayResourceChoice", cardId: "c_plenty", resources: ["brick", "wool"] });
+  expect(openCard("丰收").getByText("选择 2 张资源 · 已选 0/2")).toBeTruthy();
 });
 
-it("allows harvest to choose two cards of the same resource", () => {
+it("allows two identical harvest resources and respects the visible bank limit", () => {
+  const onCommand = vi.fn();
+  const game = handView();
+  render(<DevelopmentControls game={{ ...game, bankResources: { ...game.bankResources!, brick: 0, wool: 1 } }} busy={false} onCommand={onCommand} />);
+  const harvest = openCard("丰收");
+  expect((harvest.getByRole("button", { name: /在丰收资源中加入 1 张砖/ }) as HTMLButtonElement).disabled).toBe(true);
+  const ore = harvest.getByRole("button", { name: /在丰收资源中加入 1 张矿/ });
+  fireEvent.click(ore); fireEvent.click(ore);
+  fireEvent.click(harvest.getByRole("button", { name: "确认使用" }));
+  expect(onCommand).toHaveBeenCalledExactlyOnceWith({ type: "PlayResourceChoice", cardId: "c_plenty", resources: ["ore", "ore"] });
+});
+
+it("uses the monopoly resource selected inside the dialog", () => {
   const onCommand = vi.fn();
   render(<DevelopmentControls game={handView()} busy={false} onCommand={onCommand} />);
+  const dialog = openCard("垄断");
+  fireEvent.change(dialog.getByRole("combobox", { name: "垄断要抢的资源" }), { target: { value: "brick" } });
+  expect(screen.getByRole("dialog").textContent).toContain("「砖」");
+  expect(onCommand).not.toHaveBeenCalled();
+  fireEvent.click(dialog.getByRole("button", { name: "确认使用" }));
+  expect(onCommand).toHaveBeenCalledExactlyOnceWith({ type: "PlayMonopoly", cardId: "c_mono", resource: "brick" });
+});
 
-  const plentyCard = screen.getByText("丰收").closest(".development-card");
-  if (plentyCard === null) throw new Error("Missing harvest card");
-  const harvest = within(plentyCard as HTMLElement);
-  const addOre = harvest.getByRole("button", { name: /在丰收资源中加入 1 张矿/ });
-  fireEvent.click(addOre);
-  fireEvent.click(addOre);
-  fireEvent.click(harvest.getByRole("button", { name: "确定" }));
+it.each([
+  ["骑士", { type: "PlayKnight", cardId: "c_knight" }],
+  ["道路建设", { type: "PlayRoadBuilding", cardId: "c_road" }],
+  ["垄断", { type: "PlayMonopoly", cardId: "c_mono", resource: "ore" }],
+] as const)("requires confirmation for %s and cancellation never plays it", (label, command) => {
+  const onCommand = vi.fn();
+  render(<DevelopmentControls game={handView()} busy={false} onCommand={onCommand} />);
+  const card = within(screen.getByText(label).closest(".development-card") as HTMLElement);
+  fireEvent.click(card.getByRole("button", { name: "使用" }));
+  expect(onCommand).not.toHaveBeenCalled();
+  expect(screen.getByRole("dialog", { name: `确认使用${label}？` })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "取消" }));
+  expect(onCommand).not.toHaveBeenCalled();
+  fireEvent.click(card.getByRole("button", { name: "使用" }));
+  const confirm = screen.getByRole("button", { name: "确认使用" });
+  fireEvent.click(confirm);
+  fireEvent.click(confirm);
+  expect(onCommand).toHaveBeenCalledExactlyOnceWith(command);
+});
 
-  expect(onCommand).toHaveBeenCalledWith({
-    type: "PlayResourceChoice",
-    cardId: "c_plenty",
-    resources: ["ore", "ore"],
-  });
+it("keeps harvest choices on cancel and dismisses confirmation after a new game revision", () => {
+  const onCommand = vi.fn();
+  const game = handView();
+  const { rerender } = render(<DevelopmentControls game={game} busy={false} onCommand={onCommand} />);
+  const dialog = openCard("丰收");
+  fireEvent.click(dialog.getByRole("button", { name: /在丰收资源中加入 1 张砖/ }));
+  fireEvent.click(dialog.getByRole("button", { name: /在丰收资源中加入 1 张羊/ }));
+  fireEvent.click(dialog.getByRole("button", { name: "取消" }));
+  expect(openCard("丰收").getByText("选择 2 张资源 · 已选 2/2")).toBeTruthy();
+  rerender(<DevelopmentControls game={{ ...game, revision: game.revision + 1 }} busy={false} onCommand={onCommand} />);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(onCommand).not.toHaveBeenCalled();
 });
 
 it("puts the reason on a disabled card instead of only greying it out", () => {
@@ -122,12 +161,12 @@ it("puts the reason on a disabled card instead of only greying it out", () => {
 it("leaves a playable card unexplained and enabled", () => {
   render(<DevelopmentControls game={handView()} busy={false} onCommand={() => {}} />);
 
-  // The victory point card never gets a button; the harvest card uses a separate confirmation label.
+  // Only the passive victory point card has no use button.
   const buttons = screen.getAllByRole("button", { name: "使用" });
-  expect(buttons).toHaveLength(3);
+  expect(buttons).toHaveLength(4);
   for (const button of buttons) {
     expect((button as HTMLButtonElement).disabled).toBe(false);
     expect(button.getAttribute("title")).toBeNull();
   }
-  expect((screen.getByRole("button", { name: "确定" }) as HTMLButtonElement).disabled).toBe(true);
+
 });

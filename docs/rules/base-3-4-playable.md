@@ -135,6 +135,7 @@ Every build validates phase, active player, cost, bank transfer, piece supply, o
 - Monopoly: name one resource and transfer every opponent's cards of that type to the active player.
 - Resource choice: take two available resources from the bank, either the same or different.
 - Victory-point cards remain private and passive until the owner wins.
+- The browser requires a second confirmation before submitting any active development-card play (knight, road building, monopoly or resource choice), in both supported profiles. The sidebar shows only the card name and use button. Resource choice and monopoly selection happen inside the confirmation dialog, which shows the selected resource(s) before submission. Canceling preserves resource selection and submits nothing; a changed game revision dismisses stale confirmation. Victory-point cards remain passive. This is input protection, not a change to server-side eligibility or effects.
 - Playing a non-victory development card is a public declaration. Monopoly's named resource and aggregate transfer, and resource choice's selected bank resources, are public outcomes; the protocol still withholds every opponent's remaining hand composition and monopoly contribution from other seats.
 
 Random deck order and stolen resources are injected outcomes and appear in the private event/replay record; they are never chosen by the browser.

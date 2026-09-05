@@ -1,3 +1,4 @@
+import { projectRoomView } from "./project-room.js";
 import type { RoomMember, RoomRecord, RoomListener, Subscription } from "./room-types.js";
 import { AccountSeats } from "./account-seats.js";
 import { prepareSettlement } from "./settlements.js";
@@ -18,8 +19,8 @@ import {
 import {
   type GameCommandResponse,
   type GameCommandReply,
+  projectHistoryPage, type GameHistoryPage,
   type LeaveRoomResponse,
-  projectGameForPlayer,
   collectVictoryWarnings,
   type PlayerSessionResponse,
   type RoomView,
@@ -342,10 +343,19 @@ export class RoomRegistry {
     return this.rooms.size;
   }
 
-  getRoom(roomId: string, seatToken: string): RoomView {
+  getRoom(roomId: string, seatToken: string, eventAfterRevision?: number | null): RoomView {
     const room = this.requireRoom(roomId);
     const member = this.requireCredential(room, seatToken);
-    return this.projectRoom(room, member.id);
+    if (eventAfterRevision != null && (!room.game || eventAfterRevision > room.game.revision)) throw new RoomError("INVALID_REQUEST", "记录游标无效");
+    return this.projectRoom(room, member.id, eventAfterRevision);
+  }
+
+  getHistory(roomId: string, seatToken: string, gameId: string, beforeRevision?: number): GameHistoryPage {
+    const room = this.requireRoom(roomId);
+    const member = this.requireCredential(room, seatToken);
+    if (!room.game || room.game.id !== gameId) throw new RoomError("GAME_NOT_STARTED", "对局已变更，请刷新");
+    if (beforeRevision !== undefined && beforeRevision > room.game.revision + 1) throw new RoomError("INVALID_REQUEST", "记录游标无效");
+    return projectHistoryPage(room.game, member.id, room.history, room.victoryWarnings, beforeRevision);
   }
 
   /**
@@ -431,16 +441,18 @@ export class RoomRegistry {
     listener: RoomListener,
     onClosed?: () => void,
     onReplaced?: () => void,
+    incremental = false,
   ): () => void {
     const room = this.requireRoom(roomId);
     const member = this.requireCredential(room, seatToken);
     const playerId = member.id;
 
-    const subscription: Subscription = { playerId, listener, onClosed, onReplaced };
+    const subscription: Subscription = { playerId, listener, onClosed, onReplaced, eventAfterRevision: incremental ? null : undefined };
     const roomSubscriptions = this.subscriptions.get(room.id) ?? new Set<Subscription>();
     roomSubscriptions.add(subscription);
     this.subscriptions.set(room.id, roomSubscriptions);
-    listener(this.projectRoom(room, playerId));
+    listener(this.projectRoom(room, playerId, subscription.eventAfterRevision));
+    if (incremental) subscription.eventAfterRevision = room.game?.revision ?? null;
 
     return () => {
       roomSubscriptions.delete(subscription);
@@ -530,34 +542,9 @@ export class RoomRegistry {
     return room;
   }
 
-  private projectRoom(room: RoomRecord, viewerId: string): RoomView {
+  private projectRoom(room: RoomRecord, viewerId: string, eventAfterRevision?: number | null): RoomView {
     this.requireMember(room, viewerId);
-
-    return {
-      id: room.id,
-      revision: room.revision,
-      hostPlayerId: room.hostPlayerId,
-      members: room.members.map((member) => ({
-        id: member.id,
-        name: member.name,
-        color: member.color,
-        isHost: member.id === room.hostPlayerId,
-      })),
-      settings: {
-        ruleProfile: room.settings.ruleProfile,
-        playerLimit: getRuleProfileDefinition(room.settings.ruleProfile).maxPlayers as 4 | 6,
-        victoryPointsToWin: room.settings.victoryPointsToWin,
-        mapSeed: room.seed,
-        bankCountsPublic: room.settings.bankCountsPublic,
-      },
-      previewMap: room.game === null
-        ? getRuleProfileDefinition(room.settings.ruleProfile).createMap(room.seed)
-        : null,
-      game: room.game === null
-        ? null
-        : projectGameForPlayer(room.game, viewerId, room.history, this.turnTimers.view(room.id), room.settings, room.victoryWarnings),
-      setupAnalysis: room.publicSetupAnalysis,
-    };
+    return projectRoomView(room, viewerId, this.turnTimers.view(room.id), eventAfterRevision);
   }
 
   private syncTurnTimer(room: RoomRecord): void {
@@ -603,7 +590,8 @@ export class RoomRegistry {
     }
 
     for (const subscription of roomSubscriptions) {
-      subscription.listener(this.projectRoom(room, subscription.playerId));
+      subscription.listener(this.projectRoom(room, subscription.playerId, subscription.eventAfterRevision));
+      if (subscription.eventAfterRevision !== undefined) subscription.eventAfterRevision = room.game?.revision ?? null;
     }
   }
 

@@ -1,5 +1,6 @@
 export * from "./commands.js";
 export * from "./room-stream.js";
+export * from "./history.js";
 export * from "./accounts.js";
 export * from "./action-attention.js";
 export * from "./victory-warning.js";

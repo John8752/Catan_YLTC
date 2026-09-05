@@ -1,5 +1,5 @@
 import { expect, test, type WebSocketRoute } from "@playwright/test";
-import { createRoomStreamEncoder, ROOM_MAP_TRANSPORT, type RoomView } from "../../packages/protocol/src/index.js";
+import { createRoomStreamEncoder, ROOM_EVENT_TRANSPORT, type RoomView } from "../../packages/protocol/src/index.js";
 import { fixture } from "./layout-fixture.js";
 import { iPhone16BrowserAreaCases } from "./viewport-cases.js";
 
@@ -15,7 +15,7 @@ for (const viewport of [{ name: "desktop", options: { viewport: { width: 1280, h
     await page.route("**/api/auth/me", (route) => route.fulfill({ json: null }));
     await page.route(/\/api\/rooms\/LAYOUT\?/, (route) => { reads++; return route.fulfill({ json: current }); });
     await page.routeWebSocket(/\/ws\?/, (route) => {
-      expect(new URL(route.url()).searchParams.get("transport")).toBe(ROOM_MAP_TRANSPORT);
+      expect(new URL(route.url()).searchParams.get("transport")).toBe(ROOM_EVENT_TRANSPORT);
       socket = route; connections++; encode = createRoomStreamEncoder();
       const first = encode(current);
       expect(first.room.game?.map.geometry).not.toBeNull();

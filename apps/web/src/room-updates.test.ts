@@ -13,6 +13,14 @@ const room = (revision: number, gameRevision = revision): RoomView => ({ id: "RO
 const ack: GameCommandAck = { commandId: "cmd", roomId: "ROOM", roomRevision: 3, gameRevision: 3 };
 afterEach(() => vi.useRealTimers());
 
+it("supplies the last displayed game revision to ACK fallback so recovery can include only unseen live effects", async () => {
+  const updates = new RoomUpdates(session, vi.fn());
+  updates.accept(room(2), session);
+  const read = vi.fn(async () => room(3));
+  await updates.confirm(ack, session, read, false);
+  expect(read).toHaveBeenCalledExactlyOnceWith(2);
+});
+
 it("accepts newer room metadata at the same game revision and rejects duplicate/late snapshots", () => {
   const publish = vi.fn(), updates = new RoomUpdates(session, publish);
   expect(updates.accept(room(3, 2), session)).toBe(true);

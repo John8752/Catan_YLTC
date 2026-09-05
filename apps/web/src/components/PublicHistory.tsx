@@ -1,12 +1,20 @@
-import type { GameView } from "@catan/protocol";
-import { useLayoutEffect, useRef, useState } from "react";
+import type { GameView, HistoryRange } from "@catan/protocol";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Activity, ArrowDown, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils.js";
 import { Button } from "@/components/ui/button.js";
 import { ScrollArea } from "@/components/ui/scroll-area.js";
 
-/** The server owns history and redaction. Only order, retention and scrolling live here. */
-export function PublicHistory({ history }: { readonly history: GameView["history"] }) {
+export interface HistoryControls {
+  readonly historyHasGap?: boolean;
+  readonly historyLoading?: boolean;
+  readonly historyError?: string | null;
+  readonly onLoadEarlierHistory?: () => void | Promise<void>;
+}
+/** The server owns history and redaction. This component owns reading/scrolling only. */
+export function PublicHistory({ history, historyRange, historyHasGap = false, historyLoading = false, historyError, onLoadEarlierHistory }: HistoryControls & {
+  readonly history: GameView["history"]; readonly historyRange?: HistoryRange | undefined;
+}) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLOListElement>(null);
   const following = useRef(true);
@@ -14,15 +22,24 @@ export function PublicHistory({ history }: { readonly history: GameView["history
   const anchor = useRef<{ key: string; offset: number } | null>(null);
   const [paused, setPaused] = useState(false);
   const [unread, setUnread] = useState(false);
-  // Index within each revision/type remains stable when the rolling window drops old revisions.
-  const occurrences = new Map<string, number>();
-  const entries = history.map((entry) => {
-    const prefix = `${entry.revision}-${entry.type}`;
-    const occurrence = occurrences.get(prefix) ?? 0;
-    occurrences.set(prefix, occurrence + 1);
-    return { ...entry, key: `${prefix}-${occurrence}` };
-  }).slice(-30);
-  const signature = JSON.stringify(entries);
+  const entries = useMemo(() => {
+    const occurrences = new Map<string, number>();
+    return history.map((entry) => {
+      const prefix = `${entry.revision}-${entry.type}`;
+      const occurrence = occurrences.get(prefix) ?? 0;
+      occurrences.set(prefix, occurrence + 1);
+      return { ...entry, key: entry.id ?? `${prefix}-${occurrence}` };
+    });
+  }, [history]);
+  const lastKey = entries.at(-1)?.key;
+  const previousLast = useRef(lastKey);
+  const signature = `${entries[0]?.key}:${lastKey}:${entries.length}`;
+  const hasEarlier = ((historyRange?.afterRevision ?? 0) > 0 || historyHasGap) && onLoadEarlierHistory !== undefined;
+  function loadEarlier() {
+    if (!hasEarlier || historyLoading) return;
+    following.current = false; setPaused(true); captureAnchor();
+    void onLoadEarlierHistory?.();
+  }
 
   function captureAnchor() {
     const viewport = viewportRef.current;
@@ -49,8 +66,8 @@ export function PublicHistory({ history }: { readonly history: GameView["history
     if (following.current) {
       scrollToLatest();
     } else {
-      setUnread(true);
-      // Preserve the same visible row when old entries fall out of the 30-entry window.
+      if (previousLast.current !== lastKey) setUnread(true);
+      // Prepending older pages must preserve the same visible row and its offset.
       const viewport = viewportRef.current;
       const saved = anchor.current;
       const row = [...(contentRef.current?.children ?? [])].find((child) => child instanceof HTMLElement && child.dataset.historyKey === saved?.key);
@@ -59,6 +76,7 @@ export function PublicHistory({ history }: { readonly history: GameView["history
       }
       captureAnchor();
     }
+    previousLast.current = lastKey;
   }, [signature]);
 
   useLayoutEffect(() => {
@@ -78,7 +96,7 @@ export function PublicHistory({ history }: { readonly history: GameView["history
     <section className="flex min-h-0 flex-1 flex-col" aria-label="公开记录">
       <div className="mb-2 flex items-center justify-between text-sm font-bold text-[var(--sidebar-muted,#5d665f)]">
         <span className="flex items-center gap-2"><Activity className="size-4 text-[var(--sidebar-accent,#b45c42)]" />公开记录</span>
-        <span className="text-xs">{entries.length} 条</span>
+        <span className="text-xs">{historyRange && (historyRange.afterRevision > 0 || historyHasGap) ? "已加载 " : ""}{entries.length} 条</span>
       </div>
       <ScrollArea
         className="min-h-0 flex-1 rounded-xl border border-[var(--sidebar-line,#6d543426)] bg-[var(--sidebar-soft,#ffffff59)]"
@@ -90,16 +108,23 @@ export function PublicHistory({ history }: { readonly history: GameView["history
           // That scroll event is not a player choosing to read older entries.
           const resized = scrollSize.current.height !== viewport.clientHeight || scrollSize.current.content !== viewport.scrollHeight;
           scrollSize.current = { height: viewport.clientHeight, content: viewport.scrollHeight };
-          if (resized && following.current) {
-            viewport.scrollTop = viewport.scrollHeight;
+          if (resized) {
+            if (following.current) viewport.scrollTop = viewport.scrollHeight;
             return;
           }
           following.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <= 32;
           setPaused(!following.current);
           if (following.current) setUnread(false);
           captureAnchor();
+          if (viewport.scrollTop <= 48 && !following.current && !historyError) loadEarlier();
         }}
       >
+        {hasEarlier && <div className="grid gap-1 px-3 pt-2">
+          <Button variant="ghost" size="sm" disabled={historyLoading} onClick={loadEarlier}>
+            {historyLoading ? "正在加载较早记录…" : historyError ? "重试加载较早记录" : "加载较早记录"}
+          </Button>
+          {historyError && <p role="alert" className="text-xs text-[#a34e39]">{historyError}</p>}
+        </div>}
         <ol ref={contentRef} className="px-3 py-2 text-sm [overflow-anchor:none]" role="log" aria-label="操作记录，按时间从旧到新" aria-live="polite" aria-relevant="additions" aria-atomic="false">
           {entries.map((entry) => (
             <li key={entry.key} data-history-key={entry.key} data-history-type={entry.type} className={cn("border-b border-[var(--sidebar-line,#6d54341a)] py-2 leading-relaxed break-words text-[var(--sidebar-ink,#47534e)] last:border-0", entry.type === "victory-warning" && "font-bold text-[var(--sidebar-accent,#805418)]")}>

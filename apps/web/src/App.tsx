@@ -1,3 +1,4 @@
+import { useRoomHistory } from "./hooks/use-room-history.js";
 import { RoomUpdates, RoomSessionChangedError } from "./room-updates.js";
 import { useRoomConnection } from "./hooks/use-room-connection.js";
 import type { AccountView, AuthResponse } from "@catan/protocol";
@@ -60,6 +61,7 @@ export function App() {
   const [session, setSession] = useState<PlayerSession | null>(() => readSession());
   const [room, renderRoom] = useState<RoomView | null>(null);
   const [updates] = useState(() => new RoomUpdates(session, renderRoom));
+  const historyControls = useRoomHistory(session, room, updates);
   function setRoom(nextRoom: RoomView) { if (session !== null) updates.accept(nextRoom, session); }
   const { connectionState, snapshotEpoch } = useRoomConnection(session, authReady, updates, {
     onSynced: () => setError(null),
@@ -196,7 +198,7 @@ export function App() {
     await runBusy(async () => {
       try {
         const response = await submitGameCommand(session, submittedGame.revision, command);
-        await updates.confirm(response, session, () => getRoom(session), connectionState === "live");
+        await updates.confirm(response, session, (after) => getRoom(session, after), connectionState === "live");
       } catch (caught) {
         if (isStaleStateError(caught)) {
           const latestRoom = await getRoom(session);
@@ -206,7 +208,7 @@ export function App() {
             canRetryStaleTradeCommand(command, submittedGame.openTrade, latestRoom.game.openTrade, session.playerId)
           ) {
             const response = await submitGameCommand(session, latestRoom.game.revision, command);
-            await updates.confirm(response, session, () => getRoom(session), connectionState === "live");
+            await updates.confirm(response, session, (after) => getRoom(session, after), connectionState === "live");
             return;
           }
         }
@@ -301,7 +303,7 @@ export function App() {
   const bankSupply = liveGame === null ? null : bankInSidebar
     ? <BankSupply resources={liveGame.bankResources} className="mr-0 w-full shrink-0 justify-center border-transparent bg-transparent shadow-none backdrop-blur-none lg:rounded-none lg:[&>span]:bg-white/5 lg:[&>span]:text-[var(--game-rail-muted)]" />
     : <BankSupplyButton resources={liveGame.bankResources} />;
-  const roomControls = <ResponsiveRoomPanel
+  const roomControls = <ResponsiveRoomPanel {...historyControls}
     room={room} playerId={session.playerId} connectionState={connectionState} busy={busy}
     onStart={handleStart} onSettingsChange={handleRoomSettingsChange}
     onPlayerColorChange={handlePlayerColorChange} onShufflePlayers={handleShufflePlayers}

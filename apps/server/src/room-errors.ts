@@ -1,6 +1,7 @@
 import type { GameCommandErrorCode } from "@catan/game-core";
 
 export type RoomErrorCode =
+  | "INVALID_REQUEST"
   | "ROOM_NOT_FOUND"
   | "PLAYER_NOT_FOUND"
   | "ROOM_ALREADY_STARTED"

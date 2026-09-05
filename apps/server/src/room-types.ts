@@ -33,6 +33,8 @@ export interface RoomRecord {
 export type RoomListener = (room: RoomView) => void;
 
 export interface Subscription {
+  /** undefined: legacy snapshots; null: first events-v2 snapshot; number: last sent game revision. */
+  eventAfterRevision?: number | null | undefined;
   readonly playerId: string;
   readonly listener: RoomListener;
   /** Told once when the room is disbanded, so a socket can say why it is closing. */

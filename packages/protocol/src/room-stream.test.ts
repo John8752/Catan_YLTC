@@ -1,6 +1,6 @@
 import { createGame, PLAYER_COLORS, resourceAmounts } from "@catan/game-core";
 import { expect, it } from "vitest";
-import { createRoomStreamDecoder, createRoomStreamEncoder, MissingRoomMapError } from "./room-stream.js";
+import { createRoomStreamDecoder, createRoomStreamEncoder, createRoomEventEncoder, MissingRoomMapError, MissingRoomEventsError } from "./room-stream.js";
 import { projectGameForPlayer, type RoomView } from "./views.js";
 
 function room(count: 4 | 6, seed = 42): RoomView {
@@ -11,6 +11,20 @@ function room(count: 4 | 6, seed = 42): RoomView {
     previewMap: null, game: projectGameForPlayer(state, "p0"), setupAnalysis: null };
 }
 function wire<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
+
+it("rejects an omitted event update, ignores duplicate/late messages and resets on reconnect", () => {
+  const encode = createRoomEventEncoder(), decode = createRoomStreamDecoder();
+  const first = wire(encode(room(4)));
+  expect(decode(first).type).toBe("room_state");
+  const second = wire(encode({ ...room(4), revision: 2 }));
+  const third = wire(encode({ ...room(4), revision: 3 }));
+  expect(() => decode(third)).toThrow(MissingRoomEventsError);
+  expect(decode(second)).toEqual(decode(second));
+  expect(decode(first)).toEqual(decode(second));
+  expect(decode(third)).toMatchObject({ room: { revision: 3 } });
+  expect(() => createRoomStreamDecoder()(second)).toThrow(MissingRoomEventsError);
+  expect(createRoomStreamDecoder()(createRoomEventEncoder()({ ...room(4), revision: 3 }))).toMatchObject({ room: { revision: 3 } });
+});
 
 for (const count of [4, 6] as const) it(`round-trips all player-safe data, caches topology and still moves the robber (${count})`, () => {
   const initial = wire(room(count)), encode = createRoomStreamEncoder(), decode = createRoomStreamDecoder();

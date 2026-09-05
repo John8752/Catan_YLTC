@@ -232,7 +232,7 @@ test("history appends below, follows live updates, preserves reading and reopens
   const scroll = run.page.getByRole("region", { name: "公开记录", exact: true }).locator('[data-slot="scroll-area-viewport"]');
   const atBottom = () => scroll.evaluate((e) => e.scrollHeight - e.clientHeight - e.scrollTop < 3);
   try {
-    await expect(log.locator("li").first()).toHaveAttribute("data-history-key", "11-dice_rolled-0");
+    await expect(log.locator("li").first()).toHaveAttribute("data-history-key", "1-dice_rolled-0");
     await expect(log.locator("li").last()).toHaveAttribute("data-history-key", "40-dice_rolled-0");
     await expect(log).not.toContainText(/第\s*\d+\s*次操作/);
     await expect.poll(atBottom).toBe(true);
@@ -266,7 +266,8 @@ test("history keeps the same visible entry when retention drops older rows", asy
       const row = [...e.querySelectorAll<HTMLElement>("li")].find((r) => r.getBoundingClientRect().bottom > e.getBoundingClientRect().top)!;
       return { key: row.dataset.historyKey, offset: row.getBoundingClientRect().top - e.getBoundingClientRect().top };
     });
-    run.push(fixture(6, 42));
+    const next = fixture(6, 42);
+    run.push({ ...next, game: { ...next.game!, history: next.game!.history.slice(2) } });
     await expect(run.page.getByRole("button", { name: /有新记录/ })).toBeVisible();
     const offset = await scroll.evaluate((e, key) => {
       const row = [...e.querySelectorAll<HTMLElement>("li")].find((r) => r.dataset.historyKey === key)!;

@@ -1,4 +1,4 @@
-import { createRoomStreamEncoder, ROOM_MAP_TRANSPORT } from "@catan/protocol";
+import { createRoomEventEncoder, ROOM_EVENT_TRANSPORT, createRoomStreamEncoder, ROOM_MAP_TRANSPORT } from "@catan/protocol";
 import { playerNameSchema, startRoomSchema, roomSettingsSchema, rerollRoomMapSchema, playerColorSchema, shuffleRoomMembersSchema, leaveRoomSchema, gameCommandSchema, aiCommentarySchema } from "./route-schemas.js";
 import { SqliteDatabase } from "./database/sqlite-database.js";
 import { SqliteAccountRepository } from "./database/sqlite-account-repository.js";
@@ -257,15 +257,27 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
     }
   });
 
-  app.get<{ Params: { roomId: string }; Querystring: { seatToken?: string } }>(
+  app.get<{ Params: { roomId: string }; Querystring: { seatToken?: string; transport?: string; afterRevision?: string } }>(
     "/api/rooms/:roomId",
     async (request, reply) => {
       try {
         const seatToken = z.string().min(1).parse(request.query.seatToken);
-        return reply.code(200).send(registry.getRoom(request.params.roomId, seatToken));
+        const after = z.coerce.number().int().nonnegative().safe().optional().parse(request.query.afterRevision);
+        return reply.code(200).send(registry.getRoom(request.params.roomId, seatToken, request.query.transport === ROOM_EVENT_TRANSPORT ? after ?? null : undefined));
       } catch (error) {
         return sendError(reply, error);
       }
+    },
+  );
+
+  app.get<{ Params: { roomId: string }; Querystring: { seatToken?: string; gameId?: string; beforeRevision?: string } }>(
+    "/api/rooms/:roomId/history", async (request, reply) => {
+      try {
+        const seatToken = z.string().min(1).parse(request.query.seatToken);
+        const gameId = z.string().min(1).parse(request.query.gameId);
+        const before = z.coerce.number().int().positive().safe().optional().parse(request.query.beforeRevision);
+        return reply.send(registry.getHistory(request.params.roomId, seatToken, gameId, before));
+      } catch (error) { return sendError(reply, error); }
     },
   );
 
@@ -343,7 +355,8 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
       try {
         const roomId = z.string().min(1).parse(request.query.roomId);
         const seatToken = z.string().min(1).parse(request.query.seatToken);
-        const encode = request.query.transport === ROOM_MAP_TRANSPORT ? createRoomStreamEncoder() : null;
+        const incremental = request.query.transport === ROOM_EVENT_TRANSPORT;
+        const encode = incremental ? createRoomEventEncoder() : request.query.transport === ROOM_MAP_TRANSPORT ? createRoomStreamEncoder() : null;
         const unsubscribe = registry.subscribe(
           roomId,
           seatToken,
@@ -360,6 +373,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
             socket.send(JSON.stringify({ type: "account_session_replaced", message: "账号登录已变更或退出，请重新登录" }));
             socket.close(4001);
           },
+          incremental,
         );
 
         socket.on("close", unsubscribe);

@@ -19,9 +19,9 @@ import { cn } from "@/lib/utils.js";
 import { DisbandRoomControl } from "./DisbandRoomControl.js";
 import { PlayerColorPicker } from "./PlayerColorPicker.js";
 import { PlayerSettlementIcon } from "./PlayerSettlementIcon.js";
-import { PublicHistory } from "./PublicHistory.js";
+import { PublicHistory, type HistoryControls } from "./PublicHistory.js";
 
-export interface RoomPanelProps {
+export interface RoomPanelProps extends HistoryControls {
   readonly room: RoomView;
   readonly playerId: string;
   readonly connectionState: "connecting" | "live" | "offline";
@@ -53,6 +53,7 @@ export function RoomPanel({
   showPlayers = true,
   className,
   headerAction,
+  historyLoading, historyError, historyHasGap, onLoadEarlierHistory,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
   const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 2;
@@ -86,7 +87,11 @@ export function RoomPanel({
         </CardHeader>
 
         <CardContent className={cn("flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-3", room.game !== null && "overflow-hidden px-3 py-2")}>
-          {room.game === null ? null : <PublicHistory key={room.game.id} history={room.game.history} />}
+          {room.game === null ? null : <PublicHistory key={room.game.id} history={room.game.history} historyRange={room.game.historyRange}
+            {...(historyHasGap === undefined ? {} : { historyHasGap })}
+            {...(historyLoading === undefined ? {} : { historyLoading })}
+            {...(historyError === undefined ? {} : { historyError })}
+            {...(onLoadEarlierHistory === undefined ? {} : { onLoadEarlierHistory })} />}
 
           {room.game === null ? (
             <section aria-label="房间设置">

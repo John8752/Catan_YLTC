@@ -1,4 +1,4 @@
-import { createRoomStreamDecoder, MissingRoomMapError, ROOM_MAP_TRANSPORT, type RoomWireMessage } from "@catan/protocol";
+import { createRoomStreamDecoder, MissingRoomMapError, ROOM_EVENT_TRANSPORT, type RoomWireMessage } from "@catan/protocol";
 import { accountHeaders } from "./auth-api.js";
 import type {
   AiCommentaryMode,
@@ -6,6 +6,7 @@ import type {
   ApiErrorResponse,
   GameCommand,
   GameCommandReply,
+  GameHistoryPage,
   LeaveRoomResponse,
   PlayerSessionResponse,
   RoomServerMessage,
@@ -37,9 +38,15 @@ export async function joinRoom(roomId: string, playerName: string): Promise<Play
   });
 }
 
-export async function getRoom(session: PlayerSession): Promise<RoomView> {
-  const query = new URLSearchParams({ seatToken: session.seatToken });
+export async function getRoom(session: PlayerSession, afterRevision?: number): Promise<RoomView> {
+  const query = new URLSearchParams({ seatToken: session.seatToken, transport: ROOM_EVENT_TRANSPORT });
+  if (afterRevision !== undefined) query.set("afterRevision", String(afterRevision));
   return request<RoomView>(`/api/rooms/${encodeURIComponent(session.roomId)}?${query}`);
+}
+
+export async function getRoomHistory(session: PlayerSession, gameId: string, beforeRevision: number): Promise<GameHistoryPage> {
+  const query = new URLSearchParams({ seatToken: session.seatToken, gameId, beforeRevision: String(beforeRevision) });
+  return request<GameHistoryPage>(`/api/rooms/${encodeURIComponent(session.roomId)}/history?${query}`);
 }
 
 export async function startRoom(session: PlayerSession): Promise<RoomView> {
@@ -155,7 +162,7 @@ export function connectToRoom(
   url.searchParams.set("roomId", session.roomId);
   url.searchParams.set("seatToken", session.seatToken);
 
-  url.searchParams.set("transport", ROOM_MAP_TRANSPORT);
+  url.searchParams.set("transport", ROOM_EVENT_TRANSPORT);
   const decode = createRoomStreamDecoder();
   const socket = new WebSocket(url);
   socket.addEventListener("message", (event) => {

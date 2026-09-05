@@ -22,3 +22,5 @@ Rule behavior belongs in `docs/rules`. Long-lived technical decisions belong in 
 Account implementation validation: [Accounts and final settlements](./validation/accounts.md).
 
 Transport optimization validation: [Cached maps and command acknowledgements](./validation/room-transport-phase1.md).
+
+Incremental history validation: [Room events and complete public history](./validation/room-transport-phase2.md).

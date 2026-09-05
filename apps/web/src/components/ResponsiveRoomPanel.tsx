@@ -16,7 +16,7 @@ export function ResponsiveRoomPanel(props: RoomPanelProps) {
       {headerAction}
       <Dialog>
         <DialogTrigger asChild>
-          <Button className="mobile-room-trigger shrink-0" size="sm" variant="secondary" aria-label={`打开公开记录与房间信息，共 ${historyCount} 条记录`}>
+          <Button className="mobile-room-trigger shrink-0" size="sm" variant="secondary" aria-label={`打开公开记录与房间信息，${props.room.game?.historyRange ? "已加载" : "共"} ${historyCount} 条记录`}>
             <Activity className="size-4" />记录
           </Button>
         </DialogTrigger>

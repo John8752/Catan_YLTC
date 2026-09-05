@@ -18,3 +18,5 @@ Read documents in this order:
 14. [Account system implementation plan](./account-system-plan.md)
 
 Rule behavior belongs in `docs/rules`. Long-lived technical decisions belong in `docs/adr`. A feature that changes both should update both in the same change.
+
+Account implementation validation: [Accounts and final settlements](./validation/accounts.md).

@@ -1,0 +1,15 @@
+[Unit]
+Description=Back up Catan accounts and final match results
+
+[Service]
+Type=oneshot
+User=catan
+Group=catan
+UMask=0077
+StateDirectory=catan catan-backups
+Environment=DATABASE_PATH=/var/lib/catan/catan.sqlite
+ExecStart=/usr/bin/node /opt/catan/apps/server/dist/database/cli.js backup /var/lib/catan-backups 14
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

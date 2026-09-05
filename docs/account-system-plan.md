@@ -6,14 +6,14 @@ Add optional username/password accounts backed by a server-local SQLite database
 
 When the same account logs in from another browser or device, the newest successful login wins. The server invalidates the previous account session, rotates the active room's seat token, tells the previous room socket why it is being closed, and returns the replacement seat credential to the new browser. The new browser then reconnects to the same player seat without asking for the room code or display name again.
 
-This milestone persists account identity and login sessions only. Rooms and games remain in memory under [ADR-0007](./adr/adr-0007-in-memory-single-instance-runtime.md), so a server restart still ends active matches.
+This milestone persists account identity, login sessions and immutable final match settlements (see ADR-0011). Rooms and games remain in memory under [ADR-0007](./adr/adr-0007-in-memory-single-instance-runtime.md), so a server restart still ends active matches.
 
 The long-lived decisions are recorded separately in [ADR-0010](./adr/adr-0010-sqlite-single-session-accounts.md).
 
 ## Product decisions
 
 - Accounts are optional. A room link, display name and room code remain sufficient for guest play.
-- The login identifier and public display name are separate. The first version uses a case-insensitive ASCII username and a Unicode display name.
+- The login identifier and public display name are separate. The first version uses a case-insensitive ASCII username (letters, digits and underscore) and a Unicode display name. Usernames, display names and passwords are required but have no product character-count bounds, in registration, login, profile editing, password changes or offline reset. Generic HTTP request-size limits and authentication rate limits still apply.
 - An account can occupy at most one live room seat. Attempting to create or join another room returns the existing active seat instead of allocating another player.
 - A room member captures the account's display name when joining. Later profile edits do not rename a match already in progress.
 - The latest successful login replaces the previous login globally, including the active room connection.
@@ -51,13 +51,13 @@ Three identifiers remain deliberately separate:
 
 ## SQLite scope and schema
 
-Use the Node runtime's `node:sqlite` API behind a repository interface. Raise the supported Node floor to a version that contains the required SQLite and backup APIs before merging the database slice. Do not introduce an ORM for the initial two-table model.
+Use the Node runtime's `node:sqlite` API behind a repository interface. Raise the supported Node floor to a version that contains the required SQLite and backup APIs before merging the database slice. Do not introduce an ORM for the initial account model.
 
 The database lives outside the Git checkout:
 
 ```text
 production: /var/lib/catan/catan.sqlite
-development: <workspace>/.data/catan.sqlite
+development: <user-home>/.catan-yltc/catan.sqlite (outside the checkout)
 tests:       :memory: or one temporary database per test
 ```
 
@@ -78,7 +78,7 @@ CREATE TABLE accounts (
 CREATE TABLE account_sessions (
   id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL UNIQUE,
-  token_hash BLOB NOT NULL UNIQUE,
+  token_hash TEXT NOT NULL UNIQUE,
   created_at INTEGER NOT NULL,
   last_seen_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
@@ -103,7 +103,7 @@ PRAGMA synchronous = NORMAL
 PRAGMA busy_timeout = 5000
 ```
 
-All SQL values use bound parameters. Migrations are ordered SQL files with immutable checksums and run inside transactions. Application startup fails loudly on a missing directory, migration mismatch or newer unknown schema.
+All SQL values use bound parameters. Migrations are ordered SQL strings bundled from `apps/server/src/database/migrations.ts` with immutable checksums and run inside transactions. Application startup fails loudly on a missing directory, migration mismatch or newer unknown schema.
 
 ## Password and session policy
 
@@ -339,4 +339,20 @@ Run `pnpm validate`, focused server/auth tests, the takeover E2E, `pnpm test:e2e
 
 ## First implementation move
 
-After this plan is approved, implement A0 and A1 only. Do not start with the login form. The first failing integration test should prove that an account created in a temporary SQLite database remains readable after closing and reopening the repository, while an existing guest room flow remains byte-for-byte compatible at the protocol boundary.
+The 2026-09-05 implementation request authorizes A0–A5 and adds final-settlement history. Local validation and remaining release checks are recorded in `docs/validation/accounts.md`; production benchmarking and real-device acceptance must be recorded separately.
+
+## Final settlements and multiple game types (2026-09-05 scope extension)
+
+The global account has no game type. Game-owned durable data always carries `gameId`, currently `catan`. This is a game-type key, not `GameState.id`, a room code or a rule profile. A server-generated UUID `matchId` identifies one match even if a room code is reused after restart.
+
+`match_results` has composite primary key `(game_id, match_id)`, `started_at`, `finished_at`, `data_version`, and JSON `data_json`. `account_matches` links participating accounts to their room-scoped player IDs using foreign keys and a composite unique constraint. Clients cannot upload results or claim completed guest matches. An account may claim its currently held guest seat on login/registration before a match finishes. Completed rooms no longer occupy the account's one active seat, but takeover invalidates their old credentials too.
+
+Account history renders each Catan settlement directly with the same `CatanResultPanel` used by the live victory screen, including all five statistics tabs. Records do not use a disclosure dropdown or a separate summary UI. The panel depends only on the durable result contract, so existing v1 records remain fully renderable after room deletion or server restart.
+
+Catan payload version 1 reuses the canonical protocol `GameSummaryView` plus rule profile, victory target, winner ID and public participant display-name/color snapshots. It includes final scoring and aggregate dice/resource/activity statistics, never private cards, replay events, account IDs, usernames or seat credentials. New games add their own versioned projector and renderer; the database's envelope has no Catan columns. Unknown game IDs return an empty account history; unsupported payload versions remain stored and the UI reports that it cannot render them.
+
+`GET /api/account/matches?gameId=catan&offset=0&limit=20` requires a valid account cookie and restricts results to that account's participation. Results are ordered by completion time then match ID descending. Pages are bounded to 50 records; offset pagination is intended for this small private-group service (newly completed games may shift page boundaries; clients deduplicate IDs).
+
+The server prepares a settlement only on the transition to `finished`, then writes it and all account links in one SQLite transaction before publishing the final state or caching command success. A failed write leaves the command retryable. Duplicate commands and duplicate archive writes cannot alter the saved result or add owners. There is no archive for disbanded, idle-evicted or restarted unfinished games. This is result retention, not match recovery.
+
+The production runtime and offline account-maintenance CLI share a process lock. Password reset reads its new password from stdin and requires the service to be stopped. The default asynchronous scrypt cost is N=131072, r=8, p=1, one active hash with a queue of eight; benchmark this on production before release. Node >=22.16 is required for the SQLite backup API. Raw session tokens remain only in an HttpOnly cookie; SQLite stores a hex SHA-256 digest.

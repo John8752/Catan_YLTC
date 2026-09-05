@@ -19,6 +19,9 @@ User=catan
 Group=catan
 WorkingDirectory=/opt/catan/apps/server
 
+StateDirectory=catan
+UMask=0077
+Environment=DATABASE_PATH=/var/lib/catan/catan.sqlite
 Environment=NODE_ENV=production
 # API only listens for the local reverse proxy; Caddy owns the public port.
 Environment=HOST=127.0.0.1
@@ -45,7 +48,7 @@ ExecStart=/usr/bin/node /opt/catan/apps/server/dist/index.js
 # 512M is far above the measured working set: 200 idle rooms cost ~10MB.
 MemoryMax=512M
 
-# The process writes nothing to disk -- logs go to journald over stdout.
+# Only StateDirectory is writable; logs go to journald.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

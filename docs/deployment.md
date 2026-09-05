@@ -6,8 +6,8 @@
 
 ## 架构
 
-一台云服务器承载全部组件。**没有数据库** —— 房间与对局全部活在进程内存里
-（ADR-0007），因此必须单实例部署，且重启会结束所有进行中的对局。
+一台云服务器承载全部组件。房间与进行中的对局活在进程内存里（ADR-0007），
+账号、登录会话和最终结算保存在 SQLite（ADR-0010/0011）。必须单实例部署，重启会结束所有进行中的对局。
 
 **第一版为 IP 直连访问（HTTP:80），暂无域名**；接入域名时只需改 Caddyfile 一行，
 前端不需要重新构建（客户端按页面协议自动在 `ws://` 与 `wss://` 之间切换）。
@@ -32,7 +32,8 @@ Caddy ──静态文件──▶ /opt/catan/apps/web/dist      （前端构建�
 | `/opt/catan` | 代码（git clone），属主 `catan` 用户 |
 | `/var/log/catan/deploy.log` | 发布记录（`release.sh` 追写） |
 
-没有数据目录 —— 服务不写任何文件，日志走 stdout 交给 journald。
+账号数据库位于 `/var/lib/catan/catan.sqlite`，备份位于 `/var/lib/catan-backups`。
+systemd 的 `StateDirectory` 与 `UMask=0077` 管理权限；日志仍由 stdout 交给 journald。
 
 ## 环境变量
 
@@ -68,7 +69,7 @@ sudo systemctl restart catan
 
 ## 首次部署
 
-前置：一台 Linux，Node ≥ 22.12、pnpm 9（`corepack enable`）、git、Caddy。
+前置：一台 Linux，Node ≥ 22.16、pnpm 9（`corepack enable`）、git、Caddy。
 **两大发行版的运行时安装方式完全不同**（步骤 0），从步骤 1 起两边一样。
 
 > **当前生产环境**（2026-08-24 部署，本节命令即为实际执行并验证过的）：
@@ -411,7 +412,7 @@ sed -e 's|^:80 {|:8080 {|' \
     deploy/Caddyfile > /tmp/Caddyfile.local
 
 pnpm build
-NODE_ENV=production HOST=127.0.0.1 PORT=8787 node apps/server/dist/index.js &
+DATABASE_PATH="$HOME/.catan-yltc/catan.sqlite" NODE_ENV=production HOST=127.0.0.1 PORT=8787 node apps/server/dist/index.js &
 caddy run --config /tmp/Caddyfile.local --adapter caddyfile
 # 浏览器打开 http://127.0.0.1:8080
 ```
@@ -429,14 +430,14 @@ API 挂掉时 Caddy 仍然照常返回页面，只有 `/api` 返回 502。所以
 
 ## 迁移到新服务器
 
-无状态服务，迁机就是在新机重做一遍「首次部署」，然后把访问地址换过去。没有数据要搬。
+迁机时在新机完成「首次部署」，再按下文恢复账号和最终结算数据库。活动房间无法迁移。
 旧机保留几天作回滚，确认稳定后下线。切换期间会中断正在进行的对局。
 
 ## 约束与注意事项（汇总）
 
 - **单实例**：禁止 PM2 cluster / Node cluster / 多容器 / 多后端负载均衡 —— 房间在进程
   内存里，第二个实例看不到第一个实例的房间（ADR-0007）。
-- **重启即丢局**：没有持久化，也没有跨进程的断线重连。发布挑没人玩的时候。
+- **重启即丢局**：活动房间没有持久化；账号与已结束对局的结算保存在 SQLite。发布挑没人玩的时候。
 - **人真的不回来了会卡死整局**：游戏开始后座位无法释放，也没有超时代打。座位存在浏览器里，
   所以关标签页、关浏览器、手机锁屏之后回来都还在原位；卡死的只剩"这个人再也不来了"这一种情况，
   剩下的人只能重开。处理方案已记在 `docs/risks-and-open-questions.md` 的 O3，尚未实现。
@@ -450,4 +451,60 @@ API 挂掉时 Caddy 仍然照常返回页面，只有 `/api` 返回 502。所以
 - **`catan.service` 的加固已在 Amazon Linux 2023 实测通过**（`ProtectSystem=strict`、
   `ProtectHome=true`）。换发行版后服务起不来时，先注释这两条确认能起，再逐条加回来定位。
 - **云厂商安全组要放行 80**：机器里一切正常但外面连不上，先查这里再查 Caddy。
-- 持久化对局是远期计划（ADR-0002 已按可重放的命令/事件记录设计），当前规模不需要。
+- 活动对局持久化仍是远期计划；账号和最终结算按 ADR-0010/0011 保存。
+
+
+## 账号与最终结算数据库（2026-09-05）
+
+运行时最低 Node 22.16。生产必须显式设置绝对 `DATABASE_PATH`，且目录必须在代码仓库之外并已存在。开发默认使用用户主目录下 `.catan-yltc/catan.sqlite`，首次启动创建权限为 0700 的目录。Linux 数据库和备份为 0600。Windows 开发机使用当前用户的目录权限，生产 Linux 权限需另行验收。
+
+`catan.service` 使用 `StateDirectory=catan`、`UMask=0077`、`DATABASE_PATH=/var/lib/catan/catan.sqlite`。保持 `ProtectSystem=strict`，不需要开放代码目录写权限。启动按顺序核验和执行迁移；校验和变化、未知新版结构或错误路径会阻止启动。服务在数据库旁的空 SQLite 锁文件 `.runtime-lock` 上持有排他事务，离线维护与启动互斥。操作系统在进程异常退出后自动释放锁，文件可保留；不要删除运行中服务的锁文件。这份锁文件没有账号数据，不影响活动库的 WAL 写入和在线备份。
+
+现有裸 IP HTTP 部署仍属于临时不安全模式。账号 Cookie 为 `catan_account_session`，只有 `HttpOnly; SameSite=Strict; Path=/`，没有 `Secure` 或 `__Host-`。这些措施不提供传输加密；登录表单保留提示。Caddy 必须保留 Host，服务器据此核验 Origin；不启用 CORS。`ACCOUNT_SESSION_DAYS` 默认 30，可在服务环境文件调整。
+
+首次上线安装更新后的服务文件，并安装备份定时器。`deploy/release.sh` 已包含服务文件更新，并在已有数据库时使用旧版本 CLI 在线备份后再拉代码和构建。首次从无数据库版本升级时跳过备份，启动新服务创建数据库。
+
+```bash
+sudo cp deploy/catan.service deploy/catan-backup.service deploy/catan-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now catan-backup.timer
+sudo systemctl restart catan
+sudo systemctl start catan-backup.service
+sudo journalctl -u catan-backup.service -n 20
+```
+
+备份每天服务器本地时间 04:00 执行，随机延迟不超过五分钟，保留 14 天；只清理匹配自身命名格式的旧备份。目录为 `/var/lib/catan-backups`，与活动库分开。备份使用 SQLite 在线 backup API，包含 WAL 中已提交内容，完成后校验完整性。服务器丢失会同时丢失本地备份，上线运维还需把备份复制到受控的异机位置。
+
+常用命令如下，均从仓库根运行。开发可用 `pnpm --filter @catan/server db` 替代 `node apps/server/dist/database/cli.js`。
+
+```bash
+sudo -u catan env DATABASE_PATH=/var/lib/catan/catan.sqlite node apps/server/dist/database/cli.js status
+sudo -u catan env DATABASE_PATH=/var/lib/catan/catan.sqlite node apps/server/dist/database/cli.js integrity
+sudo -u catan env DATABASE_PATH=/var/lib/catan/catan.sqlite node apps/server/dist/database/cli.js backup /var/lib/catan-backups 14
+```
+
+恢复或回滚数据库必须停服，也暂停备份定时器并确认当前备份任务结束。不要把单个旧主文件覆盖在仍有 WAL 的活动目录上。先保留整个旧数据目录（包括 WAL/SHM），新建空目录，安装选定备份，校验后启动。下例需将 `BACKUP_FILE` 指向一次实际备份，并保证归档目录尚不存在。
+
+```bash
+sudo systemctl stop catan-backup.timer catan-backup.service catan
+sudo mv /var/lib/catan /var/lib/catan-before-restore
+sudo install -d -m 0700 -o catan -g catan /var/lib/catan
+sudo install -m 0600 -o catan -g catan "$BACKUP_FILE" /var/lib/catan/catan.sqlite
+sudo -u catan env DATABASE_PATH=/var/lib/catan/catan.sqlite node apps/server/dist/database/cli.js integrity
+sudo -u catan env DATABASE_PATH=/var/lib/catan/catan.sqlite node apps/server/dist/database/cli.js revoke-sessions
+sudo systemctl start catan catan-backup.timer
+```
+
+恢复后撤销所有登录，以免旧备份里的登录重新生效。账号和所选备份时间前的最终结算恢复，备份之后的数据不会出现，活动对局全部结束。回滚应用版本时，必须使用与目标版本结构兼容的备份；未知新版结构会拒绝启动。不提供向下迁移。回滚到无账号版本时保留完整数据库归档，用户无法访问账号与历史记录，但不能删除这些数据。
+
+离线重置密码会撤销该账号的登录。先停服，使用终端静默读取新密码后通过标准输入传递；不能把密码放进参数、环境变量或日志。
+
+```bash
+sudo systemctl stop catan
+read -r -s -p 'New password: ' RESET_PASSWORD
+printf '%s' "$RESET_PASSWORD" | sudo -u catan env DATABASE_PATH=/var/lib/catan/catan.sqlite node apps/server/dist/database/cli.js reset-password USERNAME
+unset RESET_PASSWORD
+sudo systemctl start catan
+```
+
+上线前还需在 t3.micro 实测 scrypt 单次耗时和峰值内存。当前参数 N=131072/r=8/p=1，单个 hash 约占 128 MiB，服务最多同时执行一个，等待队列上限八个。注册和登录分别限流，用户名还有独立限流。以生产机结果调整前需更新密码参数升级测试和运维记录。

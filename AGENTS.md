@@ -84,7 +84,7 @@ The proposed account milestone is specified by `docs/account-system-plan.md` and
 - The newest successful login wins globally. Replacing a session must rotate the linked room's `seatToken` before closing old subscriptions, or the previous device can reconnect with its stored room credential.
 - Account session secrets belong only in a server-managed HttpOnly cookie and their hashes in SQLite. Never put an account session, password, password hash or reset credential in browser storage, URLs, protocol views or logs.
 - Until HTTPS is actually deployed, the account cookie must not use `Secure` or a `__Host-` prefix. Treat this as an explicitly insecure temporary mode, keep the UI warning, and do not claim transport security.
-- SQLite stores account identity and sessions only in the first milestone. Rooms and games remain in memory under ADR-0007; do not silently add partial game persistence.
+- SQLite stores account identity, sessions and immutable final match settlements. Partition game-owned persistent data by `gameId` (game type), use a globally unique `matchId` per match and version each game-specific result payload. Rooms and running games remain in memory under ADR-0007 and ADR-0011; never persist partial game state or command history.
 - Keep the database outside the repository and expose it through a server repository interface. Migrations, filesystem permissions, backup/restore and deployment rollback are part of the feature, not follow-up chores.
 - Account transport DTOs belong in `packages/protocol`; secret records and authentication logic stay in `apps/server`.
 

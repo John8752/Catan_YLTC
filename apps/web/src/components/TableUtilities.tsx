@@ -1,10 +1,12 @@
+import type { ReactNode } from "react";
 import type { RoomView } from "@catan/protocol";
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
 import { DisbandRoomControl } from "./DisbandRoomControl.js";
 import { RulesReference } from "./RulesReference.js";
 
-export function TableUtilities({ room, playerId, busy, onDisband }: {
+export function TableUtilities({ room, playerId, busy, onDisband, accountControl }: {
+  readonly accountControl?: ReactNode;
   readonly room: RoomView;
   readonly playerId: string;
   readonly busy: boolean;
@@ -14,6 +16,7 @@ export function TableUtilities({ room, playerId, busy, onDisband }: {
 
   return (
     <div className="flex shrink-0 items-center gap-0.5" data-table-utilities="true">
+      {accountControl}
       <RulesReference
         ruleProfile={room.game.ruleProfile}
         trigger={

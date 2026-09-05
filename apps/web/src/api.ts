@@ -1,3 +1,4 @@
+import { accountHeaders } from "./auth-api.js";
 import type {
   AiCommentaryMode,
   AiCommentaryResponse,
@@ -176,7 +177,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const response = await fetch(url, { ...init, credentials: "same-origin", headers: { ...init?.headers, ...accountHeaders() } });
 
   if (!response.ok) {
     const payload = (await response.json()) as ApiErrorResponse;

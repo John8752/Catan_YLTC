@@ -32,8 +32,8 @@ export class RoomError extends Error {
 
 export function normalizePlayerName(playerName: string): string {
   const name = playerName.trim();
-  if (name.length < 1 || name.length > 24) {
-    throw new RoomError("INVALID_PLAYER_NAME", "Player name must contain 1–24 characters");
+  if (name.length < 1) {
+    throw new RoomError("INVALID_PLAYER_NAME", "Player name cannot be empty");
   }
   return name;
 }

@@ -1,6 +1,8 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
 export interface WelcomeProps {
+  readonly accountControl?: ReactNode;
+  readonly defaultPlayerName?: string;
   readonly busy: boolean;
   readonly error: string | null;
   readonly onCreate: (playerName: string) => void;
@@ -16,8 +18,9 @@ const TABLE_LEGENDS = [
   { name: "yst", story: "专等七点掀翻全桌计划" },
 ] as const;
 
-export function Welcome({ busy, error, onCreate, onJoin }: WelcomeProps) {
+export function Welcome({ busy, error, onCreate, onJoin, accountControl, defaultPlayerName = "" }: WelcomeProps) {
   const [playerName, setPlayerName] = useState("");
+  useEffect(() => { if (defaultPlayerName) setPlayerName(defaultPlayerName); }, [defaultPlayerName]);
   const [roomId, setRoomId] = useState("");
 
   function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -106,6 +109,7 @@ export function Welcome({ busy, error, onCreate, onJoin }: WelcomeProps) {
           </div>
         </form>
 
+        <div className="mt-4 flex justify-center">{accountControl}</div>
         {error === null ? null : <p className="error-message" role="alert">{error}</p>}
       </section>
     </main>

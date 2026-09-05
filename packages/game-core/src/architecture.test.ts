@@ -6,6 +6,12 @@ import { describe, expect, it } from "vitest";
 const sourceRoot = dirname(fileURLToPath(import.meta.url));
 
 describe("game-core module boundaries", () => {
+  it("keeps authentication, persistence and transport outside the rules engine", () => {
+    for (const file of sourceFiles(sourceRoot)) {
+      expect(readFileSync(file, "utf8"), relative(sourceRoot, file))
+        .not.toMatch(/node:sqlite|node:crypto|apps\/server|accountId|seatToken|passwordHash|@catan\/protocol/);
+    }
+  });
   it("uses explicit domain directories instead of legacy root modules", () => {
     for (const directory of ["primitives", "map", "resources", "rulesets", "engine"]) {
       expect(existsSync(join(sourceRoot, directory)), `${directory}/ should exist`).toBe(true);

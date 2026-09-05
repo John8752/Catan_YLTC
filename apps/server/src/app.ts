@@ -1,3 +1,11 @@
+import { playerNameSchema, startRoomSchema, roomSettingsSchema, rerollRoomMapSchema, playerColorSchema, shuffleRoomMembersSchema, leaveRoomSchema, gameCommandSchema, aiCommentarySchema } from "./route-schemas.js";
+import { SqliteDatabase } from "./database/sqlite-database.js";
+import { SqliteAccountRepository } from "./database/sqlite-account-repository.js";
+import { SqliteMatchRepository } from "./database/match-repository.js";
+import { AccountService } from "./auth/account-service.js";
+import { AuthError } from "./auth/password.js";
+import { registerAuthRoutes } from "./auth/routes.js";
+import { accountContext, readAccountCookie, sameOrigin } from "./auth/http.js";
 import rateLimit from "@fastify/rate-limit";
 import websocket from "@fastify/websocket";
 import Fastify, {
@@ -7,8 +15,6 @@ import Fastify, {
   type FastifyServerOptions,
 } from "fastify";
 import { z } from "zod";
-import { PLAYER_COLORS } from "@catan/game-core";
-import { AI_COMMENTARY_MODES } from "@catan/protocol";
 import { AiCommentaryUpstreamError, type AiCommentator } from "./ai-commentary.js";
 import { buildTableIntentInput } from "./ai-intent.js";
 import { RoomError } from "./room-errors.js";
@@ -22,6 +28,8 @@ export const DEFAULT_ROOM_CREATIONS_PER_MINUTE = 10;
 export const DEFAULT_AI_REQUESTS_PER_MINUTE = 6;
 
 export interface AppOptions {
+  readonly database?: SqliteDatabase;
+  readonly sessionLifetimeMs?: number;
   readonly logger?: FastifyServerOptions["logger"];
   readonly trustProxy?: FastifyServerOptions["trustProxy"];
   readonly idleRoomTtlMs?: number;
@@ -31,118 +39,14 @@ export interface AppOptions {
   readonly aiCommentator?: AiCommentator | null;
 }
 
-const playerNameSchema = z.object({
-  playerName: z.string(),
-});
-
-const startRoomSchema = z.object({
-  seatToken: z.string().min(1),
-});
-
-const roomSettingsSchema = z.object({
-  seatToken: z.string().min(1),
-  expectedRevision: z.number().int().positive(),
-  ruleProfile: z.enum(["base-3-4", "extended-5-6"]),
-  victoryPointsToWin: z.number().int().min(5).max(15),
-  bankCountsPublic: z.boolean().optional(),
-});
-
-const rerollRoomMapSchema = z.object({
-  seatToken: z.string().min(1),
-  expectedRevision: z.number().int().positive(),
-});
-
-const playerColorSchema = z.object({
-  seatToken: z.string().min(1),
-  expectedRevision: z.number().int().positive(),
-  color: z.enum(PLAYER_COLORS),
-});
-
-const shuffleRoomMembersSchema = z.object({
-  seatToken: z.string().min(1),
-  expectedRevision: z.number().int().positive(),
-});
-
-const leaveRoomSchema = z.object({
-  seatToken: z.string().min(1),
-});
-
-const gameCommandSchema = z.object({
-  seatToken: z.string().min(1),
-  commandId: z.string().min(1).max(100),
-  expectedRevision: z.number().int().positive(),
-  command: z.discriminatedUnion("type", [
-    z.object({ type: z.literal("PlaceInitialSettlement"), vertexId: z.string().min(1) }),
-    z.object({ type: z.literal("PlaceInitialRoad"), edgeId: z.string().min(1) }),
-    z.object({ type: z.literal("RollDice") }),
-    z.object({
-      type: z.literal("DiscardResources"),
-      resources: z.object({
-        brick: z.number().int().nonnegative(),
-        lumber: z.number().int().nonnegative(),
-        wool: z.number().int().nonnegative(),
-        grain: z.number().int().nonnegative(),
-        ore: z.number().int().nonnegative(),
-      }),
-    }),
-    z.object({
-      type: z.literal("MoveRobber"),
-      hexId: z.string().min(1),
-      victimId: z.string().min(1).nullable(),
-    }),
-    z.object({ type: z.literal("BuildRoad"), edgeId: z.string().min(1) }),
-    z.object({ type: z.literal("BuildSettlement"), vertexId: z.string().min(1) }),
-    z.object({ type: z.literal("BuildCity"), vertexId: z.string().min(1) }),
-    z.object({
-      type: z.literal("OpenTradeOffer"),
-      offerId: z.string().min(1),
-      give: z.object({ brick: z.number().int().nonnegative(), lumber: z.number().int().nonnegative(), wool: z.number().int().nonnegative(), grain: z.number().int().nonnegative(), ore: z.number().int().nonnegative() }),
-      receive: z.object({ brick: z.number().int().nonnegative(), lumber: z.number().int().nonnegative(), wool: z.number().int().nonnegative(), grain: z.number().int().nonnegative(), ore: z.number().int().nonnegative() }),
-    }),
-    z.object({ type: z.literal("AcceptTradeOffer"), offerId: z.string().min(1) }),
-    z.object({ type: z.literal("DeclineTradeOffer"), offerId: z.string().min(1) }),
-    z.object({
-      type: z.literal("CounterTradeOffer"),
-      offerId: z.string().min(1),
-      proposerGives: z.object({ brick: z.number().int().nonnegative(), lumber: z.number().int().nonnegative(), wool: z.number().int().nonnegative(), grain: z.number().int().nonnegative(), ore: z.number().int().nonnegative() }),
-      proposerReceives: z.object({ brick: z.number().int().nonnegative(), lumber: z.number().int().nonnegative(), wool: z.number().int().nonnegative(), grain: z.number().int().nonnegative(), ore: z.number().int().nonnegative() }),
-    }),
-    z.object({
-      type: z.literal("CompleteTradeOffer"),
-      offerId: z.string().min(1),
-      partnerId: z.string().min(1),
-    }),
-    z.object({ type: z.literal("CancelTradeOffer"), offerId: z.string().min(1) }),
-    z.object({
-      type: z.literal("MaritimeTrade"),
-      give: z.enum(["brick", "lumber", "wool", "grain", "ore"]),
-      receive: z.enum(["brick", "lumber", "wool", "grain", "ore"]),
-    }),
-    z.object({ type: z.literal("BuyDevelopmentCard") }),
-    z.object({ type: z.literal("PlayKnight"), cardId: z.string().min(1) }),
-    z.object({ type: z.literal("PlayRoadBuilding"), cardId: z.string().min(1) }),
-    z.object({ type: z.literal("BuildFreeRoad"), edgeId: z.string().min(1) }),
-    z.object({ type: z.literal("PlayMonopoly"), cardId: z.string().min(1), resource: z.enum(["brick", "lumber", "wool", "grain", "ore"]) }),
-    z.object({
-      type: z.literal("PlayResourceChoice"),
-      cardId: z.string().min(1),
-      resources: z.tuple([
-        z.enum(["brick", "lumber", "wool", "grain", "ore"]),
-        z.enum(["brick", "lumber", "wool", "grain", "ore"]),
-      ]),
-    }),
-    z.object({ type: z.literal("EndTurn") }),
-  ]),
-});
-
-const aiCommentarySchema = z.object({
-  seatToken: z.string().min(1),
-  expectedRevision: z.number().int().positive(),
-  mode: z.enum(AI_COMMENTARY_MODES),
-});
-
 export async function buildApp(registry: RoomRegistry | undefined = undefined, options: AppOptions = {}) {
   registry ??= new RoomRegistry();
+  const database = options.database ?? new SqliteDatabase(":memory:");
+  const sessionLifetimeMs = options.sessionLifetimeMs ?? 30 * 86400_000;
+  const accounts = new AccountService(new SqliteAccountRepository(database), registry, sessionLifetimeMs);
+  const matches = new SqliteMatchRepository(database);
+  registry.configureMatchRepository(matches, () => app.log.error({ code: "SETTLEMENT_WRITE_FAILED" }, "Final settlement could not be saved; timer will retry"));
+  registry.configureAccountValidation((id) => accounts.repository.hasLiveSession(id, Date.now()));
   if (options.aiCommentator !== undefined) registry.configureAiCommentator(options.aiCommentator);
   const idleRoomTtlMs = options.idleRoomTtlMs ?? DEFAULT_IDLE_ROOM_TTL_MS;
   const roomSweepIntervalMs = options.roomSweepIntervalMs ?? DEFAULT_ROOM_SWEEP_INTERVAL_MS;
@@ -154,6 +58,11 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
     trustProxy: options.trustProxy ?? false,
     // Successful traffic stays out of the journal; the hook below records failures.
     logController: new LogController({ disableRequestLogging: true }),
+  });
+
+  app.addHook("onRequest", async (request, reply) => {
+    if (request.url.startsWith("/api/")) reply.header("cache-control", "no-store");
+    if (request.url.startsWith("/ws") && request.headers.origin) sameOrigin(request);
   });
 
   // Routes answer their own errors, so Fastify never sees them. Log the route
@@ -205,6 +114,8 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
   // Anything thrown outside a route handler (rate limiter, malformed body, bugs)
   // still has to reach the client in the shape apps/web parses.
   app.setErrorHandler((error: FastifyError, _request, reply) => {
+    if (error instanceof AuthError) return reply.code(error.statusCode).send({ error: { code: error.code, message: error.message } });
+    if (error instanceof z.ZodError) return reply.code(400).send({ error: { code: "INVALID_REQUEST", message: "请检查输入内容" } });
     const statusCode = error.statusCode ?? 500;
     if (statusCode >= 500) {
       rejectionCodes.set(reply, "INTERNAL_ERROR");
@@ -222,10 +133,16 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
     }
   }, roomSweepIntervalMs);
   sweep.unref();
+  const sessionSweep = setInterval(() => accounts.expireSessions(), 30_000);
+  sessionSweep.unref();
   app.addHook("onClose", async () => {
     clearInterval(sweep);
+    clearInterval(sessionSweep);
     registry.dispose();
+    if (!options.database) database.close();
   });
+
+  registerAuthRoutes(app, accounts, matches, sessionLifetimeMs);
 
   app.get("/health", async () => ({ ok: true, service: "catan-server", rooms: registry.roomCount }));
 
@@ -239,7 +156,9 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
   }, async (request, reply) => {
     try {
       const body = playerNameSchema.parse(request.body);
-      return reply.code(201).send(registry.createRoom(body.playerName));
+      return reply.code(201).send(registry.createRoom(
+        readAccountCookie(request) ? accountContext(accounts, request, true).account.displayName : body.playerName,
+        readAccountCookie(request) ? accountContext(accounts, request, true).account.id : null));
     } catch (error) {
       return sendError(reply, error);
     }
@@ -248,7 +167,9 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
   app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/join", async (request, reply) => {
     try {
       const body = playerNameSchema.parse(request.body);
-      return reply.code(200).send(registry.joinRoom(request.params.roomId, body.playerName));
+      return reply.code(200).send(registry.joinRoom(request.params.roomId,
+        readAccountCookie(request) ? accountContext(accounts, request, true).account.displayName : body.playerName,
+        readAccountCookie(request) ? accountContext(accounts, request, true).account.id : null));
     } catch (error) {
       return sendError(reply, error);
     }
@@ -432,6 +353,10 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
             socket.send(JSON.stringify({ type: "room_closed", message: "房主已解散房间" }));
             socket.close();
           },
+          () => {
+            socket.send(JSON.stringify({ type: "account_session_replaced", message: "账号登录已变更或退出，请重新登录" }));
+            socket.close(4001);
+          },
         );
 
         socket.on("close", unsubscribe);
@@ -455,6 +380,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
 const rejectionCodes = new WeakMap<FastifyReply, string>();
 
 function sendError(reply: FastifyReply, error: unknown) {
+  if (error instanceof AuthError) return reply.code(error.statusCode).send({ error: { code: error.code, message: error.message } });
   const normalized = normalizeError(error);
   const statusCode =
     normalized.code === "ROOM_NOT_FOUND"

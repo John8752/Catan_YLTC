@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
 import { createBaseGame, resourceAmounts, type GameEventRecord, type GameState } from "@catan/game-core";
-import { projectGameForPlayer } from "@catan/protocol";
+import { projectGameForPlayer, type CatanSettlementV1 } from "@catan/protocol";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { GameResult } from "./GameResult.js";
+import { CatanResultPanel, GameResult } from "./GameResult.js";
 
 const PLAYERS = [
   { id: "player_1", name: "林", color: "terracotta" as const },
@@ -37,7 +37,7 @@ describe("GameResult", () => {
     ] satisfies GameEventRecord[];
     const game = projectGameForPlayer(state, "player_1", records);
 
-    render(<GameResult game={game} />);
+    const { rerender } = render(<GameResult game={game} />);
 
     expect(screen.getByRole("heading", { name: "林 赢得群岛" })).not.toBeNull();
     expect(screen.getByText(/海陆双冠/)).not.toBeNull();
@@ -47,6 +47,23 @@ describe("GameResult", () => {
     activateTab("资源统计");
     expect(screen.getByRole("columnheader", { name: "骰产合计" })).not.toBeNull();
     expect(screen.getByRole("rowheader", { name: /林/ })).not.toBeNull();
+
+    const tabs = ["概览", "骰子统计", "资源卡统计", "活动统计", "资源统计"];
+    const liveText = tabs.map((name) => {
+      activateTab(name);
+      return screen.getByRole("tabpanel").textContent;
+    });
+    const saved: CatanSettlementV1 = {
+      ruleProfile: "base-3-4", winnerId: "player_1", victoryPointsToWin: game.victoryPointsToWin,
+      players: PLAYERS, summary: game.summary!,
+    };
+    rerender(<CatanResultPanel result={JSON.parse(JSON.stringify(saved)) as CatanSettlementV1} />);
+    expect(screen.queryByRole("button", { name: "查看棋盘" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "林 赢得群岛" })).not.toBeNull();
+    tabs.forEach((name, index) => {
+      activateTab(name);
+      expect(screen.getByRole("tabpanel").textContent).toBe(liveText[index]);
+    });
   });
 });
 

@@ -12,10 +12,12 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": "http://localhost:8787",
+      // Preserve the browser's Host for the server's same-origin CSRF check.
+      "/api": { target: "http://localhost:8787", changeOrigin: false },
       "/ws": {
         target: "ws://localhost:8787",
         ws: true,
+        changeOrigin: false,
       },
     },
   },

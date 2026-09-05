@@ -1,3 +1,6 @@
+import type { AccountView, AuthResponse } from "@catan/protocol";
+import { getAccount, setAccountCsrf } from "./auth-api.js";
+import { AccountControl } from "./components/AccountControl.js";
 import type { PlayerColor } from "@catan/game-core";
 import type { GameCommand, RoomSettingsInput, RoomView } from "@catan/protocol";
 import { useEffect, useRef, useState } from "react";
@@ -49,6 +52,8 @@ adoptLegacyTabSession(window.sessionStorage, window.localStorage);
 const seatSlot = seatSlotFromLocation(window.location.search);
 const playerSessionStore = createPlayerSessionStore(window.localStorage, seatSlot);
 export function App() {
+  const [account, setAccount] = useState<AccountView | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const bankInSidebar = useMediaQuery("(min-width: 1024px)");
   const [boardInfoHost, setBoardInfoHost] = useState<HTMLDivElement | null>(null);
   const [session, setSession] = useState<PlayerSession | null>(() => readSession());
@@ -69,13 +74,38 @@ export function App() {
   const actionNotice = useActionAttention(room?.game ?? null, snapshotEpoch, connectionState === "live");
   const victoryNotice = useVictoryWarnings(room?.game ?? null, snapshotEpoch, connectionState === "live", actionNotice !== null);
 
+  useEffect(() => {
+    let active = true;
+    void getAccount().then((response) => {
+      if (active && response) installAccount(response);
+    }).catch(() => { /* Guests can still enter if account bootstrap fails. */ })
+      .finally(() => active && setAuthReady(true));
+    return () => { active = false; };
+  }, []);
+
+  function installAccount(response: AuthResponse) {
+    setAccount(response.account);
+    setAccountCsrf(response.csrfToken);
+    if (response.activeSeat) {
+      const { roomId, playerId, seatToken, room: nextRoom } = response.activeSeat;
+      storeSession({ roomId, playerId, seatToken });
+      setRoom(nextRoom);
+    }
+  }
+  function clearAccount() {
+    setAccount(null);
+    setAccountCsrf(null);
+    clearCurrentSession();
+  }
+  const accountControl = <AccountControl account={account} session={session} onLogin={installAccount} onLogout={clearAccount} onProfile={setAccount} />;
+
   // A read goes stale the moment anyone builds, so the marker does not outlive
   // the position it was describing.
   const boardRevision = room?.game?.revision ?? null;
   useEffect(() => setIntentFocusVertexId(null), [boardRevision]);
 
   useEffect(() => {
-    if (session === null) {
+    if (!authReady || session === null) {
       return;
     }
 
@@ -106,11 +136,15 @@ export function App() {
           }
           setRoom(message.room);
           setError(null);
-        } else if (message.type === "room_closed") {
+        } else if (message.type === "room_closed" || message.type === "account_session_replaced") {
           // The room is already gone, so drop the seat before the socket's close
           // handler starts reconnecting to something that no longer exists.
           active = false;
-          clearCurrentSession();
+          if (message.type === "account_session_replaced") clearAccount(); else clearCurrentSession();
+          setError(message.message);
+        } else if (message.code === "PLAYER_NOT_FOUND" || message.code === "ROOM_NOT_FOUND") {
+          active = false;
+          clearAccount();
           setError(message.message);
         } else {
           setError(message.message);
@@ -130,7 +164,7 @@ export function App() {
       if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
       if (socket !== null) closeSocket(socket);
     };
-  }, [session]);
+  }, [session, authReady]);
 
   useEffect(() => {
     setBuildMode(null);
@@ -287,6 +321,7 @@ export function App() {
     try {
       await action();
     } catch (caught) {
+      if (caught instanceof ApiError && caught.code === "AUTH_REQUIRED") clearAccount();
       setError(errorMessage(caught));
     } finally {
       busyRef.current = false;
@@ -300,7 +335,7 @@ export function App() {
   }
 
   if (session === null) {
-    return <Welcome busy={busy} error={error} onCreate={handleCreate} onJoin={handleJoin} />;
+    return <Welcome busy={busy || !authReady} error={error} onCreate={handleCreate} onJoin={handleJoin} accountControl={accountControl} defaultPlayerName={account?.displayName ?? ""} />;
   }
 
   if (room === null) {
@@ -341,12 +376,14 @@ export function App() {
       {liveGame === null ? <div className="game-brand lg:col-start-1 lg:row-start-1" aria-label="Catan YLTC">
         <span aria-hidden="true">⬡</span>
         <strong>Catan YLTC</strong>
+        {accountControl}
       </div> : null}
       {liveGame === null ? null : (
         <div className="seat-column col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col gap-1 phone-landscape:col-span-2 xl:min-h-0">
           <TurnForecastBar
             game={liveGame}
             actions={<TableUtilities
+              accountControl={<AccountControl compact account={account} session={session} onLogin={installAccount} onLogout={clearAccount} onProfile={setAccount} />}
               room={room}
               playerId={session.playerId}
               busy={busy}

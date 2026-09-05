@@ -8,7 +8,7 @@
 # Usage (run as a user that can sudo to the catan service account):
 #   sudo bash /opt/catan/deploy/release.sh
 #
-# There is no database to back up. Rooms live in memory (ADR-0007), so the
+# Accounts and final settlements are backed up before updating. Rooms stay in memory, so the
 # restart below ENDS EVERY MATCH IN PROGRESS. Release when nobody is playing.
 
 set -euo pipefail
@@ -18,6 +18,8 @@ APP_USER="${APP_USER:-catan}"
 SERVICE="${SERVICE:-catan}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8787/health}"
 DEPLOY_LOG="${DEPLOY_LOG:-/var/log/catan/deploy.log}"
+DATABASE_PATH="${DATABASE_PATH:-/var/lib/catan/catan.sqlite}"
+BACKUP_DIR="${BACKUP_DIR:-/var/lib/catan-backups}"
 # Under `sudo -u catan`, whoami is "catan"; SUDO_USER preserves the real operator.
 OPERATOR="${SUDO_USER:-$(whoami)}"
 
@@ -50,12 +52,21 @@ fi
 
 BUILD_START="$(date +%s)"
 
+# Use the previous release's CLI before changing migration code. Never copy a live WAL database.
+if [ -f "$DATABASE_PATH" ]; then
+  install -d -m 0700 -o "$APP_USER" "$BACKUP_DIR"
+  as_app env DATABASE_PATH="$DATABASE_PATH" node "$APP_DIR/apps/server/dist/database/cli.js" backup "$BACKUP_DIR" 14 || fail "database backup"
+fi
+
 as_app git pull --ff-only             || fail "git pull"
 as_app pnpm install --frozen-lockfile || fail "pnpm install"
 as_app pnpm build                     || fail "pnpm build"
 
 NEW_COMMIT="$(as_app git rev-parse --short HEAD)"
 
+sudo cp deploy/catan.service deploy/catan-backup.service deploy/catan-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload || fail "systemd reload"
+sudo systemctl enable --now catan-backup.timer || fail "backup timer"
 sudo systemctl restart "$SERVICE"     || fail "systemctl restart"
 
 # Poll the health endpoint for up to 30s before declaring success.

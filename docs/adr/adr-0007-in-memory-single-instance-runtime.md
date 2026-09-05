@@ -23,3 +23,7 @@ Eviction is required, not optional: players close the tab far more often than th
 The host can also end a room outright, started or not. Leaving is refused once a game is running, so before this the only ways a live room went away were the idle sweep an hour later or a process restart that took every other room with it. Disbanding tells each subscriber before the room stops existing, so a client returns to the entry screen instead of reconnecting to something that is gone. Eviction stays the backstop for rooms nobody ends on purpose.
 
 ADR-0002 already anticipates persisted matches: commands and events are recorded per room, so a future durable store can replay them without reshaping the engine. This ADR fixes the interim runtime, not the ceiling.
+
+## Account milestone exception (2026-09-05)
+
+ADR-0010 persists accounts and login sessions. ADR-0011 persists final match settlements only. This supersedes the original no-database statement for those records; canonical rooms, running games, seeds and replay history remain in memory. A restart still ends every active match.

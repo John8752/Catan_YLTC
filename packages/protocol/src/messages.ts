@@ -68,6 +68,7 @@ export interface AiCommentaryResponse {
 }
 
 export type RoomServerMessage =
+  | { readonly type: "account_session_replaced"; readonly message: string }
   | {
       readonly type: "room_state";
       readonly room: RoomView;

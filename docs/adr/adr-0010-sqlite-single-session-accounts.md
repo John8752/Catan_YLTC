@@ -1,6 +1,6 @@
 # ADR-0010: SQLite-backed single-session accounts
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-04
 
 ## Context
@@ -9,10 +9,10 @@ The product currently identifies a player only by an in-memory room member and a
 
 The production service is intentionally one Node process and keeps rooms in memory under ADR-0007. It runs on a bare-IP HTTP origin. The account milestone must fit that runtime without moving game rules or private state into the database.
 
-## Proposed decision
+## Decision
 
 - Add optional username/password accounts stored in a server-local SQLite database.
-- Persist accounts and one opaque login session per account. Continue keeping rooms and canonical games in memory.
+- Persist accounts and one opaque login session per account. ADR-0011 adds immutable final settlements partitioned by game type; continue keeping rooms and canonical games in memory.
 - Preserve guest create/join behavior.
 - Allow one live login session and one live room seat per account.
 - Make the latest successful login authoritative. It replaces the prior account session, rotates the active room's seat token, closes prior room subscriptions with an explicit protocol reason and returns the replacement seat to the new browser.

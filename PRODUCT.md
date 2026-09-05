@@ -56,7 +56,7 @@ Player count is never used as a substitute for a named rule profile.
 
 ## Post-M0 account milestone
 
-Accounts are an optional enhancement rather than a new entry requirement. Guest players must still be able to open a link, choose a display name and enter a room without registering. A registered account provides a durable profile and one active login across devices; the newest successful login takes over any live room seat and invalidates the previous device. Account persistence does not imply durable room or match recovery.
+Accounts are an optional enhancement rather than a new entry requirement. Guest players must still be able to open a link, choose a display name and enter a room without registering. A registered account provides a durable profile and one active login across devices; the newest successful login takes over any live room seat and invalidates the previous device. Account persistence also includes final match settlements, partitioned by game type (`gameId`) with a unique `matchId` and versioned game-specific payload. Only completed results are durable; this does not imply room or in-progress match recovery. The current game type is `catan`; accounts are shared identities across future game types.
 
 ## Visual direction
 

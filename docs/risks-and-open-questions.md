@@ -27,10 +27,10 @@ Resolved after M0: the 5–6 player profile follows the revised paired-player tu
 |---|---|---|
 | D6 | Account availability | Optional; guest room entry remains supported |
 | D7 | Concurrent login policy | One session and one live room seat per account; newest successful login takes over |
-| D8 | Initial persistence scope | SQLite persists accounts and login sessions, not rooms or canonical matches |
+| D8 | Initial persistence scope | SQLite persists accounts, login sessions and game-scoped final settlements; live rooms and canonical matches remain in memory |
 | D9 | Initial transport | Bare-IP HTTP is temporarily accepted with an explicit warning; credentials are not secure against network interception until HTTPS |
 
-The implementation and regression requirements for D6–D9 are recorded in [the account system plan](./account-system-plan.md) and proposed ADR-0010. The HTTP choice is a known security exposure, not a mitigation target that can be solved by password hashing or cookie flags alone.
+The implementation and regression requirements for D6–D9 are recorded in [the account system plan](./account-system-plan.md) and accepted ADR-0010/0011. The HTTP choice is a known security exposure, not a mitigation target that can be solved by password hashing or cookie flags alone.
 
 ### O3 disconnected mandatory-resolution direction (partially superseded 2026-08-25)
 

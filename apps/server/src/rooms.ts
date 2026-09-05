@@ -1,3 +1,7 @@
+import type { RoomMember, RoomRecord, RoomListener, Subscription } from "./room-types.js";
+import { AccountSeats } from "./account-seats.js";
+import { prepareSettlement } from "./settlements.js";
+import type { MatchRepository } from "./database/match-repository.js";
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import {
   createGame,
@@ -8,8 +12,6 @@ import {
   getRuleProfileDefinition,
   PLAYER_COLORS,
   type GameCommand,
-  type GameState,
-  type GameEventRecord,
   type PlayerColor,
   type PlayableRuleProfile,
 } from "@catan/game-core";
@@ -18,71 +20,25 @@ import {
   type LeaveRoomResponse,
   projectGameForPlayer,
   collectVictoryWarnings,
-  type VictoryWarningEffectView,
   type PlayerSessionResponse,
   type RoomView,
-  type RoomSettingsInput,
-  type PublicSetupAnalysisView,
 } from "@catan/protocol";
-import {
-  buildPublicSetupAnalysisInput,
-  type AiCommentator,
-  type PublicSetupAnalysisInput,
-} from "./ai-commentary.js";
+import type { AiCommentator } from "./ai-commentary.js";
+import { RoomSetupAnalysis } from "./room-setup-analysis.js";
 import { normalizePlayerName, RoomError } from "./room-errors.js";
 import { TurnTimerManager, type TurnTimerExpiry } from "./turn-timer.js";
-
-/**
- * How long to wait before each retry of a failed public setup analysis. The
- * length of this list is the retry budget: two entries means three attempts.
- * Kept short because the room sits on `loading` for the whole sequence.
- */
-const SETUP_ANALYSIS_RETRY_DELAYS_MS = [1_000, 4_000] as const;
-
-interface RoomMember {
-  readonly id: string;
-  readonly seatToken: string;
-  readonly name: string;
-  color: PlayerColor;
-}
-
-interface RoomRecord {
-  readonly id: string;
-  hostPlayerId: string;
-  seed: number;
-  revision: number;
-  readonly members: RoomMember[];
-  settings: RoomSettingsInput;
-  game: GameState | null;
-  /** Keys of commands already applied, so a client retry is not replayed. */
-  readonly appliedCommands: Set<string>;
-  readonly history: GameEventRecord[];
-  /** Derived public milestones, bounded to three per seat; never game legality. */
-  readonly victoryWarnings: VictoryWarningEffectView[];
-  publicSetupAnalysis: PublicSetupAnalysisView | null;
-  /** Per player, the turn number whose intent read they have already spent. */
-  readonly tableIntentTurns: Map<string, number>;
-  lastActiveAt: number;
-}
-
-type RoomListener = (room: RoomView) => void;
-
-interface Subscription {
-  readonly playerId: string;
-  readonly listener: RoomListener;
-  /** Told once when the room is disbanded, so a socket can say why it is closing. */
-  readonly onClosed?: (() => void) | undefined;
-}
 
 export class RoomRegistry {
   private readonly rooms = new Map<string, RoomRecord>();
   private readonly subscriptions = new Map<string, Set<Subscription>>();
+  private readonly accountSeats = new AccountSeats(this.rooms, this.subscriptions, (room, playerId) => this.projectRoom(room, playerId));
+  private matchRepository: MatchRepository | null = null;
+  private onSettlementError: () => void = () => {};
+  private accountIsActive: (accountId: string) => boolean = () => true;
   private readonly nextSeed: () => number;
   private readonly now: () => number;
   private readonly turnTimers: TurnTimerManager;
-  private readonly setupAnalysisRetries = new Map<string, ReturnType<typeof setTimeout>>();
-  private aiCommentator: AiCommentator | null;
-  private disposed = false;
+  private readonly setupAnalysis: RoomSetupAnalysis;
 
   constructor(
     options: {
@@ -94,24 +50,39 @@ export class RoomRegistry {
     this.nextSeed = options.nextSeed ?? (() => randomInt(1, 2_147_483_647));
     this.now = options.now ?? (() => Date.now());
     this.turnTimers = new TurnTimerManager(this.now);
-    this.aiCommentator = options.aiCommentator ?? null;
+    this.setupAnalysis = new RoomSetupAnalysis(this.rooms, options.aiCommentator ?? null, (room, id) => this.projectRoom(room, id), (room) => this.notify(room));
   }
 
   configureAiCommentator(aiCommentator: AiCommentator | null): void {
-    this.aiCommentator = aiCommentator;
+    this.setupAnalysis.configure(aiCommentator);
   }
 
-  createRoom(playerName: string): PlayerSessionResponse {
+  configureMatchRepository(repository: MatchRepository, onError: () => void = () => {}): void {
+    this.matchRepository = repository;
+    this.onSettlementError = onError;
+  }
+  configureAccountValidation(validate: (accountId: string) => boolean): void { this.accountIsActive = validate; }
+
+  accountSeat(accountId: string): PlayerSessionResponse | null { return this.accountSeats.seat(accountId); }
+  prepareAccountTakeover(accountId: string, guestSeat?: { readonly roomId: string; readonly seatToken: string }): () => void {
+    return this.accountSeats.prepare(accountId, guestSeat);
+  }
+
+  createRoom(playerName: string, accountId: string | null = null): PlayerSessionResponse {
+    const existing = accountId === null ? null : this.accountSeat(accountId);
+    if (existing) return existing;
     const name = normalizePlayerName(playerName);
     const roomId = this.createRoomId();
     const playerId = `player_${randomUUID()}`;
     const seatToken = randomBytes(24).toString("base64url");
     const room: RoomRecord = {
       id: roomId,
+      matchId: randomUUID(),
+      startedAt: 0,
       hostPlayerId: playerId,
       seed: this.createSeed(),
       revision: 1,
-      members: [{ id: playerId, seatToken, name, color: PLAYER_COLORS[0] }],
+      members: [{ id: playerId, seatToken, accountId, name, color: PLAYER_COLORS[0] }],
       settings: { ruleProfile: "base-3-4", victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN, bankCountsPublic: true },
       game: null,
       appliedCommands: new Set(),
@@ -132,7 +103,9 @@ export class RoomRegistry {
     };
   }
 
-  joinRoom(roomId: string, playerName: string): PlayerSessionResponse {
+  joinRoom(roomId: string, playerName: string, accountId: string | null = null): PlayerSessionResponse {
+    const existing = accountId === null ? null : this.accountSeat(accountId);
+    if (existing) return existing;
     const room = this.requireRoom(roomId);
     const name = normalizePlayerName(playerName);
 
@@ -155,7 +128,7 @@ export class RoomRegistry {
 
     const playerId = `player_${randomUUID()}`;
     const seatToken = randomBytes(24).toString("base64url");
-    room.members.push({ id: playerId, seatToken, name, color });
+    room.members.push({ id: playerId, seatToken, accountId, name, color });
     room.revision += 1;
     this.notify(room);
 
@@ -270,7 +243,7 @@ export class RoomRegistry {
 
     if (room.members.length === 0) {
       this.turnTimers.clear(room.id);
-      this.cancelSetupAnalysisRetry(room.id);
+      this.setupAnalysis.cancel(room.id);
       this.rooms.delete(room.id);
       this.subscriptions.delete(room.id);
       return { roomDeleted: true, newHostPlayerId: null };
@@ -303,7 +276,7 @@ export class RoomRegistry {
 
     for (const subscription of this.subscriptions.get(room.id) ?? []) subscription.onClosed?.();
     this.turnTimers.clear(room.id);
-    this.cancelSetupAnalysisRetry(room.id);
+    this.setupAnalysis.cancel(room.id);
     this.rooms.delete(room.id);
     this.subscriptions.delete(room.id);
   }
@@ -326,10 +299,11 @@ export class RoomRegistry {
       throw new RoomError("NOT_ENOUGH_PLAYERS", `At least ${profile.minPlayers} players are required`);
     }
 
+    room.startedAt = this.now();
     room.game = createGame({
       id: `game_${room.id.toLowerCase()}`,
       seed: room.seed,
-      players: room.members,
+      players: room.members.map(({ id, name, color }) => ({ id, name, color })),
       victoryPointsToWin: room.settings.victoryPointsToWin,
       ruleProfile: room.settings.ruleProfile,
     });
@@ -356,7 +330,7 @@ export class RoomRegistry {
       this.rooms.delete(room.id);
       this.subscriptions.delete(room.id);
       this.turnTimers.clear(room.id);
-      this.cancelSetupAnalysisRetry(room.id);
+      this.setupAnalysis.cancel(room.id);
       evicted.push(room.id);
     }
 
@@ -428,13 +402,15 @@ export class RoomRegistry {
       return { commandId, room: this.projectRoom(room, playerId) };
     }
 
+    const settlement = prepareSettlement(room, result.state, result.events, this.now());
+    if (settlement && this.matchRepository) this.matchRepository.save(settlement.record, settlement.participants);
     room.victoryWarnings.push(...collectVictoryWarnings(room.game, result.state, room.victoryWarnings));
     room.game = result.state;
     room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
     room.revision += 1;
     room.appliedCommands.add(cacheKey);
     if (result.events.some((event) => event.type === "setup_completed")) {
-      this.startPublicSetupAnalysis(room);
+      this.setupAnalysis.start(room);
     }
     this.syncTurnTimer(room);
     const response: GameCommandResponse = {
@@ -450,12 +426,13 @@ export class RoomRegistry {
     seatToken: string,
     listener: RoomListener,
     onClosed?: () => void,
+    onReplaced?: () => void,
   ): () => void {
     const room = this.requireRoom(roomId);
     const member = this.requireCredential(room, seatToken);
     const playerId = member.id;
 
-    const subscription: Subscription = { playerId, listener, onClosed };
+    const subscription: Subscription = { playerId, listener, onClosed, onReplaced };
     const roomSubscriptions = this.subscriptions.get(room.id) ?? new Set<Subscription>();
     roomSubscriptions.add(subscription);
     this.subscriptions.set(room.id, roomSubscriptions);
@@ -471,9 +448,8 @@ export class RoomRegistry {
   }
 
   dispose(): void {
-    this.disposed = true;
     this.turnTimers.dispose();
-    for (const roomId of [...this.setupAnalysisRetries.keys()]) this.cancelSetupAnalysisRetry(roomId);
+    this.setupAnalysis.dispose();
   }
 
   private createRoomId(): string {
@@ -521,6 +497,10 @@ export class RoomRegistry {
     const member = room.members.find((candidate) => candidate.seatToken === seatToken);
     if (member === undefined) {
       throw new RoomError("PLAYER_NOT_FOUND", "Seat credential is invalid");
+    }
+    if (member.accountId !== null && !this.accountIsActive(member.accountId)) {
+      this.prepareAccountTakeover(member.accountId)();
+      throw new RoomError("PLAYER_NOT_FOUND", "账号登录已失效，请重新登录");
     }
     return member;
   }
@@ -576,88 +556,6 @@ export class RoomRegistry {
     };
   }
 
-  private startPublicSetupAnalysis(room: RoomRecord): void {
-    if (this.aiCommentator === null || room.game === null || room.publicSetupAnalysis !== null) return;
-
-    const input = buildPublicSetupAnalysisInput(this.projectRoom(room, room.hostPlayerId));
-    room.publicSetupAnalysis = { status: "loading", sourceRevision: input.sourceRevision };
-    this.runPublicSetupAnalysis(room.id, input, 0);
-  }
-
-  /**
-   * The job runs once on `setup_completed` and nothing else ever calls it, so a
-   * single upstream blip used to cost a room its only opening read for good.
-   * Transient failures are retried in place; the room stays on `loading` until
-   * the attempts run out, and only then does it settle on `failed`.
-   */
-  private runPublicSetupAnalysis(
-    roomId: string,
-    input: PublicSetupAnalysisInput,
-    attempt: number,
-  ): void {
-    const commentator = this.aiCommentator;
-    if (commentator === null) return;
-    const sourceRevision = input.sourceRevision;
-
-    void commentator.analyzeSetup(input).then(
-      (analysis) => this.finishPublicSetupAnalysis(roomId, sourceRevision, {
-        status: "ready",
-        sourceRevision,
-        ...analysis,
-      }),
-      () => {
-        const delay = SETUP_ANALYSIS_RETRY_DELAYS_MS[attempt];
-        if (delay === undefined || !this.isAwaitingSetupAnalysis(roomId, sourceRevision)) {
-          this.finishPublicSetupAnalysis(roomId, sourceRevision, {
-            status: "failed",
-            sourceRevision,
-            message: "AI 开局点评暂时没有生成成功",
-          });
-          return;
-        }
-
-        this.setupAnalysisRetries.set(roomId, setTimeout(() => {
-          this.setupAnalysisRetries.delete(roomId);
-          if (this.isAwaitingSetupAnalysis(roomId, sourceRevision)) {
-            this.runPublicSetupAnalysis(roomId, input, attempt + 1);
-          }
-        }, delay));
-      },
-    );
-  }
-
-  /** Whether the room is still waiting on the very analysis run that is reporting back. */
-  private isAwaitingSetupAnalysis(roomId: string, sourceRevision: number): boolean {
-    if (this.disposed) return false;
-    const analysis = this.rooms.get(roomId)?.publicSetupAnalysis;
-    return analysis?.status === "loading" && analysis.sourceRevision === sourceRevision;
-  }
-
-  private cancelSetupAnalysisRetry(roomId: string): void {
-    const handle = this.setupAnalysisRetries.get(roomId);
-    if (handle === undefined) return;
-    clearTimeout(handle);
-    this.setupAnalysisRetries.delete(roomId);
-  }
-
-  private finishPublicSetupAnalysis(
-    roomId: string,
-    sourceRevision: number,
-    analysis: PublicSetupAnalysisView,
-  ): void {
-    if (this.disposed) return;
-    const room = this.rooms.get(roomId);
-    if (
-      room === undefined ||
-      room.publicSetupAnalysis?.status !== "loading" ||
-      room.publicSetupAnalysis.sourceRevision !== sourceRevision
-    ) return;
-
-    room.publicSetupAnalysis = analysis;
-    room.revision += 1;
-    this.notify(room);
-  }
-
   private syncTurnTimer(room: RoomRecord): void {
     if (room.game === null) {
       this.turnTimers.clear(room.id);
@@ -675,6 +573,16 @@ export class RoomRegistry {
       return;
     }
 
+    const settlement = prepareSettlement(room, result.state, result.events, this.now());
+    try {
+      if (settlement && this.matchRepository) this.matchRepository.save(settlement.record, settlement.participants);
+    } catch {
+      this.onSettlementError();
+      // Keep the previous authoritative state and re-arm its timeout for retry.
+      this.syncTurnTimer(room);
+      this.notify(room);
+      return;
+    }
     room.victoryWarnings.push(...collectVictoryWarnings(room.game, result.state, room.victoryWarnings));
     room.game = result.state;
     room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));

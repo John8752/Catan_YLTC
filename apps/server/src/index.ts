@@ -1,3 +1,9 @@
+import { acquireRuntimeLock } from "./database/runtime-lock.js";
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { SqliteDatabase, assertExternalDatabase } from "./database/sqlite-database.js";
 import {
   buildApp,
   DEFAULT_AI_REQUESTS_PER_MINUTE,
@@ -10,7 +16,16 @@ const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 const host = process.env.HOST ?? "0.0.0.0";
 const logLevel = process.env.LOG_LEVEL ?? "info";
 const deepSeekApiKey = process.env.DEEPSEEK_API_KEY?.trim();
+const defaultDataDir = resolve(homedir(), ".catan-yltc");
+if (!process.env.DATABASE_PATH && process.env.NODE_ENV === "production") throw new Error("DATABASE_PATH is required in production");
+if (!process.env.DATABASE_PATH) mkdirSync(defaultDataDir, { recursive: true, mode: 0o700 });
+const databasePath = process.env.DATABASE_PATH ?? resolve(defaultDataDir, "catan.sqlite");
+assertExternalDatabase(databasePath, fileURLToPath(new URL("../../..", import.meta.url)));
+const unlock = acquireRuntimeLock(databasePath);
+const database = new SqliteDatabase(databasePath);
 const app = await buildApp(undefined, {
+  database,
+  sessionLifetimeMs: readPositiveInt("ACCOUNT_SESSION_DAYS", 30) * 86400_000,
   logger: { level: logLevel },
   // Caddy is the only thing that can reach this process, so its X-Forwarded-For
   // is the real client address. Widen only if another hop is added in front.
@@ -29,6 +44,8 @@ const app = await buildApp(undefined, {
         ...(process.env.DEEPSEEK_BASE_URL === undefined ? {} : { baseUrl: process.env.DEEPSEEK_BASE_URL }),
       }),
 });
+
+app.addHook("onClose", async () => { database.close(); unlock(); });
 
 // systemd sends SIGTERM on restart/stop: close listeners and in-flight sockets
 // before exiting so players get a clean disconnect instead of a severed socket.

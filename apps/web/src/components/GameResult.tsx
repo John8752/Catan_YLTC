@@ -1,4 +1,4 @@
-import type { GameView, PlayerGameSummaryView } from "@catan/protocol";
+import type { CatanSettlementV1, GameView, PlayerGameSummaryView } from "@catan/protocol";
 import { BarChart3, ChevronDown, Crown, Dices, Route, ShieldCheck, Trophy } from "lucide-react";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Button } from "@/components/ui/button.js";
@@ -13,11 +13,6 @@ const CONFETTI_COLORS = ["#f0c75e", "#d96b4e", "#75a889", "#72a9c0", "#f5e1a4"] 
 export function GameResult({ game }: { readonly game: GameView }) {
   const [collapsed, setCollapsed] = useState(false);
   if (game.phase.kind !== "finished" || game.summary === null) return null;
-
-  const winnerId = game.phase.winnerId;
-  const winner = game.players.find((player) => player.id === winnerId);
-  const winnerSummary = game.summary.players.find((player) => player.playerId === winnerId);
-  if (winner === undefined || winnerSummary === undefined) return null;
 
   if (collapsed) {
     return (
@@ -34,57 +29,72 @@ export function GameResult({ game }: { readonly game: GameView }) {
           <span key={index} style={confettiStyle(index)} />
         ))}
       </div>
-      <div className="game-result-panel">
-        <header className="game-result-header">
-          <div className="winner-medallion"><Crown aria-hidden="true" /></div>
-          <div className="min-w-0 flex-1">
-            <p className="eyebrow">对局结束 · {winnerTitle(winnerSummary, game)}</p>
-            <h2>{winner.name} 赢得群岛</h2>
-            <p>{winnerNarrative(winner.name, winnerSummary, game)}</p>
-          </div>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setCollapsed(true)}><ChevronDown />查看棋盘</Button>
-        </header>
-
-        <div className="game-result-meta">
-          <span><Dices />共掷骰 {game.summary.totalRolls} 次</span>
-          <span><BarChart3 />目标 {game.victoryPointsToWin} 分</span>
-          <span><Trophy />{scoreBreakdown(winnerSummary)}</span>
-        </div>
-
-        <Tabs defaultValue="overview" className="game-result-tabs [--foreground:#fff8df] [--ring:#f0c56b] [&_[data-slot=tabs-trigger]]:text-white/85 [&_[data-slot=tabs-trigger]:hover]:text-white [&_[data-slot=tabs-trigger][data-state=active]]:text-white [&_[data-slot=tabs-trigger]]:after:bg-[#f0c56b]">
-          <div className="overflow-x-auto pb-1">
-            <TabsList variant="line" className="min-w-max text-[#fff8df]">
-              <TabsTrigger value="overview">概览</TabsTrigger>
-              <TabsTrigger value="dice">骰子统计</TabsTrigger>
-              <TabsTrigger value="cards">资源卡统计</TabsTrigger>
-              <TabsTrigger value="activity">活动统计</TabsTrigger>
-              <TabsTrigger value="resources">资源统计</TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="overview"><Overview game={game} /></TabsContent>
-          <TabsContent value="dice"><DiceSummary game={game} /></TabsContent>
-          <TabsContent value="cards"><ResourceCardSummary game={game} /></TabsContent>
-          <TabsContent value="activity"><ActivitySummary game={game} /></TabsContent>
-          <TabsContent value="resources"><ResourceSummary game={game} /></TabsContent>
-        </Tabs>
-      </div>
+      <CatanResultPanel result={{ players: game.players, winnerId: game.phase.winnerId,
+        victoryPointsToWin: game.victoryPointsToWin, summary: game.summary }} onViewBoard={() => setCollapsed(true)} />
     </section>
   );
 }
 
-function Overview({ game }: { readonly game: GameView }) {
+/** One presentation for live results and durable account history; needs no live game state. */
+type ResultData = Pick<CatanSettlementV1, "players" | "winnerId" | "victoryPointsToWin" | "summary">;
+export function CatanResultPanel({ result: game, onViewBoard }: {
+  readonly result: ResultData;
+  readonly onViewBoard?: () => void;
+}) {
+  const winner = game.players.find((player) => player.id === game.winnerId);
+  const winnerSummary = game.summary.players.find((player) => player.playerId === game.winnerId);
+  if (!winner || !winnerSummary) return null;
+  return (
+    <section aria-label="赛后结算" className={cn("game-result-panel text-[#fff8df]", !onViewBoard && "!max-h-none min-w-0 shadow-none")}>
+      <header className="game-result-header">
+        <div className="winner-medallion"><Crown aria-hidden="true" /></div>
+        <div className={cn("min-w-0 flex-1 break-words", !onViewBoard && "!pr-0")}>
+          <p className="eyebrow">对局结束 · {winnerTitle(winnerSummary, game)}</p>
+          <h2>{winner.name} 赢得群岛</h2>
+          <p>{winnerNarrative(winner.name, winnerSummary, game)}</p>
+        </div>
+        {onViewBoard && <Button type="button" variant="secondary" size="sm" onClick={onViewBoard}><ChevronDown />查看棋盘</Button>}
+      </header>
+
+      <div className="game-result-meta">
+        <span><Dices />共掷骰 {game.summary.totalRolls} 次</span>
+        <span><BarChart3 />目标 {game.victoryPointsToWin} 分</span>
+        <span><Trophy />{scoreBreakdown(winnerSummary)}</span>
+      </div>
+
+      <Tabs defaultValue="overview" className="game-result-tabs [--foreground:#fff8df] [--ring:#f0c56b] [&_[data-slot=tabs-trigger]]:text-white/85 [&_[data-slot=tabs-trigger]:hover]:text-white [&_[data-slot=tabs-trigger][data-state=active]]:text-white [&_[data-slot=tabs-trigger]]:after:bg-[#f0c56b]">
+        <div className="overflow-x-auto pb-1">
+          <TabsList variant="line" className="min-w-max text-[#fff8df]">
+            <TabsTrigger value="overview">概览</TabsTrigger>
+            <TabsTrigger value="dice">骰子统计</TabsTrigger>
+            <TabsTrigger value="cards">资源卡统计</TabsTrigger>
+            <TabsTrigger value="activity">活动统计</TabsTrigger>
+            <TabsTrigger value="resources">资源统计</TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent value="overview"><Overview game={game} /></TabsContent>
+        <TabsContent value="dice"><DiceSummary game={game} /></TabsContent>
+        <TabsContent value="cards"><ResourceCardSummary game={game} /></TabsContent>
+        <TabsContent value="activity"><ActivitySummary game={game} /></TabsContent>
+        <TabsContent value="resources"><ResourceSummary game={game} /></TabsContent>
+      </Tabs>
+    </section>
+  );
+}
+
+function Overview({ game }: { readonly game: ResultData }) {
   // Ranked by what actually won the game, not by what was on the board.
   const ranked = [...requireSummary(game).players].sort((first, second) => second.score.total - first.score.total);
   return (
     <div className="result-ranking">
       {ranked.map((summary, index) => {
         const player = requirePlayer(game, summary.playerId);
-        const winner = game.phase.kind === "finished" && player.id === game.phase.winnerId;
+        const winner = player.id === game.winnerId;
         return (
           <article className={cn("result-player-row", winner && "is-winner")} key={player.id}>
             <span className="result-rank">{index + 1}</span>
             <span className={cn("result-player-color", PLAYER_SWATCH_CLASSES[player.color])} />
-            <strong>{player.name}</strong>
+            <strong className="min-w-0 break-words">{player.name}</strong>
             <span className="result-score">{summary.score.total}<small>总分</small></span>
             <span className="result-score-sources">
               {summary.score.settlements > 0 ? `${summary.score.settlements} 村庄` : ""}
@@ -100,7 +110,7 @@ function Overview({ game }: { readonly game: GameView }) {
   );
 }
 
-function DiceSummary({ game }: { readonly game: GameView }) {
+function DiceSummary({ game }: { readonly game: ResultData }) {
   const dice = requireSummary(game).diceTotals;
   const maximum = Math.max(1, ...dice.map((entry) => entry.count));
   return (
@@ -116,7 +126,7 @@ function DiceSummary({ game }: { readonly game: GameView }) {
   );
 }
 
-function ResourceCardSummary({ game }: { readonly game: GameView }) {
+function ResourceCardSummary({ game }: { readonly game: ResultData }) {
   return (
     <ResultTable headings={["玩家", "开局", "骰产", "交易入", "海贸入", "偷取", "被偷", "建造/发展", "交易出", "弃牌", "终局"]}>
       {requireSummary(game).players.map((summary) => {
@@ -133,7 +143,7 @@ function ResourceCardSummary({ game }: { readonly game: GameView }) {
   );
 }
 
-function ActivitySummary({ game }: { readonly game: GameView }) {
+function ActivitySummary({ game }: { readonly game: ResultData }) {
   return (
     <ResultTable headings={["玩家", "掷骰", "道路", "村庄", "城市", "发展购入", "发展使用", "玩家交易", "海上贸易", "强盗"]}>
       {requireSummary(game).players.map((summary) => {
@@ -151,7 +161,7 @@ function ActivitySummary({ game }: { readonly game: GameView }) {
   );
 }
 
-function ResourceSummary({ game }: { readonly game: GameView }) {
+function ResourceSummary({ game }: { readonly game: ResultData }) {
   return (
     <ResultTable headings={["玩家", ...RESOURCES.map(resourceLabel), "骰产合计"]}>
       {requireSummary(game).players.map((summary) => (
@@ -180,12 +190,12 @@ function ResultTable({ headings, children }: { readonly headings: readonly strin
   );
 }
 
-function PlayerCell({ game, playerId }: { readonly game: GameView; readonly playerId: string }) {
+function PlayerCell({ game, playerId }: { readonly game: ResultData; readonly playerId: string }) {
   const player = requirePlayer(game, playerId);
   return <th scope="row"><span className={cn("result-player-color", PLAYER_SWATCH_CLASSES[player.color])} />{player.name}</th>;
 }
 
-function winnerTitle(summary: PlayerGameSummaryView, game: GameView): string {
+function winnerTitle(summary: PlayerGameSummaryView, game: ResultData): string {
   if (summary.score.longestRoad && summary.score.largestArmy) return "海陆双冠";
   if (summary.score.cities >= 3) return "城邦筑造者";
   if (summary.score.longestRoad) return "道路织网者";
@@ -195,7 +205,7 @@ function winnerTitle(summary: PlayerGameSummaryView, game: GameView): string {
   return "稳健拓荒者";
 }
 
-function winnerNarrative(name: string, summary: PlayerGameSummaryView, game: GameView): string {
+function winnerNarrative(name: string, summary: PlayerGameSummaryView, game: ResultData): string {
   const achievements = [
     summary.score.settlements > 0 ? `${summary.score.settlements} 座村庄` : null,
     summary.score.cities > 0 ? `${summary.score.cities} 座城市` : null,
@@ -217,12 +227,12 @@ function scoreBreakdown(summary: PlayerGameSummaryView): string {
   return `${summary.score.total} 分 · ${points.join(" · ")}`;
 }
 
-function requireSummary(game: GameView) {
+function requireSummary(game: ResultData) {
   if (game.summary === null) throw new Error("Finished game summary is missing");
   return game.summary;
 }
 
-function requirePlayer(game: GameView, playerId: string) {
+function requirePlayer(game: ResultData, playerId: string) {
   const player = game.players.find((candidate) => candidate.id === playerId);
   if (player === undefined) throw new Error(`Missing result player ${playerId}`);
   return player;

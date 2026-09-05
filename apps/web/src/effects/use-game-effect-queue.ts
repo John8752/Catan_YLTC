@@ -1,10 +1,11 @@
 import type { GameView, PublicGameEffectView } from "@catan/protocol";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
-export function useGameEffectQueue(game: GameView | null): {
+export function useGameEffectQueue(game: GameView | null, snapshotEpoch = 0): {
   readonly activeEffect: PublicGameEffectView | null;
   readonly completeActiveEffect: () => void;
 } {
+  const epochRef = useRef(snapshotEpoch);
   const gameIdRef = useRef<string | null>(null);
   const seenRevisionRef = useRef(0);
   const [queue, setQueue] = useState<readonly PublicGameEffectView[]>([]);
@@ -17,7 +18,8 @@ export function useGameEffectQueue(game: GameView | null): {
       return;
     }
 
-    if (gameIdRef.current !== game.id) {
+    if (gameIdRef.current !== game.id || epochRef.current !== snapshotEpoch) {
+      epochRef.current = snapshotEpoch;
       gameIdRef.current = game.id;
       seenRevisionRef.current = game.revision;
       setQueue([]);
@@ -34,7 +36,7 @@ export function useGameEffectQueue(game: GameView | null): {
       const known = new Set(current.map((effect) => effect.id));
       return [...current, ...unseen.filter((effect) => !known.has(effect.id))];
     });
-  }, [game]);
+  }, [game, snapshotEpoch]);
 
   const completeActiveEffect = useCallback(() => {
     setQueue((current) => current.slice(1));

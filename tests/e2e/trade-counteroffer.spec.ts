@@ -125,12 +125,16 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
       await route.continue();
     };
     await responderPage.route(commandUrl, forceOneStaleRevision);
+    // Disabled also means "request pending". Wait for the successful retry before removing its interceptor.
+    const acceptedResponse = responderPage.waitForResponse((response) => commandUrl.test(response.url()) && response.ok()
+      && response.request().postDataJSON()?.command?.type === "AcceptTradeOffer");
     await responderPage.getByRole("button", { name: "同意" }).evaluate((button) => {
       (button as HTMLButtonElement).click();
       (button as HTMLButtonElement).click();
     });
     await expect(responderPage.getByRole("button", { name: "同意" })).toBeDisabled();
     await expect(responderPage.getByRole("alert")).toHaveCount(0);
+    await acceptedResponse;
     await responderPage.unroute(commandUrl, forceOneStaleRevision);
     expect(forcedStaleRevision).toBe(true);
     await expect(thirdResponderPage.getByRole("button", { name: "拒绝" })).toBeDisabled();

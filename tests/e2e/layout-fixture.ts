@@ -1,5 +1,5 @@
 import { createGame, resourceAmounts, type GameState, type PlayerSeed, type GameEventRecord } from "../../packages/game-core/src/index.js";
-import { projectGameForPlayer, type RoomView } from "../../packages/protocol/src/index.js";
+import { createRoomStreamEncoder, projectGameForPlayer, type RoomView } from "../../packages/protocol/src/index.js";
 import { expect, type Browser, type BrowserContextOptions, type Page, type WebSocketRoute } from "@playwright/test";
 
 const players: PlayerSeed[] = [
@@ -44,11 +44,12 @@ export async function openFixture(browser: Browser, width: number, height: numbe
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route(/\/api\/rooms\/LAYOUT\?/, (route) => route.fulfill({ json: room }));
   let socket: WebSocketRoute | undefined;
-  await page.routeWebSocket(/\/ws\?/, (route) => { socket = route; });
+  let encode = createRoomStreamEncoder();
+  await page.routeWebSocket(/\/ws\?/, (route) => { socket = route; encode = createRoomStreamEncoder(); route.send(JSON.stringify(encode(room))); });
   await page.goto("/");
   await expect(page.locator(".hex-tile")).toHaveCount(room.game?.map.hexes.length ?? 0);
   await expect.poll(() => socket !== undefined).toBe(true);
-  return { context, page, errors, push: (next: RoomView) => socket!.send(JSON.stringify({ type: "room_state", room: next })) };
+  return { context, page, errors, push: (next: RoomView) => socket!.send(JSON.stringify(encode(next))) };
 }
 
 export async function measure(page: Page) {

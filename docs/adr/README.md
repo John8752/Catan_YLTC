@@ -16,3 +16,4 @@
 Add a new ADR when reversing an accepted decision. Do not silently rewrite the historical reason.
 
 - [ADR-0011: Game-scoped final settlements](./adr-0011-game-scoped-final-settlements.md) — accepted
+- [ADR-0012: Cached map transport and command acknowledgements](./adr-0012-cached-map-room-transport.md) — accepted

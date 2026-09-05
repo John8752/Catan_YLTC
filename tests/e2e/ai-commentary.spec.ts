@@ -18,7 +18,7 @@ for (const viewportName of focusedSetupTipViewports) {
     try {
       const predictedWinner = base.members[2] ?? base.members[0];
       if (predictedWinner === undefined) throw new Error("Missing fixture players");
-      run.push({ ...base, setupAnalysis: {
+      run.push({ ...base, revision: base.revision + 1, setupAnalysis: {
         status: "ready",
         sourceRevision: 12,
         playerComments: base.members.map((player, index) => ({

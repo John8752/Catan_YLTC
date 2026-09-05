@@ -54,3 +54,11 @@ it("requests AI commentary through the server without exposing provider credenti
   expect(String(capturedInit?.body)).toBe(JSON.stringify({ seatToken: "seat", expectedRevision: 9, mode: "summary" }));
   expect(JSON.stringify(capturedInit?.headers)).not.toContain("deepseek");
 });
+
+it("requests compact acknowledgements and only uploads the command", async () => {
+  const fetch = vi.fn(async () => new Response(JSON.stringify({ commandId: "id", roomId: "BAB434", roomRevision: 8, gameRevision: 8 })));
+  vi.stubGlobal("fetch", fetch);
+  await submitGameCommand(session, 7, { type: "EndTurn" });
+  const body = JSON.parse(String((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+  expect(body).toEqual({ seatToken: "seat", expectedRevision: 7, commandId: expect.any(String), responseMode: "ack", command: { type: "EndTurn" } });
+});

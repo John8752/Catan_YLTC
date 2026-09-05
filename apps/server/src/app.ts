@@ -1,3 +1,4 @@
+import { createRoomStreamEncoder, ROOM_MAP_TRANSPORT } from "@catan/protocol";
 import { playerNameSchema, startRoomSchema, roomSettingsSchema, rerollRoomMapSchema, playerColorSchema, shuffleRoomMembersSchema, leaveRoomSchema, gameCommandSchema, aiCommentarySchema } from "./route-schemas.js";
 import { SqliteDatabase } from "./database/sqlite-database.js";
 import { SqliteAccountRepository } from "./database/sqlite-account-repository.js";
@@ -278,6 +279,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
           body.commandId,
           body.expectedRevision,
           body.command,
+          body.responseMode,
         ),
       );
     } catch (error) {
@@ -334,18 +336,19 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
     }
   });
 
-  app.get<{ Querystring: { roomId?: string; seatToken?: string } }>(
+  app.get<{ Querystring: { roomId?: string; seatToken?: string; transport?: string } }>(
     "/ws",
     { websocket: true },
     (socket, request) => {
       try {
         const roomId = z.string().min(1).parse(request.query.roomId);
         const seatToken = z.string().min(1).parse(request.query.seatToken);
+        const encode = request.query.transport === ROOM_MAP_TRANSPORT ? createRoomStreamEncoder() : null;
         const unsubscribe = registry.subscribe(
           roomId,
           seatToken,
           (room) => {
-            socket.send(JSON.stringify({ type: "room_state", room }));
+            socket.send(JSON.stringify(encode ? encode(room) : { type: "room_state", room }));
           },
           () => {
             // Say why before closing, or the client just sees a dropped socket and

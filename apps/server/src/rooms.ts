@@ -17,6 +17,7 @@ import {
 } from "@catan/game-core";
 import {
   type GameCommandResponse,
+  type GameCommandReply,
   type LeaveRoomResponse,
   projectGameForPlayer,
   collectVictoryWarnings,
@@ -372,22 +373,28 @@ export class RoomRegistry {
     room.tableIntentTurns.set(member.id, phase.turnNumber);
   }
 
+  executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand): GameCommandResponse;
+  executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand, responseMode: "ack" | undefined): GameCommandReply;
   executeCommand(
     roomId: string,
     seatToken: string,
     commandId: string,
     expectedRevision: number,
     command: GameCommand,
-  ): GameCommandResponse {
+    responseMode?: "ack",
+  ): GameCommandReply {
     const room = this.requireRoom(roomId);
     const member = this.requireCredential(room, seatToken);
     const playerId = member.id;
+    const response = (): GameCommandReply => responseMode === "ack"
+      ? { commandId, roomId: room.id, roomRevision: room.revision, gameRevision: room.game!.revision }
+      : { commandId, room: this.projectRoom(room, playerId) };
     const cacheKey = `${playerId}:${commandId}`;
     if (room.appliedCommands.has(cacheKey)) {
       // Answer a retry from live state. Keeping the original response per command
       // meant retaining a full room projection -- map and entire history -- for
       // every move ever made, which made room memory quadratic in game length.
-      return { commandId, room: this.projectRoom(room, playerId) };
+      return response();
     }
     if (room.game === null) throw new RoomError("GAME_NOT_STARTED", "The game has not started");
     if (room.game.revision !== expectedRevision) {
@@ -399,7 +406,7 @@ export class RoomRegistry {
 
     if (result.state.revision === room.game.revision && result.events.length === 0) {
       room.appliedCommands.add(cacheKey);
-      return { commandId, room: this.projectRoom(room, playerId) };
+      return response();
     }
 
     const settlement = prepareSettlement(room, result.state, result.events, this.now());
@@ -413,12 +420,9 @@ export class RoomRegistry {
       this.setupAnalysis.start(room);
     }
     this.syncTurnTimer(room);
-    const response: GameCommandResponse = {
-      commandId,
-      room: this.projectRoom(room, playerId),
-    };
+    const reply = response();
     this.notify(room);
-    return response;
+    return reply;
   }
 
   subscribe(

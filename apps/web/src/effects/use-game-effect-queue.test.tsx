@@ -34,6 +34,16 @@ describe("useGameEffectQueue", () => {
     expect(result.current.activeEffect).toBeNull();
   });
 
+  it("uses a quiet baseline on reconnect, then plays new live effects once", () => {
+    const { result, rerender } = renderHook(({ game, epoch }) => useGameEffectQueue(game, epoch),
+      { initialProps: { game: gameView(6, []), epoch: 1 } });
+    rerender({ game: gameView(7, [effect]), epoch: 2 });
+    expect(result.current.activeEffect).toBeNull();
+    const next = { ...effect, id: "8:resources-produced", revision: 8 };
+    rerender({ game: gameView(8, [effect, next]), epoch: 2 });
+    expect(result.current.activeEffect?.id).toBe(next.id);
+  });
+
   it("queues a card reveal before its same-revision resource result", () => {
     const reveal: PublicGameEffectView = {
       id: "8:development-card:player_1:resource-choice",

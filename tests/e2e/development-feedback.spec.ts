@@ -123,6 +123,7 @@ async function openProjectedSeat(
   let socket: WebSocketRoute | undefined;
   await page.routeWebSocket(/\/ws\?/, (route) => {
     socket = route;
+    route.send(JSON.stringify({ type: "room_state", room: initialRoom }));
   });
   await page.goto("/");
   await expect(page.getByRole("img", { name: "由十九块六边形地形组成的游戏棋盘" })).toBeVisible();

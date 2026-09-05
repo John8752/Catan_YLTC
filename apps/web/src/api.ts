@@ -1,10 +1,11 @@
+import { createRoomStreamDecoder, MissingRoomMapError, ROOM_MAP_TRANSPORT, type RoomWireMessage } from "@catan/protocol";
 import { accountHeaders } from "./auth-api.js";
 import type {
   AiCommentaryMode,
   AiCommentaryResponse,
   ApiErrorResponse,
   GameCommand,
-  GameCommandResponse,
+  GameCommandReply,
   LeaveRoomResponse,
   PlayerSessionResponse,
   RoomServerMessage,
@@ -119,13 +120,14 @@ export async function submitGameCommand(
   session: PlayerSession,
   expectedRevision: number,
   command: GameCommand,
-): Promise<GameCommandResponse> {
-  return request<GameCommandResponse>(`/api/rooms/${encodeURIComponent(session.roomId)}/commands`, {
+): Promise<GameCommandReply> {
+  return request<GameCommandReply>(`/api/rooms/${encodeURIComponent(session.roomId)}/commands`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       seatToken: session.seatToken,
       commandId: randomId(),
+      responseMode: "ack",
       expectedRevision,
       command,
     }),
@@ -153,9 +155,15 @@ export function connectToRoom(
   url.searchParams.set("roomId", session.roomId);
   url.searchParams.set("seatToken", session.seatToken);
 
+  url.searchParams.set("transport", ROOM_MAP_TRANSPORT);
+  const decode = createRoomStreamDecoder();
   const socket = new WebSocket(url);
   socket.addEventListener("message", (event) => {
-    onMessage(JSON.parse(String(event.data)) as RoomServerMessage);
+    try { onMessage(decode(JSON.parse(String(event.data)) as RoomWireMessage)); }
+    catch (error) {
+      if (!(error instanceof MissingRoomMapError)) throw error;
+      socket.close(4002, "Map snapshot required");
+    }
   });
   return socket;
 }

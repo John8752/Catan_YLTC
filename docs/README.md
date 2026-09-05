@@ -20,3 +20,5 @@ Read documents in this order:
 Rule behavior belongs in `docs/rules`. Long-lived technical decisions belong in `docs/adr`. A feature that changes both should update both in the same change.
 
 Account implementation validation: [Accounts and final settlements](./validation/accounts.md).
+
+Transport optimization validation: [Cached maps and command acknowledgements](./validation/room-transport-phase1.md).

@@ -38,6 +38,7 @@ export const leaveRoomSchema = z.object({
 });
 
 export const gameCommandSchema = z.object({
+  responseMode: z.literal("ack").optional(),
   seatToken: z.string().min(1),
   commandId: z.string().min(1).max(100),
   expectedRevision: z.number().int().positive(),

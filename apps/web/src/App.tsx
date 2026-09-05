@@ -1,3 +1,5 @@
+import { RoomUpdates, RoomSessionChangedError } from "./room-updates.js";
+import { useRoomConnection } from "./hooks/use-room-connection.js";
 import type { AccountView, AuthResponse } from "@catan/protocol";
 import { getAccount, setAccountCsrf } from "./auth-api.js";
 import { AccountControl } from "./components/AccountControl.js";
@@ -6,7 +8,6 @@ import type { GameCommand, RoomSettingsInput, RoomView } from "@catan/protocol";
 import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
-  connectToRoom,
   createRoom,
   getRoom,
   joinRoom,
@@ -57,20 +58,27 @@ export function App() {
   const bankInSidebar = useMediaQuery("(min-width: 1024px)");
   const [boardInfoHost, setBoardInfoHost] = useState<HTMLDivElement | null>(null);
   const [session, setSession] = useState<PlayerSession | null>(() => readSession());
-  const [room, setRoom] = useState<RoomView | null>(null);
-  const [connectionState, setConnectionState] = useState<"connecting" | "live" | "offline">(
-    "offline",
-  );
+  const [room, renderRoom] = useState<RoomView | null>(null);
+  const [updates] = useState(() => new RoomUpdates(session, renderRoom));
+  function setRoom(nextRoom: RoomView) { if (session !== null) updates.accept(nextRoom, session); }
+  const { connectionState, snapshotEpoch } = useRoomConnection(session, authReady, updates, {
+    onSynced: () => setError(null),
+    onError: (caught) => setError(errorMessage(caught)),
+    onClosed: (reason, message) => {
+      if (reason === "account_session_replaced") clearAccount(); else clearCurrentSession();
+      setError(message);
+    },
+    onInvalidSeat: (message) => { clearAccount(); setError(message); },
+  });
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [buildMode, setBuildMode] = useState<"road" | "settlement" | "city" | null>(null);
   const [selectedRobberHexId, setSelectedRobberHexId] = useState<string | null>(null);
-  const [snapshotEpoch, setSnapshotEpoch] = useState(0);
   // Where the AI said someone is heading, parked here so the dialog can close
   // and leave the board pointing at it.
   const [intentFocusVertexId, setIntentFocusVertexId] = useState<string | null>(null);
-  const { activeEffect, completeActiveEffect } = useGameEffectQueue(room?.game ?? null);
+  const { activeEffect, completeActiveEffect } = useGameEffectQueue(room?.game ?? null, snapshotEpoch);
   const actionNotice = useActionAttention(room?.game ?? null, snapshotEpoch, connectionState === "live");
   const victoryNotice = useVictoryWarnings(room?.game ?? null, snapshotEpoch, connectionState === "live", actionNotice !== null);
 
@@ -89,7 +97,7 @@ export function App() {
     if (response.activeSeat) {
       const { roomId, playerId, seatToken, room: nextRoom } = response.activeSeat;
       storeSession({ roomId, playerId, seatToken });
-      setRoom(nextRoom);
+      updates.accept(nextRoom, { roomId, playerId, seatToken });
     }
   }
   function clearAccount() {
@@ -105,68 +113,6 @@ export function App() {
   useEffect(() => setIntentFocusVertexId(null), [boardRevision]);
 
   useEffect(() => {
-    if (!authReady || session === null) {
-      return;
-    }
-
-    let active = true;
-    setConnectionState("connecting");
-    void getRoom(session)
-      .then((nextRoom) => {
-        if (active) setRoom(nextRoom);
-      })
-      .catch((caught: unknown) => {
-        if (active) setError(errorMessage(caught));
-      });
-
-    let socket: WebSocket | null = null;
-    let reconnectTimer: number | undefined;
-
-    const openSocket = () => {
-      if (!active) return;
-      setConnectionState("connecting");
-      let initialSnapshot = true;
-      socket = connectToRoom(session, (message) => {
-        if (!active) return;
-
-        if (message.type === "room_state") {
-          if (initialSnapshot) {
-            setSnapshotEpoch((epoch) => epoch + 1);
-            initialSnapshot = false;
-          }
-          setRoom(message.room);
-          setError(null);
-        } else if (message.type === "room_closed" || message.type === "account_session_replaced") {
-          // The room is already gone, so drop the seat before the socket's close
-          // handler starts reconnecting to something that no longer exists.
-          active = false;
-          if (message.type === "account_session_replaced") clearAccount(); else clearCurrentSession();
-          setError(message.message);
-        } else if (message.code === "PLAYER_NOT_FOUND" || message.code === "ROOM_NOT_FOUND") {
-          active = false;
-          clearAccount();
-          setError(message.message);
-        } else {
-          setError(message.message);
-        }
-      });
-      socket.addEventListener("open", () => active && setConnectionState("live"));
-      socket.addEventListener("close", () => {
-        if (!active) return;
-        setConnectionState("offline");
-        reconnectTimer = window.setTimeout(openSocket, 1_000);
-      });
-    };
-    openSocket();
-
-    return () => {
-      active = false;
-      if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
-      if (socket !== null) closeSocket(socket);
-    };
-  }, [session, authReady]);
-
-  useEffect(() => {
     setBuildMode(null);
     setSelectedRobberHexId(null);
   }, [room?.game?.revision]);
@@ -175,7 +121,7 @@ export function App() {
     await runBusy(async () => {
       const response = await createRoom(playerName);
       storeSession({ roomId: response.roomId, playerId: response.playerId, seatToken: response.seatToken });
-      setRoom(response.room);
+      updates.accept(response.room, response);
       setBuildMode(null);
       setSelectedRobberHexId(null);
     });
@@ -185,7 +131,7 @@ export function App() {
     await runBusy(async () => {
       const response = await joinRoom(roomId, playerName);
       storeSession({ roomId: response.roomId, playerId: response.playerId, seatToken: response.seatToken });
-      setRoom(response.room);
+      updates.accept(response.room, response);
       setBuildMode(null);
       setSelectedRobberHexId(null);
     });
@@ -250,7 +196,7 @@ export function App() {
     await runBusy(async () => {
       try {
         const response = await submitGameCommand(session, submittedGame.revision, command);
-        setRoom(response.room);
+        await updates.confirm(response, session, () => getRoom(session), connectionState === "live");
       } catch (caught) {
         if (isStaleStateError(caught)) {
           const latestRoom = await getRoom(session);
@@ -260,7 +206,7 @@ export function App() {
             canRetryStaleTradeCommand(command, submittedGame.openTrade, latestRoom.game.openTrade, session.playerId)
           ) {
             const response = await submitGameCommand(session, latestRoom.game.revision, command);
-            setRoom(response.room);
+            await updates.confirm(response, session, () => getRoom(session), connectionState === "live");
             return;
           }
         }
@@ -306,7 +252,7 @@ export function App() {
   function clearCurrentSession() {
     playerSessionStore.clear();
     setSession(null);
-    setRoom(null);
+    updates.reset(null);
     setError(null);
     setBuildMode(null);
     setSelectedRobberHexId(null);
@@ -321,6 +267,7 @@ export function App() {
     try {
       await action();
     } catch (caught) {
+      if (caught instanceof RoomSessionChangedError) return;
       if (caught instanceof ApiError && caught.code === "AUTH_REQUIRED") clearAccount();
       setError(errorMessage(caught));
     } finally {
@@ -330,6 +277,7 @@ export function App() {
   }
 
   function storeSession(nextSession: PlayerSession) {
+    updates.reset(nextSession);
     playerSessionStore.write(nextSession);
     setSession(nextSession);
   }
@@ -487,13 +435,4 @@ function errorMessage(error: unknown): string {
  */
 function isStaleStateError(error: unknown): boolean {
   return error instanceof ApiError && ["STALE_REVISION", "STALE_ROOM_REVISION"].includes(error.code);
-}
-
-function closeSocket(socket: WebSocket): void {
-  if (socket.readyState === WebSocket.CONNECTING) {
-    socket.addEventListener("open", () => socket.close(), { once: true });
-    return;
-  }
-
-  socket.close();
 }

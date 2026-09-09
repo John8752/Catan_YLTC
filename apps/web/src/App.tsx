@@ -335,6 +335,7 @@ export function App() {
       {liveGame === null ? null : (
         <div className="seat-column col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col gap-1 phone-landscape:col-span-2 xl:min-h-0">
           <TurnForecastBar
+            compact={!bankInSidebar}
             game={liveGame}
             actions={<TableUtilities
               compact={!bankInSidebar}

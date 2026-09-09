@@ -6,6 +6,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PlayerDock } from "./PlayerDock.js";
 
+vi.mock("@/hooks/use-media-query.js", () => ({ useMediaQuery: () => false }));
+
 const players = [
   { id: "player_1", name: "林", color: "terracotta" as const },
   { id: "player_2", name: "岚", color: "ocean" as const },

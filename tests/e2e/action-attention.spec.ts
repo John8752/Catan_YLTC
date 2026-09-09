@@ -59,8 +59,13 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
       await expect(page.locator('[data-action-attention="none"]')).toHaveCount(1);
       await expect(page.locator('[data-turn-forecast]')).toBeVisible();
       await expect(page.locator('[data-turn-forecast-summary]')).toHaveText("再过 4 次操作 · 搭档行动");
+      if (width < 1024) await page.getByRole("button", { name: "查看完整行动队列" }).click();
       await expect(page.locator('[data-turn-queue-current="true"]')).toHaveAttribute("data-turn-queue-player", "p2");
       await expect(page.locator('[data-turn-queue-self="true"]')).toHaveAttribute("data-turn-queue-player", "p1");
+      if (width < 1024) {
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("dialog", { name: "完整行动队列", exact: true })).toBeHidden();
+      }
       const forecastArtifact = name.includes("iPhone 16 portrait browser-area")
         ? "iphone-16-portrait"
         : width === 1920

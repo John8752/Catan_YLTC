@@ -28,3 +28,5 @@ Incremental history validation: [Room events and complete public history](./vali
 Roll controls and audio validation: [Mobile actions and distinct game sounds](./validation/roll-actions-and-sounds.md).
 
 Mobile disclosure validation: [Compact controls and negotiation](./validation/mobile-organization.md).
+
+Compact trade editor and queue validation: [Two-row amounts and live queue disclosure](./validation/trade-editor-queue.md).

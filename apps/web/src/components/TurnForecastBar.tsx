@@ -1,9 +1,12 @@
 import type { GameView, TurnQueueEntryView } from "@catan/protocol";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils.js";
+import { ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.js";
 import { PlayerColorDot } from "./PlayerColorDot.js";
 
-export function TurnForecastBar({ game, actions }: {
+export function TurnForecastBar({ game, actions, compact = false }: {
+  readonly compact?: boolean;
   readonly game: GameView;
   readonly actions?: ReactNode;
 }) {
@@ -17,7 +20,7 @@ export function TurnForecastBar({ game, actions }: {
   }
 
   const selfIndex = game.turnQueue.findIndex((entry) => entry.playerId === game.you.id);
-  const indexes = visibleIndexes(game.turnQueue.length);
+  const indexes = game.turnQueue.map((_, index) => index);
   const current = game.turnQueue[0];
   if (current === undefined) return null;
 
@@ -34,7 +37,7 @@ export function TurnForecastBar({ game, actions }: {
       data-turn-forecast="true"
       data-turn-forecast-distance={selfIndex}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2 phone-landscape:hidden lg:contents">
+      {compact ? <QueueDisclosure game={game} selfIndex={selfIndex} /> : <div className="flex min-w-0 flex-1 items-center gap-2 lg:contents">
         <div className="min-w-0 shrink-0 lg:col-start-1 lg:row-start-1 lg:flex lg:items-baseline lg:gap-1.5">
           <span className="block whitespace-nowrap text-[9px] font-black tracking-[.12em] text-[#d9c397] uppercase lg:inline lg:text-xs">
             第 {current.turnNumber} 回合
@@ -62,8 +65,7 @@ export function TurnForecastBar({ game, actions }: {
             );
           })}
         </ol>
-      </div>
-      <LandscapeQueue game={game} selfIndex={selfIndex} />
+      </div>}
       {actions === undefined ? null : (
         <div className="flex shrink-0 items-center lg:col-start-2 lg:row-start-1 lg:self-start">
           {actions}
@@ -73,40 +75,37 @@ export function TurnForecastBar({ game, actions }: {
   );
 }
 
-function LandscapeQueue({ game, selfIndex }: { readonly game: GameView; readonly selfIndex: number }) {
-  const current = game.turnQueue[0];
-  const target = selfIndex === 0 ? game.turnQueue[1] : game.turnQueue[selfIndex];
-  if (current === undefined || target === undefined) return null;
-  return (
-    <div className="hidden min-w-0 flex-1 items-center justify-between gap-1 phone-landscape:flex phone-landscape:overflow-x-auto lg:hidden" data-landscape-turn-queue="true">
-      <strong className="shrink-0 whitespace-nowrap text-[10px] text-[#fff4d6]">
-        {compactForecastSummary(game, selfIndex)}
-      </strong>
-      <div className="flex min-w-0 items-center gap-1" aria-label="紧凑操作顺序">
-        <CompactQueuePlayer game={game} entry={current} self={current.playerId === game.you.id} />
-        <span className="shrink-0 text-[8px] font-black text-[#d9c397]/80" aria-hidden="true">
-          {selfIndex > 1 ? `+${selfIndex - 1}` : "›"}
+function QueueDisclosure({ game, selfIndex }: { readonly game: GameView; readonly selfIndex: number }) {
+  const current = game.turnQueue[0]!;
+  const currentPlayer = game.players.find((p) => p.id === current.playerId);
+  return <Dialog>
+    <DialogTrigger asChild>
+      <button type="button" aria-label="查看完整行动队列" className="flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-lg text-left outline-offset-2 hover:bg-white/5">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-xs text-[#ead6aa]" title={currentPlayer?.name}>第 {current.turnNumber} 回合 · {current.playerId === game.you.id ? "你" : currentPlayer?.name ?? "玩家"} · {current.kind === "primary" ? "主回合" : "搭档行动"}</span>
+          <strong data-turn-forecast-summary="true" className="block truncate text-xs leading-5 text-[#fff4d6]">{forecastSummary(game, selfIndex)}</strong>
         </span>
-        <CompactQueuePlayer game={game} entry={target} self={target.playerId === game.you.id} />
-      </div>
-    </div>
-  );
-}
-
-function CompactQueuePlayer({ game, entry, self }: {
-  readonly game: GameView;
-  readonly entry: TurnQueueEntryView;
-  readonly self: boolean;
-}) {
-  const player = game.players.find((candidate) => candidate.id === entry.playerId);
-  if (player === undefined) return null;
-  return (
-    <span className={cn("flex min-w-0 shrink-0 items-center gap-0.5 rounded-md border border-white/10 bg-white/5 px-1 py-0.5 text-[9px] font-black", self && "border-[#f2b3aa]/65 bg-[#f2b3aa]/14 text-[#ffe2dc]")}>
-      <PlayerColorDot color={player.color} className="size-2 shrink-0 rounded-sm" />
-      <span className="max-w-8 truncate">{self ? "你" : player.name}</span>
-      <b className="shrink-0 text-[8px] text-[#ead6aa]">{entry.kind === "primary" ? "主" : "搭"}</b>
-    </span>
-  );
+        <ChevronRight className="size-4 shrink-0 text-[#d9c397]" aria-hidden="true" />
+      </button>
+    </DialogTrigger>
+    <DialogContent className="flex max-h-[80dvh] flex-col gap-3 overflow-hidden bg-[#fff3db] p-4 text-[#294b43] sm:max-w-md">
+      <DialogHeader className="shrink-0 pr-6"><DialogTitle>完整行动队列</DialogTitle><DialogDescription>{forecastSummary(game, selfIndex)}。顺序随对局实时更新。</DialogDescription></DialogHeader>
+      <ol aria-label="接下来的操作顺序" className="m-0 min-h-0 space-y-2 overflow-y-auto overscroll-contain p-1">
+        {game.turnQueue.map((entry, index) => {
+          const player = game.players.find((p) => p.id === entry.playerId);
+          const self = entry.playerId === game.you.id;
+          return <li key={`${entry.turnNumber}:${entry.kind}:${entry.playerId}`} data-turn-queue-player={entry.playerId}
+            data-turn-queue-kind={entry.kind} data-turn-queue-current={index === 0 || undefined} data-turn-queue-self={self || undefined}
+            className={cn("flex min-h-14 items-center gap-3 rounded-xl border border-[#6d5434]/15 bg-white/50 px-3 py-2", self && "border-[#b8634c]/50 bg-[#fbe4d9]", index === 0 && "ring-2 ring-[#628577]/60")}>
+            <span className="w-5 shrink-0 text-center text-xs text-[#737b6b]">{index + 1}</span>
+            {player ? <PlayerColorDot color={player.color} className="size-3 shrink-0" /> : null}
+            <span className="min-w-0 flex-1"><strong className="block break-words text-sm">{player?.name ?? "玩家"}{self ? "（你）" : ""}</strong><span className="text-xs text-[#657369]">第 {entry.turnNumber} 回合 · {entry.kind === "primary" ? "主回合" : "搭档行动"}</span></span>
+            {index === 0 ? <span className="shrink-0 rounded bg-[#315e51] px-2 py-1 text-xs text-white">当前</span> : null}
+          </li>;
+        })}
+      </ol>
+    </DialogContent>
+  </Dialog>;
 }
 
 function QueuePlayer({ game, entry, current, self }: {
@@ -147,17 +146,4 @@ function forecastSummary(game: GameView, selfIndex: number): string {
   if (selfIndex === 0) return `轮到你了 · ${kind}`;
   if (selfIndex === 1) return `接下来轮到你 · ${kind}`;
   return `再过 ${selfIndex - 1} 次操作 · ${kind}`;
-}
-
-function compactForecastSummary(game: GameView, selfIndex: number): string {
-  const own = game.turnQueue[selfIndex];
-  if (own === undefined) return "操作队列";
-  const kind = own.kind === "primary" ? "主回合" : "搭档行动";
-  if (selfIndex === 0) return `轮到你 · ${kind}`;
-  if (selfIndex === 1) return `下一位是你 · ${kind}`;
-  return `再过 ${selfIndex - 1} 次 · ${kind}`;
-}
-
-function visibleIndexes(queueLength: number): readonly number[] {
-  return Array.from({ length: queueLength }, (_, index) => index);
 }

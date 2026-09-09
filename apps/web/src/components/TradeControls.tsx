@@ -1,6 +1,8 @@
 import type { GameCommand, GameView } from "@catan/protocol";
 import { ArrowRightLeft, ChevronUp, Handshake, Landmark, Send, X } from "lucide-react";
 import { useState } from "react";
+import { useMediaQuery } from "@/hooks/use-media-query.js";
+import { TradeAmountRow, TradeOfferSummary } from "./TradeAmountRow.js";
 import { Button } from "@/components/ui/button.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.js";
@@ -12,6 +14,7 @@ import {
   type TradeBasket,
   TRADE_RESOURCES,
   TradeResourceBasket,
+  tradeBasketTotal,
   type TradeResource,
 } from "./TradeResourceBasket.js";
 import { TradeExchange, TradeValidationNote, tradeProblem } from "./TradePresentation.js";
@@ -41,6 +44,7 @@ export function TradeControls({
   onComposerOpenChange,
   handPickerExternal = false,
 }: TradeControlsProps) {
+  const compact = useMediaQuery("(max-width: 1023px)");
   const [internalComposerOpen, setInternalComposerOpen] = useState(false);
   const [internalPlayerGive, setInternalPlayerGive] = useState(emptyTradeBasket);
   const [playerReceive, setPlayerReceive] = useState(emptyTradeBasket);
@@ -98,7 +102,7 @@ export function TradeControls({
 
       <DialogContent
         id="trade-composer-panel"
-        className="trade-composer-sheet max-h-[70dvh] max-w-none gap-0 overflow-y-auto border-[#f7e6bf]/45 bg-[#f3e4c5]/98 p-3 text-[#263d39] shadow-2xl lg:max-h-[min(80dvh,44rem)] lg:max-w-3xl lg:rounded-2xl"
+        className="trade-composer-sheet max-h-[85dvh] max-w-none gap-0 overflow-y-auto border-[#f7e6bf]/45 bg-[#f3e4c5]/98 p-3 text-[#263d39] shadow-2xl lg:max-h-[min(80dvh,44rem)] lg:max-w-3xl lg:rounded-2xl"
         showCloseButton={false}
       >
         <section className="grid gap-3" aria-label="交易编辑器">
@@ -107,7 +111,7 @@ export function TradeControls({
               <span className="grid size-9 place-items-center rounded-full bg-[#214d48] text-[#fff8df]"><Handshake className="size-4" /></span>
               <div>
                 <DialogTitle className="font-serif text-lg">交易桌</DialogTitle>
-                <DialogDescription className="text-xs text-[#6b716a]">组合资源后发布，棋盘仍可查看</DialogDescription>
+                <DialogDescription className="text-xs text-[#6b716a]">{compact ? "点资源加 1，下方减 1；核对后发布" : "组合资源后发布，棋盘仍可查看"}</DialogDescription>
               </div>
             </div>
             <Button type="button" variant="ghost" size="icon-sm" aria-label="收起交易编辑器" onClick={() => setComposerOpen(false)}><X /></Button>
@@ -121,7 +125,7 @@ export function TradeControls({
 
             {allowPlayerTrades ? (
               <TabsContent value="players">
-                <form className="mt-3 grid gap-3" onSubmit={(event) => {
+                <form className="mt-2 grid gap-2 lg:mt-3 lg:gap-3" onSubmit={(event) => {
                   event.preventDefault();
                   setComposerOpen(false);
                   onCommand({ type: "OpenTradeOffer", offerId: randomId(), give: playerGive, receive: playerReceive });
@@ -130,12 +134,14 @@ export function TradeControls({
                 }}>
                   {handPickerExternal ? <p className="m-0 hidden rounded-lg bg-[#214d48]/8 px-3 py-2 text-center text-xs font-bold text-[#45625c] lg:block">点击下方“我的资源”加入我提供的卡片</p> : null}
                   <TradeExchange
-                    giveLabel="我提供"
-                    receiveLabel="我希望获得"
-                    give={<TradeResourceBasket label="我提供" value={playerGive} maximums={game.you.resources} showPalette onChange={setPlayerGive} />}
-                    receive={<TradeResourceBasket label="我希望获得" value={playerReceive} onChange={setPlayerReceive} />}
+                    compact={compact}
+                    giveLabel={compact ? `我出 · ${tradeBasketTotal(playerGive)} 张` : "我提供"}
+                    receiveLabel={compact ? `我收 · ${tradeBasketTotal(playerReceive)} 张` : "我希望获得"}
+                    give={compact ? <TradeAmountRow label="我提供" value={playerGive} maximums={game.you.resources} onChange={setPlayerGive} /> : <TradeResourceBasket label="我提供" value={playerGive} maximums={game.you.resources} showPalette onChange={setPlayerGive} />}
+                    receive={compact ? <TradeAmountRow label="我希望获得" value={playerReceive} onChange={setPlayerReceive} /> : <TradeResourceBasket label="我希望获得" value={playerReceive} onChange={setPlayerReceive} />}
                   />
-                  <TradeValidationNote problem={playerOfferProblem} fallback="可组合多种资源；点击已选卡片会撤回 1 张。" />
+                  {compact ? <TradeOfferSummary give={playerGive} receive={playerReceive} /> : null}
+                  <TradeValidationNote problem={playerOfferProblem} fallback={compact ? "允许单向赠送或索取，成交前仍需双方确认。" : "可组合多种资源；点击已选卡片会撤回 1 张。"} />
                   <Button className="sticky bottom-0 z-10 h-10 w-full bg-[#214d48] text-[#fff8df] shadow-[0_-8px_18px_rgba(243,228,197,.9)] hover:bg-[#173d39]" type="submit" disabled={busy || playerOfferProblem !== null}>
                     <Send className="size-4" />向所有玩家发布报价
                   </Button>
@@ -150,6 +156,7 @@ export function TradeControls({
                 onCommand({ type: "MaritimeTrade", give, receive });
               }}>
                 <TradeExchange
+                  compact={compact}
                   giveLabel={`交给银行 · ${game.you.maritimeRatios[give]} 张`}
                   receiveLabel="从银行获得 · 1 张"
                   give={<SingleResourcePicker label="交给银行" value={give} counts={game.you.resources} onChange={setGive} />}

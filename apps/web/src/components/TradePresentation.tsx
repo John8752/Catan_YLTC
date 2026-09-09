@@ -14,24 +14,26 @@ export function TradeExchange({
   receiveLabel,
   give,
   receive,
+  compact = false,
 }: {
+  readonly compact?: boolean;
   readonly giveLabel: string;
   readonly receiveLabel: string;
   readonly give: React.ReactNode;
   readonly receive: React.ReactNode;
 }) {
   return (
-    <div className="grid items-stretch gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-4">
-      <Card className="gap-3 border-[#8c5d47]/15 bg-[#fffaf0]/72 p-3 text-center shadow-sm sm:p-4">
+    <div className={cn("grid items-stretch", compact ? "gap-2" : "gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-4")}>
+      <Card className={cn("border-[#8c5d47]/15 bg-[#fffaf0]/72 text-center shadow-sm", compact ? "gap-1.5 p-2" : "gap-3 p-3 sm:p-4")}>
         <small className="font-black tracking-[.08em] text-[#8e5d48] uppercase">{giveLabel}</small>
         {give}
       </Card>
-      <span className="grid place-items-center" aria-hidden="true">
+      <span className={compact ? "hidden" : "grid place-items-center"} aria-hidden="true">
         <span className="grid size-9 place-items-center rounded-full border border-[#a65c43]/20 bg-[#ead2aa] text-[#9c573f] shadow-inner">
           <ArrowDown className="size-5 sm:rotate-[-90deg]" />
         </span>
       </span>
-      <Card className="gap-3 border-[#315f59]/15 bg-[#eef0db]/72 p-3 text-center shadow-sm sm:p-4">
+      <Card className={cn("border-[#315f59]/15 bg-[#eef0db]/72 text-center shadow-sm", compact ? "gap-1.5 p-2" : "gap-3 p-3 sm:p-4")}>
         <small className="font-black tracking-[.08em] text-[#35645d] uppercase">{receiveLabel}</small>
         {receive}
       </Card>

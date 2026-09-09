@@ -1,4 +1,4 @@
-import type { ActionAttentionEffectView, VictoryWarningEffectView } from "@catan/protocol";
+import type { ActionAttentionEffectView, VictoryWarningEffectView } from "@catan/protocol/catan";
 import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils.js";
 import { VictoryWarningNotice } from "./VictoryWarningNotice.js";

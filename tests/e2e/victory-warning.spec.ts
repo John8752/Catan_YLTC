@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
-import { createGame, type GameState } from "../../packages/game-core/src/index.js";
-import { collectVictoryWarnings, projectGameForPlayer, type RoomView, type VictoryWarningEffectView } from "../../packages/protocol/src/index.js";
+import { createGame, type GameState } from "../../packages/game-core/src/catan.js";
+import { collectVictoryWarnings, projectGameForPlayer, type RoomView, type VictoryWarningEffectView } from "../../packages/protocol/src/catan/index.js";
 import { expect, test, type Browser, type BrowserContextOptions, type WebSocketRoute } from "@playwright/test";
 import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";
 

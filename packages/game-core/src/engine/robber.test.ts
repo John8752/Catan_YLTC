@@ -10,7 +10,7 @@ import {
   type PlayerSeed,
   type RandomSource,
   type ResourceHand,
-} from "../index.js";
+} from "../catan.js";
 
 const players: readonly PlayerSeed[] = [
   { id: "player_1", name: "林", color: "terracotta" },

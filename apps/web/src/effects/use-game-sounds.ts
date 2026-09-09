@@ -1,4 +1,4 @@
-import type { GameView } from "@catan/protocol";
+import type { GameView } from "@catan/protocol/catan";
 import { useEffect, useRef, useState } from "react";
 import { createGameAudio } from "./game-audio.js";
 

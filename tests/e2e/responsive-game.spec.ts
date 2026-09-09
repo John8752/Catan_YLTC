@@ -1,11 +1,12 @@
+import type { RoomSession } from "@catan/protocol/platform";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import type { PlayerSessionResponse, RoomView } from "@catan/protocol";
+import type { RoomView } from "@catan/protocol/catan";
 import { expect, test } from "@playwright/test";
 
 test("six-player board keeps five opponents, the map and the private dock in one phone viewport", async ({ browser, request }) => {
   const hostResponse = await request.post("/api/rooms", { data: { playerName: "甲" } });
-  const host = await hostResponse.json() as PlayerSessionResponse;
+  const host = await hostResponse.json() as RoomSession<RoomView>;
   const settingsResponse = await request.patch(`/api/rooms/${host.roomId}/settings`, {
     data: {
       seatToken: host.seatToken,

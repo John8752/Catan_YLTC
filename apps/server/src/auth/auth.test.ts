@@ -1,5 +1,7 @@
+import type { RoomView } from "@catan/protocol/catan";
+import type { RoomSession } from "@catan/protocol/platform";
 import { afterEach, expect, it } from "vitest";
-import type { AuthResponse, PlayerSessionResponse } from "@catan/protocol";
+import type { AuthResponse } from "@catan/protocol/platform";
 import { buildApp } from "../app.js";
 import { RoomRegistry } from "../rooms.js";
 import { SqliteDatabase } from "../database/sqlite-database.js";
@@ -23,7 +25,7 @@ it("replaces login globally, rotates seat before socket eviction, rejects old HT
   const headers = { origin, cookie: first.cookie, "x-csrf-token": first.response.csrfToken };
   const hostResult = await app.inject({ method: "POST", url: "/api/rooms", headers, payload: { playerName: "ignored" } });
   expect(hostResult.statusCode, hostResult.body).toBe(201);
-  const host = hostResult.json<PlayerSessionResponse>();
+  const host = hostResult.json<RoomSession<RoomView>>();
   const guest = registry.joinRoom(host.roomId, "游客");
   registry.startRoom(host.roomId, host.seatToken);
   let evicted = false;
@@ -45,7 +47,7 @@ it("replaces login globally, rotates seat before socket eviction, rejects old HT
   expect(JSON.stringify(guestView)).not.toContain("passwordHash");
   const nextHeaders = { origin, cookie: String(second.headers["set-cookie"]).split(";")[0]!, "x-csrf-token": replacement.csrfToken };
   const same = await app.inject({ method: "POST", url: "/api/rooms", headers: nextHeaders, payload: { playerName: "another" } });
-  expect(same.json<PlayerSessionResponse>().playerId).toBe(host.playerId);
+  expect(same.json<RoomSession<RoomView>>().playerId).toBe(host.playerId);
   await app.inject({ method: "PATCH", url: "/api/account/profile", headers: nextHeaders, payload: { displayName: "新名称" } });
   expect(registry.getRoom(host.roomId, replacement.activeSeat!.seatToken).members[0]?.name).toBe(credentials.displayName);
   await app.inject({ method: "POST", url: "/api/auth/logout", headers: nextHeaders, payload: {} });
@@ -112,7 +114,7 @@ for (const input of [
     const headers = { origin, cookie: String(loggedIn.headers["set-cookie"]).split(";")[0]!, "x-csrf-token": auth.csrfToken };
     const room = await app.inject({ method: "POST", url: "/api/rooms", headers, payload: { playerName: "ignored" } });
     expect(room.statusCode, room.body).toBe(201);
-    expect(room.json<PlayerSessionResponse>().room.members[0]?.name).toBe(input.displayName);
+    expect(room.json<RoomSession<RoomView>>().room.members[0]?.name).toBe(input.displayName);
     const profile = await app.inject({ method: "PATCH", url: "/api/account/profile", headers, payload: { displayName: input.displayName + "新" } });
     expect(profile.statusCode, profile.body).toBe(200);
     const newPassword = input.password.length === 1 ? "很长的新密码".repeat(100) : "b";

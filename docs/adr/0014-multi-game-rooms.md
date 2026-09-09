@@ -20,3 +20,13 @@ The product now hosts Catan and an original drawing-telephone game for 3–6 pla
 ## Consequences
 
 Documentation, test entry points and commit scopes distinguish `platform`, `catan` and `draw-guess`. Existing Catan rules, account takeover ordering and transport regression coverage remain required. New-game work must include headless rule tests, projection privacy tests and separate multiplayer/browser tests.
+
+## Boundary implementation
+
+- Public imports use `@catan/game-core/catan`, `/draw-guess`, `/primitives` and `@catan/protocol/platform`, `/catan`, `/draw-guess`, `/transport`. The ambiguous package-root exports and duplicate session-response aliases are removed. `RoomSession<R>` is the canonical seat response; each game's view extends the platform room base.
+- Protocol files live in `platform`, `catan` and `draw-guess`. Account identity and generic match envelopes belong to platform; the versioned settlement payload belongs to its game. `platform-stream.ts` is the explicit wire-format composition point, and creates a Catan decoder only when a Catan cache/event packet arrives.
+- The web `RoomUpdates` store owns credentials, monotonic room revisions and publication. A game policy may reconcile snapshots; Catan's history buffer, history loading and command acknowledgements live in `games/catan`. Draw-guess installs no history policy. `games/room-sync.ts` is the small explicit policy dispatch.
+- Account history owns querying, selection and pagination. Its game result renderers load on demand from `games/<gameId>/AccountMatchItem.tsx`. No Catan result UI is a static dependency of the account shell.
+- Server game routes and schemas, Catan AI/history/projection/timers/settlements, and each game's room record live under `games/<gameId>`. The registry remains the authoritative seat directory and dispatches typed operations; it does not implement history projection, AI turn quotas or game capacity rules. Each game adapter receives a typed room lookup callback, never the mutable cross-game directory.
+- Shared deterministic shuffle primitives are available to both games. Draw-guess retains its existing integer generator and seeded word order; importing a public primitive must not be mistaken for a Catan dependency.
+- Architecture tests parse imports, reexports and dynamic imports across all four source trees. They reject cross-game imports, game dependencies in platform services and Catan rendering in the account shell's static dependency graph. Intentional composition points are named explicitly, not opened up with blanket exceptions.

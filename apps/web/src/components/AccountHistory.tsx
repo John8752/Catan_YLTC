@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { CATAN_GAME_ID, GAME_CATALOG, type GameType, type AccountMatchRecord, type CatanSettlementV1 } from "@catan/protocol";
-import type { DrawGuessSettlementV1 } from "@catan/protocol/draw-guess";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { GAME_CATALOG, type GameType, type AccountMatchRecord } from "@catan/protocol/platform";
 import { getMatchHistory } from "../auth-api.js";
-import { CatanResultPanel } from "./GameResult.js";
 import { Button } from "./ui/button.js";
 
+const CatanMatchItem = lazy(() => import("../games/catan/AccountMatchItem.js"));
+const DrawGuessMatchItem = lazy(() => import("../games/draw-guess/AccountMatchItem.js"));
+
 export function AccountHistory() {
-  const [gameId, setGameId] = useState<GameType>(CATAN_GAME_ID);
+  const [gameId, setGameId] = useState<GameType>("catan");
   const currentGame = useRef(gameId); currentGame.current = gameId;
   const [matches, setMatches] = useState<readonly AccountMatchRecord[]>([]);
   const [offset, setOffset] = useState<number | null>(0);
@@ -43,21 +44,10 @@ export function AccountHistory() {
   </section>;
 }
 function MatchItem({ match }: { readonly match: AccountMatchRecord }) {
-  if (match.gameId === "draw-guess" && match.dataVersion === 1) {
-    const data = match.data as DrawGuessSettlementV1;
-    const you = data.players.find((player) => player.id === match.playerId);
-    return <article className="grid min-w-0 gap-2 rounded-xl border p-4" aria-label="已完成对局"><strong>传画猜词 · {data.playerCount} 人 · {data.albumCount} 本画册</strong>
-      <p className="text-sm text-muted-foreground">{new Date(match.finishedAt).toLocaleString("zh-CN")}</p><p className="text-sm">你完成了 {you?.submittedPages ?? 0} 页，超时收稿 {you?.timedOutPages ?? 0} 页。</p>
-      <p className="break-words text-sm">{data.players.map((player) => player.name).join("、")}</p></article>;
-  }
-  if (match.gameId !== CATAN_GAME_ID || match.dataVersion !== 1) {
+  if (match.dataVersion !== 1 || (match.gameId !== "catan" && match.gameId !== "draw-guess")) {
     return <p>此对局的结算版本暂不支持显示。</p>;
   }
-  const data = match.data as CatanSettlementV1;
-  return <article className="grid min-w-0 gap-2" aria-label="已完成对局">
-    <p className="text-sm text-muted-foreground">
-      {new Date(match.finishedAt).toLocaleString("zh-CN")} · {data.players.length} 人 · {data.winnerId === match.playerId ? "你赢得了本局" : "已完成"}
-    </p>
-    <CatanResultPanel result={data} />
-  </article>;
+  return <Suspense fallback={<p role="status">正在读取对局…</p>}>
+    {match.gameId === "catan" ? <CatanMatchItem match={match} /> : <DrawGuessMatchItem match={match} />}
+  </Suspense>;
 }

@@ -8,7 +8,7 @@ import {
   type GameCommandResult,
   type GameState,
   type PlayerSeed,
-} from "../index.js";
+} from "../catan.js";
 
 const players: readonly PlayerSeed[] = [
   { id: "player_1", name: "一", color: "terracotta" },

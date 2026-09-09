@@ -1,5 +1,5 @@
 import { expect, test, type WebSocketRoute } from "@playwright/test";
-import { createRoomStreamEncoder, ROOM_EVENT_TRANSPORT, type RoomView } from "../../packages/protocol/src/index.js";
+import { createRoomStreamEncoder, ROOM_EVENT_TRANSPORT, type RoomView } from "../../packages/protocol/src/catan/index.js";
 import { fixture } from "./layout-fixture.js";
 import { iPhone16BrowserAreaCases } from "./viewport-cases.js";
 

@@ -1,10 +1,7 @@
-import type { AccountView, AuthResponse, ChangePasswordRequest, LoginRequest, MatchHistoryResponse, RegisterRequest } from "@catan/protocol";
-import { ApiError } from "./api.js";
+import type { AccountView, AuthResponse, ChangePasswordRequest, LoginRequest, MatchHistoryResponse, RegisterRequest } from "@catan/protocol/platform";
+import { ApiError } from "./http.js";
 
-// Memory only. The session itself is an HttpOnly cookie, managed by the server.
-let csrfToken: string | null = null;
-export function setAccountCsrf(value: string | null): void { csrfToken = value; }
-export function accountHeaders(): Record<string, string> { return csrfToken ? { "x-csrf-token": csrfToken } : {}; }
+import { accountHeaders } from "./auth-headers.js";
 export async function authRequest<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, { method, credentials: "same-origin", headers: { "content-type": "application/json", ...accountHeaders() },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }) });

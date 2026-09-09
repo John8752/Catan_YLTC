@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { RoomRegistry } from "./rooms.js";
-import type { RoomRecord } from "./room-types.js";
+import type { CatanRoomRecord } from "./games/catan/room-types.js";
 import { SqliteDatabase } from "./database/sqlite-database.js";
 import { SqliteAccountRepository } from "./database/sqlite-account-repository.js";
 import { SqliteMatchRepository } from "./database/match-repository.js";
@@ -14,7 +14,7 @@ it("persists exactly one final settlement before broadcasting, survives retry, o
   const host = registry.createRoom("甲", "a"); registry.joinRoom(host.roomId, "游客");
   registry.updateSettings(host.roomId, host.seatToken, 2, { ruleProfile: "base-3-4", victoryPointsToWin: 5 });
   registry.startRoom(host.roomId, host.seatToken);
-  const room = (registry as unknown as { rooms: Map<string, RoomRecord> }).rooms.get(host.roomId)!;
+  const room = (registry as unknown as { rooms: Map<string, CatanRoomRecord> }).rooms.get(host.roomId)!;
   expect(JSON.stringify(room.game)).not.toContain("accountId");
   expect(JSON.stringify(room.game)).not.toContain("seatToken");
   const game = room.game!;

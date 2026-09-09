@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import type { AnyRoomView } from "@catan/protocol";
+import type { AnyRoomView } from "@catan/protocol/platform";
 import type { DrawGuessRoomView, DrawGuessSettings } from "@catan/protocol/draw-guess";
-import { getRoom, shuffleRoomMembers, type PlayerSession } from "../../api.js";
+import { getRoom, shuffleRoomMembers } from "../../api.js";
+import { type PlayerSession } from "../../room-session.js";
 import { Button } from "../../components/ui/button.js";
 import { DisbandRoomControl } from "../../components/DisbandRoomControl.js";
 import { saveDrawSettings, sendDrawCommand } from "./api.js";

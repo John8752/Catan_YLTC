@@ -1,6 +1,6 @@
-import { createBaseGame, type GameState } from "@catan/game-core";
+import { createBaseGame, type GameState } from "@catan/game-core/catan";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTION_TIMEOUT_MS, ROLL_TIMEOUT_MS, TurnTimerManager } from "./turn-timer.js";
+import { ACTION_TIMEOUT_MS, ROLL_TIMEOUT_MS, TurnTimerManager } from "./games/catan/turn-timer.js";
 
 const PLAYERS = [
   { id: "player_1", name: "林", color: "terracotta" as const },

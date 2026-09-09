@@ -1,0 +1,46 @@
+import { describeAction, type GameView } from "@catan/protocol/catan";
+import { ChevronDown, Hammer } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { cn } from "../../../lib/utils.js";
+import { Button } from "../../../components/ui/button.js";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible.js";
+
+export function DockActions({ game, compact, buildMode, selectedRobberHexId, children }: {
+  readonly game: GameView;
+  readonly compact: boolean;
+  readonly buildMode: "road" | "settlement" | "city" | null;
+  readonly selectedRobberHexId: string | null;
+  readonly children: ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(game.interaction.kind === "turn-action");
+  const prompt = describeAction(game.interaction);
+  const turnNumber = game.phase.kind === "turn" ? game.phase.turnNumber : null;
+  // Entering ordinary or paired actions must keep End Turn within reach after
+  // a roll (including seven's mandatory resolutions). Manual collapse persists
+  // across snapshots within that interaction.
+  useEffect(() => setExpanded(game.interaction.kind === "turn-action"), [game.id, game.you.id, game.interaction.kind, turnNumber, compact]);
+  useEffect(() => { if (buildMode !== null) setExpanded(false); }, [buildMode]);
+  const mustResolve = game.interaction.kind === "turn-roll" || game.interaction.kind === "discard" ||
+    (game.interaction.kind === "robber" && game.interaction.targets.some((target) => target.hexId === selectedRobberHexId && target.victimIds.length > 1));
+  const open = !compact || mustResolve || expanded;
+  const title = buildMode !== null ? `请在地图选择${{ road: "道路位置", settlement: "定居点位置", city: "要升级的村庄" }[buildMode]}`
+    : prompt?.title ?? (compact ? game.interaction.instruction : "本回合操作");
+
+  return <Collapsible open={open} onOpenChange={setExpanded} asChild>
+    <section className="col-span-2 min-w-0 rounded-xl border border-[#6d5434]/15 bg-white/40 px-2 py-1 md:col-span-1 md:col-start-2 md:row-span-3 md:row-start-1 lg:border-transparent lg:bg-transparent" aria-label="本回合操作">
+      <div className={cn("flex items-center justify-between gap-1 phone-landscape:flex-wrap", compact ? "min-h-8" : "mb-1")}>
+        <span data-action-title="true" title={title} className={cn("flex min-w-0 items-center gap-1 text-xs font-black text-[#5d665f] phone-landscape:basis-full lg:text-sm lg:text-[var(--game-rail-muted)]", prompt?.tone === "required" && "text-[#8c3f3a] lg:rounded lg:bg-[#f1d4cf] lg:px-1 lg:text-[#783d38]")}>
+          <Hammer className="hidden size-3.5 shrink-0 lg:block" aria-hidden="true" /><span className="truncate">{title}</span>
+        </span>
+        {compact && !mustResolve ? <CollapsibleTrigger asChild>
+          <Button type="button" size="sm" variant="ghost" className="h-8 shrink-0 gap-0.5 px-1.5 text-xs" aria-label={open ? "收起本回合操作" : "展开本回合操作"}>
+            {open ? "收起" : "操作"}<ChevronDown className={cn("size-3.5", open && "rotate-180")} />
+          </Button>
+        </CollapsibleTrigger> : null}
+      </div>
+      <CollapsibleContent className={cn("max-h-[28dvh] overflow-y-auto lg:max-h-[min(28dvh,13rem)]", compact && "pt-1 pb-0.5")} data-dock-action-details="true">
+        {children}
+      </CollapsibleContent>
+    </section>
+  </Collapsible>;
+}

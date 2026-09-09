@@ -1,9 +1,10 @@
-import type { GameCommand } from "@catan/game-core";
-import type { PlayerSessionResponse, PublicSetupAnalysisContent, RoomView } from "@catan/protocol";
+import type { RoomSession } from "@catan/protocol/platform";
+import type { GameCommand } from "@catan/game-core/catan";
+import type { PublicSetupAnalysisContent, RoomView } from "@catan/protocol/catan";
 import { expect, it, vi } from "vitest";
-import type { AiCommentator, PublicSetupAnalysisInput } from "./ai-commentary.js";
-import { RoomRegistry } from "./test-helpers/catan-registry.js";
-import type { RoomRecord } from "./room-types.js";
+import type { AiCommentator, PublicSetupAnalysisInput } from "./games/catan/ai-commentary.js";
+import { RoomRegistry } from "./games/catan/test-helpers/registry.js";
+import type { CatanRoomRecord } from "./games/catan/room-types.js";
 
 it("ignores a prior match's AI result even when the new match has the same source revision", async () => {
   let seed = 403;
@@ -13,7 +14,7 @@ it("ignores a prior match's AI result even when the new match has the same sourc
   try {
     const sessions = createStartedRoom(registry), host = sessions[0]!;
     completeSetup(registry, sessions);
-    const room = (registry as unknown as { rooms: Map<string, RoomRecord> }).rooms.get(host.roomId)!;
+    const room = (registry as unknown as { rooms: Map<string, CatanRoomRecord> }).rooms.get(host.roomId)!;
     room.game = { ...room.game!, phase: { kind: "finished", winnerId: host.playerId } };
     registry.returnToLobby(host.roomId, host.seatToken, room.matchId!); registry.startRoom(host.roomId, host.seatToken);
     // Drive the same setup sequence with match-scoped commands in the replay.
@@ -105,7 +106,7 @@ function resultFor(input: PublicSetupAnalysisInput): PublicSetupAnalysisContent 
   };
 }
 
-function createStartedRoom(registry: RoomRegistry): PlayerSessionResponse[] {
+function createStartedRoom(registry: RoomRegistry): RoomSession<RoomView>[] {
   const host = registry.createRoom("林");
   const second = registry.joinRoom(host.roomId, "周");
   const third = registry.joinRoom(host.roomId, "陈");
@@ -113,7 +114,7 @@ function createStartedRoom(registry: RoomRegistry): PlayerSessionResponse[] {
   return [host, second, third];
 }
 
-function completeSetup(registry: RoomRegistry, sessions: readonly PlayerSessionResponse[]) {
+function completeSetup(registry: RoomRegistry, sessions: readonly RoomSession<RoomView>[]) {
   const host = sessions[0];
   if (host === undefined) throw new Error("Missing host");
   let commandIndex = 0;

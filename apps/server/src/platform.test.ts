@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { RoomRecord } from "./room-types.js";
+import type { CatanRoomRecord } from "./games/catan/room-types.js";
 import { RoomRegistry } from "./rooms.js";
 import { buildApp } from "./app.js";
 const registries: RoomRegistry[] = [];
@@ -37,7 +37,7 @@ describe("platform room lifecycle", () => {
   it("gives Catan replays new match IDs and rejects old and unscoped legacy commands", () => {
     const rooms = registry(), host = rooms.createRoom("甲"); rooms.joinRoom(host.roomId, "乙");
     const first = rooms.startCatanRoom(host.roomId, host.seatToken);
-    const records = (rooms as unknown as { rooms: Map<string, RoomRecord> }).rooms;
+    const records = (rooms as unknown as { rooms: Map<string, CatanRoomRecord> }).rooms;
     const room = records.get(host.roomId)!;
     // Fixture of a completed state; scoring legality is covered by Catan replay tests.
     room.game = { ...room.game!, phase: { kind: "finished", winnerId: host.playerId } };

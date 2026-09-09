@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
-import { createGame, executeGameCommand, resourceAmounts, type GameCommand, type GameState } from "../../packages/game-core/src/index.js";
-import { projectGameForPlayer } from "../../packages/protocol/src/index.js";
+import { createGame, executeGameCommand, resourceAmounts, type GameCommand, type GameState } from "../../packages/game-core/src/catan.js";
+import { projectGameForPlayer } from "../../packages/protocol/src/catan/index.js";
 import { fixture, openFixture } from "./layout-fixture.js";
 import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";
 

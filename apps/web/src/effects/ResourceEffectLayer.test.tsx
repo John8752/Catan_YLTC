@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { resourceAmounts } from "@catan/game-core";
-import type { PublicGameEffectView } from "@catan/protocol";
+import { resourceAmounts } from "@catan/game-core/catan";
+import type { PublicGameEffectView } from "@catan/protocol/catan";
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { measureFlights, measureRobberMove, ResourceEffectLayer } from "./ResourceEffectLayer.js";

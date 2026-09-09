@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createBaseGame, createStandardBoard, type PlayerSeed } from "./index.js";
+import { createBaseGame, createStandardBoard, type PlayerSeed } from "./catan.js";
 
 const players: readonly PlayerSeed[] = [
   { id: "player_1", name: "林", color: "terracotta" },

@@ -1,3 +1,4 @@
+import { DEFAULT_AI_REQUESTS_PER_MINUTE } from "./games/catan/routes.js";
 import { acquireRuntimeLock } from "./database/runtime-lock.js";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
@@ -6,11 +7,10 @@ import { fileURLToPath } from "node:url";
 import { SqliteDatabase, assertExternalDatabase } from "./database/sqlite-database.js";
 import {
   buildApp,
-  DEFAULT_AI_REQUESTS_PER_MINUTE,
   DEFAULT_IDLE_ROOM_TTL_MS,
   DEFAULT_ROOM_CREATIONS_PER_MINUTE,
 } from "./app.js";
-import { DeepSeekCommentator } from "./ai-commentary.js";
+import { DeepSeekCommentator } from "./games/catan/ai-commentary.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 const host = process.env.HOST ?? "0.0.0.0";

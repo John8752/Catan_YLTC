@@ -1,11 +1,12 @@
-import type { GameCommand } from "@catan/game-core";
-import type { PlayerSessionResponse } from "@catan/protocol";
+import type { RoomView } from "@catan/protocol/catan";
+import type { RoomSession } from "@catan/protocol/platform";
+import type { GameCommand } from "@catan/game-core/catan";
 import { afterEach, expect, it, vi } from "vitest";
-import type { AiCommentator } from "./ai-commentary.js";
-import { buildTableIntentInput, resolveTableIntent } from "./ai-intent.js";
+import type { AiCommentator } from "./games/catan/ai-commentary.js";
+import { buildTableIntentInput, resolveTableIntent } from "./games/catan/ai-intent.js";
 import { buildApp } from "./app.js";
-import { RoomRegistry } from "./test-helpers/catan-registry.js";
-import type { RoomRecord } from "./room-types.js";
+import { RoomRegistry } from "./games/catan/test-helpers/registry.js";
+import type { CatanRoomRecord } from "./games/catan/room-types.js";
 
 const apps: Awaited<ReturnType<typeof buildApp>>[] = [];
 
@@ -94,7 +95,7 @@ it("rations the read to one per turn per seat and answers only the seat that ask
   });
   apps.push(app);
 
-  const read = (seat: PlayerSessionResponse) => app.inject({
+  const read = (seat: RoomSession<RoomView>) => app.inject({
     method: "POST",
     url: `/api/rooms/${seat.roomId}/ai-commentary`,
     payload: {
@@ -162,7 +163,7 @@ it.each(["match", "turn"] as const)("does not charge a newer %s when an older AI
     seatToken: host.seatToken, expectedRevision: registry.getRoom(host.roomId, host.seatToken).game!.revision, mode: "intent",
   } }).then((response) => response);
   await vi.waitFor(() => expect(analyzeIntent).toHaveBeenCalledOnce());
-  const room = (registry as unknown as { rooms: Map<string, RoomRecord> }).rooms.get(host.roomId)!;
+  const room = (registry as unknown as { rooms: Map<string, CatanRoomRecord> }).rooms.get(host.roomId)!;
   // Reuse the same revision/turn to reproduce a cross-match collision; lifecycle is covered separately.
   if (scope === "match") { room.matchId = "new-match"; room.game = { ...room.game!, id: room.matchId }; }
   else room.game = { ...room.game!, phase: { kind: "turn", step: "roll", activePlayerId: host.playerId, turnNumber: 2 } };

@@ -1,93 +1,60 @@
-import type { GameCommandAck, GameCommandReply, AnyRoomView, GameHistoryPage, IndexedHistoryEntry } from "@catan/protocol";
-import type { PlayerSession } from "./api.js";
-import { HistoryBuffer } from "./history-buffer.js";
+import type { AnyRoomView, GameType } from "@catan/protocol/platform";
+import type { PlayerSession } from "./room-session.js";
 
 export const ROOM_SNAPSHOT_WAIT_MS = 1_500;
 export class RoomSessionChangedError extends Error {
   constructor() { super("房间登录状态已变更"); }
 }
 
-/** All HTTP/WS snapshots pass here before rendering. Credentials scope every asynchronous read. */
+/** Optional game-owned snapshot reconciliation. The platform never inspects game details. */
+export interface RoomUpdatePolicy {
+  isUpgrade(room: AnyRoomView, previous: AnyRoomView | null): boolean;
+  merge(room: AnyRoomView, previous: AnyRoomView | null): AnyRoomView;
+  reset(): void;
+}
+export type RoomPolicyFactory = (gameId: GameType, updates: RoomUpdates) => RoomUpdatePolicy | null;
+
+/** Credentials and room revisions scope every HTTP/WS snapshot before publication. */
 export class RoomUpdates {
   private current: AnyRoomView | null = null;
   private readonly listeners = new Set<() => void>();
-  private readonly history = new HistoryBuffer();
-  get hasHistoryGap(): boolean { return this.history.hasGap; }
-  constructor(private session: PlayerSession | null, private readonly publish: (room: AnyRoomView | null) => void) {}
+  private policy: RoomUpdatePolicy | null = null;
+  get snapshot(): AnyRoomView | null { return this.current; }
+  get gamePolicy(): RoomUpdatePolicy | null { return this.policy; }
+  constructor(private session: PlayerSession | null, private readonly publish: (room: AnyRoomView | null) => void,
+    private readonly createPolicy: RoomPolicyFactory = () => null) {}
 
   reset(session: PlayerSession | null): void {
     if (session !== null && this.belongsTo(session)) return;
     this.session = session;
     this.current = null;
-    this.history.clear();
+    this.policy?.reset(); this.policy = null;
     this.publish(null);
     this.notify();
   }
-
   belongsTo(session: PlayerSession): boolean {
     return this.session?.seatToken === session.seatToken && this.session.roomId === session.roomId && this.session.playerId === session.playerId;
   }
-
   accept(room: AnyRoomView, session: PlayerSession): boolean {
     if (!this.belongsTo(session) || room.id !== session.roomId || (room.game !== null && room.game.you.id !== session.playerId)) return false;
-    // Room metadata (including AI completion) can advance without a game revision.
-    const previousGame = this.current?.gameId === "catan" ? this.current.game : null;
-    const upgrade = room.gameId === "catan" && room.game?.historyRange !== undefined && previousGame?.historyRange === undefined;
-    if (this.current !== null && (room.revision < this.current.revision || (room.revision === this.current.revision && !upgrade))) return false;
-    if (room.game?.id !== this.current?.game?.id) this.history.clear();
-    if (room.gameId === "catan" && room.game?.historyRange) {
-      this.history.add({ gameId: room.game.id, range: room.game.historyRange, entries: room.game.history as readonly IndexedHistoryEntry[] });
-      const visible = this.history.hasGap && previousGame?.historyRange
-        ? { entries: previousGame.history, range: previousGame.historyRange } : this.history.latest!;
-      room = { ...room, game: { ...room.game, history: visible.entries, historyRange: visible.range } };
-    }
-    this.current = room;
-    this.publish(room);
+    if (this.current && room.gameId !== this.current.gameId) return false;
+    if (!this.current) this.policy = this.createPolicy(room.gameId, this);
+    const upgrade = this.policy?.isUpgrade(room, this.current) ?? false;
+    if (this.current && (room.revision < this.current.revision || (room.revision === this.current.revision && !upgrade))) return false;
+    this.current = this.policy?.merge(room, this.current) ?? room;
+    this.publish(this.current);
     this.notify();
     return true;
   }
-
-  async loadEarlierHistory(session: PlayerSession, read: (gameId: string, beforeRevision: number) => Promise<GameHistoryPage>): Promise<void> {
-    if (!this.belongsTo(session)) throw new RoomSessionChangedError();
-    const latest = this.history.latest;
-    if (!latest || latest.range.afterRevision === 0) return;
-    const before = latest.range.afterRevision + 1;
-    const page = await read(latest.gameId, before);
-    if (!this.belongsTo(session) || this.current?.gameId !== "catan" || this.current.game?.id !== latest.gameId) throw new RoomSessionChangedError();
-    if (page.gameId !== latest.gameId || page.range.throughRevision !== before - 1 || page.range.afterRevision >= before - 1) {
-      throw new Error("记录加载范围无效，请重试");
-    }
-    this.history.add(page);
-    if (!this.history.hasGap) this.current = { ...this.current, game: { ...this.current.game, history: this.history.latest!.entries, historyRange: this.history.latest!.range } };
-    this.publish(this.current); // History cannot advance/replace dynamic game state or enqueue effects.
+  /** A game-owned derived update may replace only the exact snapshot it read. */
+  replaceDerived(previous: AnyRoomView, room: AnyRoomView): boolean {
+    if (this.current !== previous || room.id !== previous.id || room.revision !== previous.revision || room.matchId !== previous.matchId || room.gameId !== previous.gameId) return false;
+    this.current = room; this.publish(room);
+    return true;
   }
-
-  async confirm(reply: GameCommandReply, session: PlayerSession, read: (afterRevision?: number) => Promise<AnyRoomView>, connected: boolean): Promise<void> {
-    if (!this.belongsTo(session)) throw new RoomSessionChangedError();
-    if ("room" in reply) { this.accept(reply.room, session); return; } // Older server during deployment.
-    if (reply.roomId !== session.roomId) throw new Error("操作确认的房间不匹配");
-    if (this.hasRevision(reply)) return; // Push often arrives before the HTTP acknowledgement.
-    if (connected) {
-      await new Promise<void>((resolve) => {
-        const finish = () => { clearTimeout(timer); this.listeners.delete(changed); resolve(); };
-        const changed = () => { if (!this.belongsTo(session) || this.hasRevision(reply)) finish(); };
-        const timer = setTimeout(finish, ROOM_SNAPSHOT_WAIT_MS);
-        this.listeners.add(changed);
-      });
-    }
-    if (!this.belongsTo(session)) throw new RoomSessionChangedError();
-    if (this.hasRevision(reply)) return;
-    // A missing push must not strand the UI, or cause an already accepted command to be sent twice.
-    const snapshot = await read(this.current?.game?.revision);
-    if (!this.belongsTo(session)) throw new RoomSessionChangedError();
-    this.accept(snapshot, session);
-    if (!this.hasRevision(reply)) throw new Error("操作已提交，正在等待最新状态，请稍后刷新");
-  }
-
-  private hasRevision(ack: GameCommandAck): boolean {
-    return this.current !== null && this.current.revision >= ack.roomRevision &&
-      (ack.matchId === undefined || ack.matchId === this.current.matchId) &&
-      this.current.game !== null && this.current.game.revision >= ack.gameRevision;
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
   }
   private notify(): void { for (const listener of this.listeners) listener(); }
 }

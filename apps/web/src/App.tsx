@@ -1,11 +1,15 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import type { AccountView, AuthResponse, AnyRoomView, GameType } from "@catan/protocol";
-import { getAccount, setAccountCsrf } from "./auth-api.js";
+import type { AccountView, AuthResponse, AnyRoomView, GameType } from "@catan/protocol/platform";
+import { getAccount } from "./auth-api.js";
+import { setAccountCsrf } from "./auth-headers.js";
 import { AccountControl } from "./components/AccountControl.js";
 import { Welcome } from "./components/Welcome.js";
+import { createGameRoomPolicy } from "./games/room-sync.js";
 import { RoomUpdates, RoomSessionChangedError } from "./room-updates.js";
 import { useRoomConnection } from "./hooks/use-room-connection.js";
-import { ApiError, createRoom, joinRoom, startRoom, leaveRoom, disbandRoom, returnToLobby, type PlayerSession } from "./api.js";
+import { ApiError } from "./http.js";
+import { createRoom, joinRoom, startRoom, leaveRoom, disbandRoom, returnToLobby } from "./api.js";
+import { type PlayerSession } from "./room-session.js";
 import { adoptLegacyTabSession, createPlayerSessionStore, seatSlotFromLocation } from "./player-session.js";
 
 adoptLegacyTabSession(window.sessionStorage, window.localStorage);
@@ -19,7 +23,7 @@ export function App() {
   const [authReady, setAuthReady] = useState(false);
   const [session, setSession] = useState<PlayerSession | null>(() => playerSessionStore.read());
   const [room, renderRoom] = useState<AnyRoomView | null>(null);
-  const [updates] = useState(() => new RoomUpdates(session, renderRoom));
+  const [updates] = useState(() => new RoomUpdates(session, renderRoom, createGameRoomPolicy));
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);

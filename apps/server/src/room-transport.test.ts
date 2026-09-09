@@ -1,7 +1,7 @@
-import type { GameCommandAck, GameCommandResponse } from "@catan/protocol";
+import type { GameCommandAck, GameCommandResponse } from "@catan/protocol/catan";
 import { expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
-import { RoomRegistry } from "./test-helpers/catan-registry.js";
+import { RoomRegistry } from "./games/catan/test-helpers/registry.js";
 import { CatanRoomGame } from "./games/catan/room-game.js";
 
 it("acknowledges without building an extra private projection, preserves idempotency and legacy full replies", async () => {

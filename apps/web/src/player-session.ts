@@ -1,4 +1,4 @@
-import type { PlayerSession } from "./api.js";
+import type { PlayerSession } from "./room-session.js";
 
 const SEAT_KEY_PREFIX = "catan-yltc-seat";
 const LEGACY_SESSION_KEY = "catan-yltc-session";

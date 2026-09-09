@@ -1,0 +1,536 @@
+import { createBaseGame, createGame, resourceAmounts, type GameEventRecord } from "@catan/game-core/catan";
+import { describe, expect, it } from "vitest";
+import { MAX_PROJECTED_EVENT_RECORDS, projectGameForPlayer } from "./views.js";
+
+describe("player-safe game projections", () => {
+  it("projects the authoritative 5–6 player action queue", () => {
+    const game = createGame({
+      id: "game_turn_queue",
+      seed: 42,
+      ruleProfile: "extended-5-6",
+      players: [
+        { id: "p1", name: "一", color: "terracotta" },
+        { id: "p2", name: "二", color: "ocean" },
+        { id: "p3", name: "三", color: "pine" },
+        { id: "p4", name: "四", color: "wheat" },
+        { id: "p5", name: "五", color: "plum" },
+        { id: "p6", name: "六", color: "charcoal" },
+      ],
+    });
+    const view = projectGameForPlayer({
+      ...game,
+      phase: { kind: "turn", activePlayerId: "p1", step: "action", turnNumber: 4 },
+    }, "p5");
+
+    expect(view.turnQueue.slice(0, 4)).toEqual([
+      { playerId: "p1", kind: "primary", turnNumber: 4 },
+      { playerId: "p4", kind: "paired", turnNumber: 4 },
+      { playerId: "p2", kind: "primary", turnNumber: 5 },
+      { playerId: "p5", kind: "paired", turnNumber: 5 },
+    ]);
+  });
+
+  it("carries the server phase deadline without making the client authoritative", () => {
+    const game = createBaseGame({
+      id: "game_timer_projection",
+      seed: 41,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const timer = {
+      playerId: "player_1",
+      kind: "roll" as const,
+      durationMs: 5_000,
+      deadlineAt: 105_000,
+      serverNow: 100_000,
+    };
+
+    expect(projectGameForPlayer(game, "player_1", [], timer).turnTimer).toEqual(timer);
+    expect(projectGameForPlayer(game, "player_1").turnTimer).toBeNull();
+  });
+
+  it("carries only the most recent event records, keeping the newest", () => {
+    const game = createBaseGame({
+      id: "game_capped",
+      seed: 42,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const overflow = MAX_PROJECTED_EVENT_RECORDS + 50;
+    const hexId = game.map.hexes[0]?.id ?? "hex_0_0";
+    const vertexId = game.map.vertices[0]?.id ?? "vertex_00";
+    // Production events, so the cap is exercised on effects as well as the log.
+    const records: GameEventRecord[] = Array.from({ length: overflow }, (_, index) => ({
+      revision: index + 1,
+      event: {
+        type: "resources_produced",
+        total: 1,
+        grants: [{ playerId: "player_1", resources: resourceAmounts({ grain: 1 }) }],
+        sources: [{ playerId: "player_1", resource: "grain", amount: 1, hexId, vertexId }],
+        triggeredHexIds: [hexId],
+      },
+    }));
+
+    const view = projectGameForPlayer(game, "player_1", records);
+    const oldestKept = overflow - MAX_PROJECTED_EVENT_RECORDS + 1;
+
+    expect(view.history).toHaveLength(MAX_PROJECTED_EVENT_RECORDS);
+    // The tail is what players and the effect queue need; the oldest entries go.
+    expect(view.history.at(-1)?.revision).toBe(overflow);
+    expect(view.history.at(0)?.revision).toBe(oldestKept);
+    expect(view.effects.filter((effect) => effect.kind !== "action-attention")).toHaveLength(MAX_PROJECTED_EVENT_RECORDS);
+    expect(view.effects.at(0)?.revision).toBe(oldestKept);
+  });
+
+  it("exposes the viewer hand and redacts every opponent hand", () => {
+    const game = createBaseGame({
+      id: "game_1",
+      seed: 42,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const gameWithCards = {
+      ...game,
+      players: game.players.map((player) =>
+        player.id === "player_2"
+          ? { ...player, resources: { ...player.resources, ore: 3, grain: 2 } }
+          : player,
+      ),
+    };
+
+    const view = projectGameForPlayer(gameWithCards, "player_1");
+    const serialized = JSON.stringify(view.players);
+
+    expect(view.you.resources).toEqual({ brick: 0, lumber: 0, wool: 0, grain: 0, ore: 0 });
+    expect(view.players.find((player) => player.id === "player_2")?.resourceCardCount).toBe(5);
+    expect(serialized).not.toContain('"resources"');
+  });
+
+  it("projects public bank supply, remaining pieces and road achievements", () => {
+    const game = createBaseGame({
+      id: "game_public_supplies",
+      seed: 43,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const [firstEdge, secondEdge] = game.map.edges;
+    if (firstEdge === undefined || secondEdge === undefined) throw new Error("Map needs test edges");
+    const publicState = {
+      ...game,
+      bank: resourceAmounts({ brick: 17, lumber: 16, wool: 15, grain: 14, ore: 13 }),
+      roads: [
+        { ownerId: "player_2", edgeId: firstEdge.id },
+        { ownerId: "player_2", edgeId: secondEdge.id },
+      ],
+      players: game.players.map((player) => player.id === "player_2"
+        ? {
+            ...player,
+            pieces: { roads: 13, settlements: 3, cities: 4 },
+            playedKnights: 2,
+          }
+        : player),
+    };
+
+    const view = projectGameForPlayer(publicState, "player_1");
+    const opponent = view.players.find((player) => player.id === "player_2");
+
+    expect(view.bankResources).toEqual(resourceAmounts({ brick: 17, lumber: 16, wool: 15, grain: 14, ore: 13 }));
+    expect(opponent).toMatchObject({
+      remainingPieces: { roads: 13, settlements: 3, cities: 4 },
+      playedKnights: 2,
+      longestRoadLength: 2,
+    });
+  });
+
+  it("reveals development card identities only to their owner", () => {
+    const game = createBaseGame({
+      id: "game_cards",
+      seed: 7,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const withPrivateCard = {
+      ...game,
+      players: game.players.map((player) => player.id === "player_2"
+        ? {
+            ...player,
+            developmentCards: [{ id: "secret_card", type: "victory-point" as const, acquiredTurn: 1 }],
+          }
+        : player),
+    };
+
+    const opponentView = projectGameForPlayer(withPrivateCard, "player_1");
+    const ownerView = projectGameForPlayer(withPrivateCard, "player_2");
+
+    expect(opponentView.players.find((player) => player.id === "player_2")?.developmentCardCount).toBe(1);
+    expect(JSON.stringify(opponentView.players)).not.toContain("victory-point");
+    expect(ownerView.you.developmentCards).toContainEqual(expect.objectContaining({ id: "secret_card" }));
+  });
+
+  it("redacts private event details from public history", () => {
+    const game = createBaseGame({
+      id: "game_history",
+      seed: 9,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [{
+      revision: 2,
+      event: {
+        type: "development_card_bought" as const,
+        playerId: "player_2",
+        cardId: "secret_card",
+        cardType: "victory-point",
+      },
+    }];
+
+    expect(projectGameForPlayer(game, "player_1", records).history[0]?.privateDetail).toBeNull();
+    expect(projectGameForPlayer(game, "player_2", records).history[0]?.privateDetail).toBe("购入：胜利点");
+  });
+
+  it("projects development-card feedback while keeping monopoly contributions private", () => {
+    const game = createBaseGame({
+      id: "game_development_feedback",
+      seed: 10,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+        { id: "player_4", name: "岚", color: "wheat" },
+      ],
+    });
+    const records = [
+      {
+        revision: 4,
+        event: {
+          type: "development_card_played",
+          playerId: "player_1",
+          cardId: "card_monopoly",
+          cardType: "monopoly",
+          resource: "ore",
+          total: 5,
+          transfers: [
+            { playerId: "player_2", amount: 3 },
+            { playerId: "player_3", amount: 2 },
+          ],
+        },
+      },
+      {
+        revision: 5,
+        event: {
+          type: "development_card_played",
+          playerId: "player_1",
+          cardId: "card_choice",
+          cardType: "resource-choice",
+          resources: resourceAmounts({ lumber: 1, grain: 1 }),
+        },
+      },
+      {
+        revision: 6,
+        event: {
+          type: "free_road_built",
+          playerId: "player_1",
+          edgeId: "edge_4",
+          placed: 1,
+          total: 2,
+          completed: false,
+        },
+      },
+    ] satisfies GameEventRecord[];
+
+    const victimView = projectGameForPlayer(game, "player_2", records);
+    const bystanderView = projectGameForPlayer(game, "player_4", records);
+    expect(victimView.history.map((entry) => entry.message)).toEqual([
+      "林 使用垄断（矿），获得 5 张",
+      "林 使用丰收（1木、1麦）",
+      "林 免费道路 1/2",
+    ]);
+    expect(victimView.history[0]?.privateDetail).toBe("你交出 3 张矿");
+    expect(bystanderView.history[0]?.privateDetail).toBeNull();
+    expect(victimView.effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: "development-card-play",
+        card: { type: "monopoly", resource: "ore", total: 5, ownLoss: 3 },
+      }),
+      expect.objectContaining({ kind: "resource-grant", reason: "monopoly", grants: [expect.objectContaining({ resources: resourceAmounts({ ore: 5 }) })] }),
+      expect.objectContaining({ kind: "development-card-play", card: { type: "resource-choice", resources: resourceAmounts({ lumber: 1, grain: 1 }) } }),
+      expect.objectContaining({ kind: "resource-grant", reason: "resource-choice", grants: [expect.objectContaining({ origin: { kind: "bank" } })] }),
+      expect.objectContaining({ kind: "free-road-built", edgeId: "edge_4", placed: 1, total: 2 }),
+    ]));
+    expect(JSON.stringify(victimView.effects)).not.toContain("transfers");
+    expect(JSON.stringify(bystanderView.effects)).not.toContain("player_2");
+    expect(JSON.stringify(bystanderView.effects)).not.toContain("player_3");
+  });
+
+  it("tells observers which mandatory development-card action is pending", () => {
+    const game = createBaseGame({
+      id: "game_development_waiting",
+      seed: 18,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const turn = { kind: "turn" as const, activePlayerId: "player_1", turnNumber: 3 };
+
+    expect(projectGameForPlayer({ ...game, phase: { ...turn, step: "robber" } }, "player_2").interaction)
+      .toMatchObject({ kind: "waiting", instruction: "等待 林 移动强盗" });
+    expect(projectGameForPlayer({
+      ...game,
+      phase: { ...turn, step: "free-road" },
+      freeRoadsRemaining: 2,
+      freeRoadsGranted: 2,
+    }, "player_2").interaction)
+      .toMatchObject({ kind: "waiting", instruction: "等待 林 放置免费道路" });
+  });
+
+  it("projects only build actions the player can currently afford", () => {
+    const game = createBaseGame({
+      id: "game_affordances",
+      seed: 11,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const actionGame = {
+      ...game,
+      phase: { kind: "turn" as const, activePlayerId: "player_1", step: "action" as const, turnNumber: 1 },
+      buildings: [{ ownerId: "player_1", vertexId: game.map.vertices[0]?.id ?? "", kind: "settlement" as const }],
+      players: game.players.map((player) => player.id === "player_1"
+        ? { ...player, resources: resourceAmounts({ brick: 1 }) }
+        : player),
+    };
+
+    const interaction = projectGameForPlayer(actionGame, "player_1").interaction;
+    expect(interaction).toMatchObject({
+      kind: "turn-action",
+      roadEdgeIds: [],
+      settlementVertexIds: [],
+      cityVertexIds: [],
+    });
+  });
+
+  it("summarizes one production event in a single concise public row", () => {
+    const game = createBaseGame({
+      id: "game_production_history",
+      seed: 12,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [{
+      revision: 8,
+      event: {
+        type: "resources_produced",
+        total: 6,
+        grants: [
+          { playerId: "player_1", resources: resourceAmounts({ brick: 1, lumber: 1 }) },
+          { playerId: "player_3", resources: resourceAmounts({ ore: 2 }) },
+        ],
+        sources: [
+          { playerId: "player_1", resource: "brick", amount: 1, hexId: "hex_brick", vertexId: "vertex_1" },
+          { playerId: "player_1", resource: "lumber", amount: 1, hexId: "hex_lumber", vertexId: "vertex_1" },
+          { playerId: "player_3", resource: "ore", amount: 2, hexId: "hex_ore", vertexId: "vertex_3" },
+        ],
+        triggeredHexIds: ["hex_brick", "hex_lumber", "hex_ore", "hex_unclaimed"],
+      },
+    }] satisfies GameEventRecord[];
+
+    expect(projectGameForPlayer(game, "player_2", records).history.map((entry) => entry.message))
+      .toEqual(["林 +1砖、1木；陈 +2矿"]);
+    expect(projectGameForPlayer(game, "player_2", records).effects).toContainEqual(expect.objectContaining({
+      id: "8:resources-produced",
+      reason: "production",
+      sources: expect.arrayContaining([expect.objectContaining({ hexId: "hex_ore", amount: 2 })]),
+      triggeredHexIds: expect.arrayContaining(["hex_unclaimed"]),
+    }));
+  });
+
+  it("omits turn transitions and sequence-number boilerplate from routine history", () => {
+    const game = createBaseGame({
+      id: "game_concise_history",
+      seed: 121,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [
+      { revision: 41, event: { type: "turn_ended", playerId: "player_1", nextPlayerId: "player_2", turnNumber: 4 } },
+      { revision: 42, event: { type: "dice_rolled", playerId: "player_2", dice: [2, 3] } },
+      { revision: 43, event: { type: "resources_produced", total: 0, grants: [], sources: [], triggeredHexIds: [] } },
+      { revision: 44, event: { type: "trade_offered", offerId: "offer_2", playerId: "player_2" } },
+      { revision: 45, event: { type: "trade_cancelled", offerId: "offer_2", playerId: "player_2" } },
+    ] satisfies GameEventRecord[];
+
+    const messages = projectGameForPlayer(game, "player_1", records).history.map((entry) => entry.message);
+    expect(messages).toEqual(["周 掷出 5", "本轮无资源", "周 发布报价", "周 取消报价"]);
+    expect(messages.join(" ")).not.toMatch(/第\s*\d+\s*次操作|结束回合/);
+  });
+
+  it("keeps trade responses and the chosen final exchange publicly auditable", () => {
+    const game = createBaseGame({
+      id: "game_trade_history",
+      seed: 13,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [
+      { revision: 5, event: { type: "trade_response_recorded", offerId: "offer_1", playerId: "player_2", response: "accepted" } },
+      { revision: 6, event: { type: "trade_response_recorded", offerId: "offer_1", playerId: "player_3", response: "countered" } },
+      {
+        revision: 7,
+        event: {
+          type: "player_trade_completed",
+          offerId: "offer_1",
+          proposerId: "player_1",
+          accepterId: "player_2",
+          give: resourceAmounts({ brick: 2 }),
+          receive: resourceAmounts({ grain: 1 }),
+        },
+      },
+    ] satisfies GameEventRecord[];
+
+    expect(projectGameForPlayer(game, "player_3", records).history.map((entry) => entry.message)).toEqual([
+      "周 接受报价",
+      "陈 提出反报价",
+      "林 与 周：2砖换1麦",
+    ]);
+    expect(projectGameForPlayer(game, "player_3", records).effects).toContainEqual(expect.objectContaining({
+      reason: "player-trade",
+      grants: [
+        expect.objectContaining({ playerId: "player_1", resources: resourceAmounts({ grain: 1 }), origin: { kind: "player", playerId: "player_2" } }),
+        expect.objectContaining({ playerId: "player_2", resources: resourceAmounts({ brick: 2 }), origin: { kind: "player", playerId: "player_1" } }),
+      ],
+    }));
+  });
+
+  it("projects bank gains and redacts a robbed resource from uninvolved players", () => {
+    const game = createBaseGame({
+      id: "game_transfer_effects",
+      seed: 15,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [
+      { revision: 10, event: { type: "maritime_trade_completed", playerId: "player_1", give: "brick", receive: "ore", ratio: 4 } },
+      { revision: 11, event: { type: "robber_moved", playerId: "player_1", fromHexId: "hex_0", hexId: "hex_1", victimId: "player_2", stolenResource: "grain" } },
+    ] satisfies GameEventRecord[];
+
+    const actorView = projectGameForPlayer(game, "player_1", records);
+    const victimView = projectGameForPlayer(game, "player_2", records);
+    const bystanderView = projectGameForPlayer(game, "player_3", records);
+    expect(actorView.history).toEqual([
+      expect.objectContaining({ message: "林 港口：4砖换1矿", privateDetail: null }),
+      expect.objectContaining({ message: "林 移动强盗，从周处偷取 1 张", privateDetail: "偷到：麦" }),
+    ]);
+    expect(victimView.history[1]?.privateDetail).toBe("被偷：麦");
+    expect(bystanderView.history[1]?.privateDetail).toBeNull();
+    expect(actorView.effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ reason: "maritime-trade", grants: [expect.objectContaining({ resources: resourceAmounts({ ore: 1 }), origin: { kind: "bank" } })] }),
+      expect.objectContaining({ kind: "robber-move", fromHexId: "hex_0", toHexId: "hex_1" }),
+      expect.objectContaining({ kind: "resource-transfer", transfers: [expect.objectContaining({ resource: "grain" })] }),
+    ]));
+    expect(bystanderView.effects).toContainEqual(expect.objectContaining({
+      kind: "resource-transfer",
+      transfers: [expect.objectContaining({ resource: null, sourcePlayerId: "player_2", playerId: "player_1" })],
+    }));
+  });
+
+  it("projects public spend and post-setup score effects without revealing a rival victory card", () => {
+    const game = createBaseGame({
+      id: "game_spend_effects",
+      seed: 16,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [
+      { revision: 19, event: { type: "initial_settlement_placed", playerId: "player_1", vertexId: "vertex_setup" } },
+      { revision: 20, event: { type: "piece_built", playerId: "player_1", piece: "settlement", locationId: "vertex_8" } },
+      { revision: 21, event: { type: "development_card_bought", playerId: "player_2", cardId: "secret_vp", cardType: "victory-point" } },
+      { revision: 22, event: { type: "award_changed", award: "longest-road", holderId: "player_1" } },
+    ] satisfies GameEventRecord[];
+
+    const rivalView = projectGameForPlayer(game, "player_1", records);
+    const ownerView = projectGameForPlayer(game, "player_2", records);
+
+    expect(rivalView.effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: "resource-spend",
+        playerId: "player_1",
+        resources: resourceAmounts({ brick: 1, lumber: 1, wool: 1, grain: 1 }),
+        destination: { kind: "build", piece: "settlement", locationId: "vertex_8" },
+      }),
+      expect.objectContaining({ kind: "score-change", playerId: "player_1", delta: 1, reason: "settlement" }),
+      expect.objectContaining({ kind: "resource-spend", playerId: "player_2", destination: { kind: "development" } }),
+      expect.objectContaining({ kind: "score-change", playerId: "player_1", delta: 2, reason: "longest-road" }),
+    ]));
+    expect(rivalView.effects).not.toContainEqual(expect.objectContaining({ reason: "victory-point" }));
+    expect(rivalView.effects.find((effect) => effect.revision === 19)).toBeUndefined();
+    expect(JSON.stringify(rivalView.effects)).not.toContain("secret_vp");
+    expect(ownerView.effects).toContainEqual(expect.objectContaining({
+      kind: "score-change",
+      playerId: "player_2",
+      reason: "victory-point",
+    }));
+  });
+
+  it("projects a matching-hex effect when production grants nobody resources", () => {
+    const game = createBaseGame({
+      id: "game_empty_production_effect",
+      seed: 14,
+      players: [
+        { id: "player_1", name: "林", color: "terracotta" },
+        { id: "player_2", name: "周", color: "ocean" },
+        { id: "player_3", name: "陈", color: "pine" },
+      ],
+    });
+    const records = [{
+      revision: 9,
+      event: {
+        type: "resources_produced",
+        total: 0,
+        grants: [],
+        sources: [],
+        triggeredHexIds: ["hex_unclaimed"],
+      },
+    }] satisfies GameEventRecord[];
+
+    expect(projectGameForPlayer(game, "player_1", records).effects.filter((effect) => effect.kind !== "action-attention")).toEqual([
+      expect.objectContaining({ triggeredHexIds: ["hex_unclaimed"], grants: [] }),
+    ]);
+  });
+});

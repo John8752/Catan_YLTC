@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
-import type { RoomSession, AnyRoomView } from "@catan/protocol";
-import type { RoomMember, AnyRoomRecord, Subscription } from "./room-types.js";
+import type { RoomSession, AnyRoomView } from "@catan/protocol/platform";
+import type { RoomMember } from "./room-base.js";
+import type { AnyRoomRecord, Subscription } from "./room-types.js";
 
 export class AccountSeats {
   constructor(private readonly rooms: Map<string, AnyRoomRecord>, private readonly subscriptions: Map<string, Set<Subscription>>,

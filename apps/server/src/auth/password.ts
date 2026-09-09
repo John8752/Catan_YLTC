@@ -29,5 +29,5 @@ export async function verifyPassword(password: string, encoded: string = DUMMY):
 }
 export function passwordNeedsUpgrade(hash: string): boolean { return !hash.startsWith(`scrypt$${COST}$`); }
 export class AuthError extends Error {
-  constructor(readonly code: import("@catan/protocol").AccountErrorCode, message: string, readonly statusCode = 401) { super(message); }
+  constructor(readonly code: import("@catan/protocol/platform").AccountErrorCode, message: string, readonly statusCode = 401) { super(message); }
 }

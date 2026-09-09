@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { createBaseGame, type GameState } from "@catan/game-core";
-import { projectGameForPlayer } from "@catan/protocol";
+import { createBaseGame, type GameState } from "@catan/game-core/catan";
+import { projectGameForPlayer } from "@catan/protocol/catan";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ATTENTION_DURATION_MS, useActionAttention } from "./use-action-attention.js";

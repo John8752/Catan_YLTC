@@ -1,4 +1,4 @@
-import type { GameView, VictoryWarningEffectView } from "@catan/protocol";
+import type { GameView, VictoryWarningEffectView } from "@catan/protocol/catan";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export const VICTORY_WARNING_DURATION_MS = 3_000;

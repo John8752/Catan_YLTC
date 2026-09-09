@@ -1,6 +1,6 @@
 import { clickGameTool, closeGameMenu } from "./game-tools.js";
-import { createGame, executeGameCommand, type GameCommand, type GameEventRecord, type GameState } from "../../packages/game-core/src/index.js";
-import { projectGameForPlayer } from "../../packages/protocol/src/index.js";
+import { createGame, executeGameCommand, type GameCommand, type GameEventRecord, type GameState } from "../../packages/game-core/src/catan.js";
+import { projectGameForPlayer } from "../../packages/protocol/src/catan/index.js";
 import { expect, test, type Page } from "@playwright/test";
 import { fixture, openFixture, measure } from "./layout-fixture.js";
 import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";

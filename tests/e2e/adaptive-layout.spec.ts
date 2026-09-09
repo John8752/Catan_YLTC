@@ -1,7 +1,7 @@
 import { clickGameTool, closeGameMenu } from "./game-tools.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { resourceAmounts } from "../../packages/game-core/src/index.js";
+import { resourceAmounts } from "../../packages/game-core/src/catan.js";
 import { expect, test } from "@playwright/test";
 import { fixture, openFixture, measure } from "./layout-fixture.js";
 import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";

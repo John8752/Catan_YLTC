@@ -1,4 +1,5 @@
-import type { PlayerSessionResponse, RoomView } from "@catan/protocol";
+import type { RoomSession } from "@catan/protocol/platform";
+import type { RoomView } from "@catan/protocol/catan";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
 import { RoomRegistry } from "./rooms.js";
@@ -17,12 +18,12 @@ describe("room API", () => {
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "林" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     const guest = (await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/join`,
       payload: { playerName: "周" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/start`,
@@ -90,7 +91,7 @@ describe("room API", () => {
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "林" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
 
     // One seat is not a match: the profile floor is what turns it away.
     const soloStart = await app.inject({
@@ -127,17 +128,17 @@ describe("room API", () => {
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "林" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     const second = (await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/join`,
       payload: { playerName: "周" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     const third = (await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/join`,
       payload: { playerName: "陈" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
 
     const hostColorResponse = await app.inject({
       method: "PATCH",
@@ -202,17 +203,17 @@ describe("room API", () => {
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "林" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     const second = (await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/join`,
       payload: { playerName: "周" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     const third = (await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/join`,
       payload: { playerName: "陈" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
 
     const secondLeave = await app.inject({
       method: "POST",
@@ -226,7 +227,7 @@ describe("room API", () => {
       method: "POST",
       url: `/api/rooms/${host.roomId}/join`,
       payload: { playerName: "赵" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     expect(replacement.room.members.find((member) => member.id === replacement.playerId)?.color).toBe("ocean");
 
     const hostLeave = await app.inject({
@@ -270,7 +271,7 @@ describe("room API", () => {
       url: "/api/rooms",
       payload: { playerName: "林" },
     });
-    const host = createResponse.json<PlayerSessionResponse>();
+    const host = createResponse.json<RoomSession<RoomView>>();
     expect(host.room.settings).toEqual({
       ruleProfile: "base-3-4",
       playerLimit: 4,
@@ -310,7 +311,7 @@ describe("room API", () => {
       url: `/api/rooms/${host.roomId}/join`,
       payload: { playerName: "周" },
     });
-    const second = secondResponse.json<PlayerSessionResponse>();
+    const second = secondResponse.json<RoomSession<RoomView>>();
     const nonHostSettingsResponse = await app.inject({
       method: "PATCH",
       url: `/api/rooms/${host.roomId}/settings`,
@@ -363,7 +364,7 @@ describe("room API", () => {
       url: "/api/rooms",
       payload: { playerName: "林" },
     });
-    const host = createResponse.json<PlayerSessionResponse>();
+    const host = createResponse.json<RoomSession<RoomView>>();
 
     expect(createResponse.statusCode).toBe(201);
     expect(host.room.members).toHaveLength(1);
@@ -473,7 +474,7 @@ describe("room API", () => {
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "林" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     for (const playerName of ["周", "陈"]) {
       await app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/join`, payload: { playerName } });
     }
@@ -537,7 +538,7 @@ describe("room API", () => {
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "一" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
 
     const settingsResponse = await app.inject({
       method: "PATCH",
@@ -586,12 +587,12 @@ describe("room API", () => {
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "林" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     const watched = (await app.inject({
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "周" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
     registry.subscribe(watched.roomId, watched.seatToken, () => {});
 
     now += 59_000;
@@ -690,7 +691,7 @@ describe("room API", () => {
       url: "/api/rooms",
       payload: { playerName: "林" },
     });
-    const host = createResponse.json<PlayerSessionResponse>();
+    const host = createResponse.json<RoomSession<RoomView>>();
     const startResponse = await app.inject({
       method: "POST",
       url: `/api/rooms/${host.roomId}/start`,
@@ -716,7 +717,7 @@ describe("room API", () => {
       method: "POST",
       url: "/api/rooms",
       payload: { playerName: "林" },
-    })).json<PlayerSessionResponse>();
+    })).json<RoomSession<RoomView>>();
 
     const rejected = await app.inject({
       method: "POST",

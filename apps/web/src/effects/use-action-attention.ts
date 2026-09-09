@@ -1,4 +1,4 @@
-import type { ActionAttentionEffectView, GameView } from "@catan/protocol";
+import type { ActionAttentionEffectView, GameView } from "@catan/protocol/catan";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export const ATTENTION_DURATION_MS = 1_500;

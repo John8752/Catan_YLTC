@@ -1,8 +1,8 @@
-import type { RoomView, GameHistoryPage } from "@catan/protocol";
+import type { RoomView, GameHistoryPage } from "@catan/protocol/catan";
 import { expect, it } from "vitest";
-import { RoomRegistry } from "./test-helpers/catan-registry.js";
+import { RoomRegistry } from "./games/catan/test-helpers/registry.js";
 import { buildApp } from "./app.js";
-import type { RoomRecord } from "./room-types.js";
+import type { CatanRoomRecord } from "./games/catan/room-types.js";
 
 it("sends new history/effects per subscription and recent history without replay effects on reconnect", () => {
   const registry = new RoomRegistry({ nextSeed: () => 42 });
@@ -33,7 +33,7 @@ it("pages past 200 events through an authenticated seat and rejects invalid or r
   try {
     const host = registry.createRoom("甲", "owner"), other = registry.joinRoom(host.roomId, "乙");
     registry.startRoom(host.roomId, host.seatToken);
-    const internal = (registry as unknown as { rooms: Map<string, RoomRecord> }).rooms.get(host.roomId)!;
+    const internal = (registry as unknown as { rooms: Map<string, CatanRoomRecord> }).rooms.get(host.roomId)!;
     internal.game = { ...internal.game!, revision: 601 };
     internal.history.push(...Array.from({ length: 600 }, (_, i) => ({ revision: i + 2,
       event: { type: "development_card_bought", playerId: host.playerId, cardId: `secret-${i}`, cardType: "victory-point" } as const })));

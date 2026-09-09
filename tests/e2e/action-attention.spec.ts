@@ -1,7 +1,7 @@
 import { clickGameTool, closeGameMenu } from "./game-tools.js";
 import { mkdir } from "node:fs/promises";
-import { createGame, resourceAmounts, type GameState } from "../../packages/game-core/src/index.js";
-import { projectGameForPlayer, type RoomView, type TurnTimerView } from "../../packages/protocol/src/index.js";
+import { createGame, resourceAmounts, type GameState } from "../../packages/game-core/src/catan.js";
+import { projectGameForPlayer, type RoomView, type TurnTimerView } from "../../packages/protocol/src/catan/index.js";
 import { expect, test, type Browser, type BrowserContextOptions, type WebSocketRoute } from "@playwright/test";
 import { primaryPhoneCases, viewportCase } from "./viewport-cases.js";
 

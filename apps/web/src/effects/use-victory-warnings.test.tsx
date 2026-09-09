@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { createBaseGame } from "@catan/game-core";
-import { projectGameForPlayer, type GameView, type VictoryWarningEffectView } from "@catan/protocol";
+import { createBaseGame } from "@catan/game-core/catan";
+import { projectGameForPlayer, type GameView, type VictoryWarningEffectView } from "@catan/protocol/catan";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { useVictoryWarnings, VICTORY_WARNING_DURATION_MS } from "./use-victory-warnings.js";

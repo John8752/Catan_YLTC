@@ -1,4 +1,4 @@
-import type { AnyRoomView } from "@catan/protocol";
+import type { AnyRoomView } from "@catan/protocol/platform";
 import { DoorClosed } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
 import {

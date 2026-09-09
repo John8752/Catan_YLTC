@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import type { AccountView, AuthResponse, LoginRequest, RegisterRequest } from "@catan/protocol";
+import type { AccountView, AuthResponse, LoginRequest, RegisterRequest } from "@catan/protocol/platform";
 import type { RoomRegistry } from "../rooms.js";
 import type { AccountRecord, AccountRepository, SessionRecord } from "./account-repository.js";
 import { AuthError, hashPassword, passwordNeedsUpgrade, verifyPassword } from "./password.js";

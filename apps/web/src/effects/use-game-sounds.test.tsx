@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { createBaseGame, type GameState } from "@catan/game-core";
-import { projectGameForPlayer, type GameView } from "@catan/protocol";
+import { createBaseGame, type GameState } from "@catan/game-core/catan";
+import { projectGameForPlayer, type GameView } from "@catan/protocol/catan";
 import { act, cleanup, fireEvent, renderHook } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { useGameSounds } from "./use-game-sounds.js";

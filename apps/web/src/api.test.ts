@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { ApiError, requestAiCommentary, submitGameCommand, type PlayerSession } from "./api.js";
+import { ApiError } from "./http.js";
+import { type PlayerSession } from "./room-session.js";
+import { requestAiCommentary, submitGameCommand } from "./games/catan/api.js";
 
 const session: PlayerSession = { roomId: "BAB434", playerId: "player_1", seatToken: "seat" };
 

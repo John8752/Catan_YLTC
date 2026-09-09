@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { createBaseGame, resourceAmounts } from "@catan/game-core";
-import { projectGameForPlayer, type PublicGameEffectView } from "@catan/protocol";
+import { createBaseGame, resourceAmounts } from "@catan/game-core/catan";
+import { projectGameForPlayer, type PublicGameEffectView } from "@catan/protocol/catan";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { useGameEffectQueue } from "./use-game-effect-queue.js";

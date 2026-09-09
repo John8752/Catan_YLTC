@@ -1,8 +1,8 @@
-import { RESOURCE_TYPES } from "@catan/game-core";
-import type { PublicGameEffectView } from "@catan/protocol";
+import { RESOURCE_TYPES } from "@catan/game-core/catan";
+import type { PublicGameEffectView } from "@catan/protocol/catan";
 import type { CSSProperties } from "react";
 import { useLayoutEffect, useMemo, useState } from "react";
-import { ResourceCard, type ResourceCardKind } from "@/components/ResourceCard.js";
+import { ResourceCard, type ResourceCardKind } from "../games/catan/components/ResourceCard.js";
 
 const RESOURCE_FLIGHT_DURATION_MS = 1_000;
 const RESOURCE_ARRIVAL_DELAY_MS = RESOURCE_FLIGHT_DURATION_MS - 100;

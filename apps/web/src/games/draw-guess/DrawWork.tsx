@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import type { AnyRoomView } from "@catan/protocol";
+import type { AnyRoomView } from "@catan/protocol/platform";
 import type { DrawGuessView } from "@catan/protocol/draw-guess";
 import type { PageContent } from "@catan/game-core/draw-guess";
-import type { PlayerSession } from "../../api.js";
+import type { PlayerSession } from "../../room-session.js";
 import { Button } from "../../components/ui/button.js";
 import { DrawingCanvas, DrawingPreview } from "./DrawingCanvas.js";
 import { useDraft } from "./use-draft.js";

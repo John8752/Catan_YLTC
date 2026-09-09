@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { createBaseGame, resourceAmounts, type GameEventRecord, type GameState, type PlayerSeed } from "../../packages/game-core/src/index.js";
-import { projectGameForPlayer, type RoomView } from "../../packages/protocol/src/index.js";
+import { createBaseGame, resourceAmounts, type GameEventRecord, type GameState, type PlayerSeed } from "../../packages/game-core/src/catan.js";
+import { projectGameForPlayer, type RoomView } from "../../packages/protocol/src/catan/index.js";
 import { expect, test, type BrowserContext, type Page, type WebSocketRoute } from "@playwright/test";
 
 const roomId = "DEVFX1";

@@ -17,14 +17,19 @@ export function createSeededRandom(seed: number): RandomSource {
 }
 
 export function shuffled<T>(values: readonly T[], random: RandomSource): T[] {
+  return shuffledByIndex(values, (upperExclusive) => Math.floor(random.next() * upperExclusive));
+}
+
+/** Deterministic shuffle with an injected index source, including integer PRNGs. */
+export function shuffledByIndex<T>(values: readonly T[], nextIndex: (upperExclusive: number) => number): T[] {
   const result = [...values];
 
   for (let index = result.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(random.next() * (index + 1));
+    const swapIndex = nextIndex(index + 1);
     const current = result[index];
     const swap = result[swapIndex];
 
-    if (current === undefined || swap === undefined) {
+    if (!Number.isInteger(swapIndex) || swapIndex < 0 || swapIndex > index || current === undefined || swap === undefined) {
       throw new Error("Shuffle index escaped the array bounds");
     }
 

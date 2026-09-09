@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { PublicGameEffectView } from "@catan/protocol";
+import type { PublicGameEffectView } from "@catan/protocol/catan";
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DevelopmentEffectLayer } from "./DevelopmentEffectLayer.js";

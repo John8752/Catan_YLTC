@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { GameCommand } from "../../packages/protocol/src/index.js";
+import type { GameCommand } from "../../packages/protocol/src/catan/index.js";
 import { fixture, openFixture } from "./layout-fixture.js";
 import { iPhone16BrowserAreaCases } from "./viewport-cases.js";
 

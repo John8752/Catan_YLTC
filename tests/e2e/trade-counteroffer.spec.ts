@@ -1,13 +1,14 @@
+import type { RoomSession } from "@catan/protocol/platform";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import type { GameCommand, GameCommandResponse, PlayerSessionResponse, RoomView } from "@catan/protocol";
+import type { GameCommand, GameCommandResponse, RoomView } from "@catan/protocol/catan";
 import { expect, test, type APIRequestContext, type BrowserContext, type Page, type Route } from "@playwright/test";
 import { iPhone16BrowserAreaCases } from "./viewport-cases.js";
 
 const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
 type Resource = Extract<GameCommand, { readonly type: "MaritimeTrade" }>["give"];
 type ResourceCounts = Record<Resource, number>;
-type Session = Pick<PlayerSessionResponse, "roomId" | "playerId" | "seatToken">;
+type Session = Pick<RoomSession<RoomView>, "roomId" | "playerId" | "seatToken">;
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   brick: "砖",
@@ -19,11 +20,11 @@ const RESOURCE_LABELS: Record<Resource, string> = {
 
 test("players can publish, counter and complete a trade on desktop and mobile", async ({ browser, request }) => {
   const hostResponse = await request.post("/api/rooms", { data: { playerName: "林" } });
-  const host = await hostResponse.json() as PlayerSessionResponse;
+  const host = await hostResponse.json() as RoomSession<RoomView>;
   const secondResponse = await request.post(`/api/rooms/${host.roomId}/join`, { data: { playerName: "岚" } });
-  const second = await secondResponse.json() as PlayerSessionResponse;
+  const second = await secondResponse.json() as RoomSession<RoomView>;
   const thirdResponse = await request.post(`/api/rooms/${host.roomId}/join`, { data: { playerName: "舟" } });
-  const third = await thirdResponse.json() as PlayerSessionResponse;
+  const third = await thirdResponse.json() as RoomSession<RoomView>;
   const sessions: readonly Session[] = [host, second, third];
 
   const startResponse = await request.post(`/api/rooms/${host.roomId}/start`, { data: { seatToken: host.seatToken } });

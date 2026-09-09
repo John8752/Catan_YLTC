@@ -1,7 +1,8 @@
-import type { GameCommand, PlayerSessionResponse, RoomView } from "@catan/protocol";
-import { resourceAmounts } from "@catan/game-core";
+import type { RoomSession } from "@catan/protocol/platform";
+import type { GameCommand, RoomView } from "@catan/protocol/catan";
+import { resourceAmounts } from "@catan/game-core/catan";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RoomRegistry } from "./test-helpers/catan-registry.js";
+import { RoomRegistry } from "./games/catan/test-helpers/registry.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -79,7 +80,7 @@ describe("authoritative room countdown", () => {
   });
 });
 
-function createStartedRoom(registry: RoomRegistry): PlayerSessionResponse[] {
+function createStartedRoom(registry: RoomRegistry): RoomSession<RoomView>[] {
   const host = registry.createRoom("林");
   const second = registry.joinRoom(host.roomId, "周");
   const third = registry.joinRoom(host.roomId, "陈");
@@ -87,7 +88,7 @@ function createStartedRoom(registry: RoomRegistry): PlayerSessionResponse[] {
   return [host, second, third];
 }
 
-function completeSetup(registry: RoomRegistry, sessions: readonly PlayerSessionResponse[]): RoomView {
+function completeSetup(registry: RoomRegistry, sessions: readonly RoomSession<RoomView>[]): RoomView {
   const host = requireSession(sessions, 0);
   let commandIndex = 0;
   while (true) {
@@ -109,7 +110,7 @@ function completeSetup(registry: RoomRegistry, sessions: readonly PlayerSessionR
   }
 }
 
-function requireSession(sessions: readonly PlayerSessionResponse[], index: number): PlayerSessionResponse {
+function requireSession(sessions: readonly RoomSession<RoomView>[], index: number): RoomSession<RoomView> {
   const session = sessions[index];
   if (session === undefined) throw new Error(`Missing session ${index}`);
   return session;

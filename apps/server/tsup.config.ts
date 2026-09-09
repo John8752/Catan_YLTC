@@ -11,5 +11,5 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   splitting: false,
-  noExternal: ["@catan/game-core", "@catan/protocol"],
+  noExternal: [/^@catan\/(game-core|protocol)(\/|$)/],
 });

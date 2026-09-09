@@ -1,5 +1,3 @@
-import type { GameCommandErrorCode } from "@catan/game-core";
-
 export type RoomErrorCode =
   | "WRONG_GAME"
   | "STALE_MATCH"
@@ -22,12 +20,11 @@ export type RoomErrorCode =
   | "STALE_ROOM_REVISION"
   | "CANNOT_LEAVE_STARTED_GAME"
   | "GAME_NOT_STARTED"
-  | "STALE_REVISION"
-  | GameCommandErrorCode;
+  | "STALE_REVISION";
 
-export class RoomError extends Error {
+export class RoomError<Code extends string = RoomErrorCode> extends Error {
   constructor(
-    readonly code: RoomErrorCode,
+    readonly code: Code,
     message: string,
   ) {
     super(message);

@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { UserRound } from "lucide-react";
-import type { AccountView, AuthResponse } from "@catan/protocol";
-import { ApiError, type PlayerSession } from "../api.js";
+import type { AccountView, AuthResponse } from "@catan/protocol/platform";
+import { ApiError } from "../http.js";
+import { type PlayerSession } from "../room-session.js";
 import { loginAccount, registerAccount, logoutAccount, updateAccountProfile, changeAccountPassword } from "../auth-api.js";
 import { Button } from "./ui/button.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.js";

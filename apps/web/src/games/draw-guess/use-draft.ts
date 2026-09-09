@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { Draft, EditablePage, DrawGuessPlayerCommand } from "@catan/game-core/draw-guess";
 import type { DrawGuessRoomView, DrawGuessView } from "@catan/protocol/draw-guess";
-import { ApiError, getRoom, type PlayerSession } from "../../api.js";
-import type { AnyRoomView } from "@catan/protocol";
+import { ApiError } from "../../http.js";
+import { getRoom } from "../../api.js";
+import { type PlayerSession } from "../../room-session.js";
+import type { AnyRoomView } from "@catan/protocol/platform";
 import { randomId } from "../../lib/random-id.js";
 import { draftKey, readDraft, writeDraft, removeDraft, pruneDrafts } from "./drafts.js";
 import { sendDrawCommand } from "./api.js";

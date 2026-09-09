@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AnyRoomView, RoomSession, MatchRecord } from "@catan/protocol";
+import type { AnyRoomView, RoomSession, MatchRecord } from "@catan/protocol/platform";
 import type { DrawGuessRoomView } from "@catan/protocol/draw-guess";
 import { RoomRegistry } from "../../rooms.js";
 import { buildApp } from "../../app.js";

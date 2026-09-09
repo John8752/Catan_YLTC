@@ -4,13 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./platform": "./src/platform.ts",
-    "./catan": "./src/index.ts",
+    "./platform": "./src/platform/index.ts",
+    "./catan": "./src/catan/index.ts",
     "./draw-guess": "./src/draw-guess/index.ts",
-    ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    }
+    "./transport": "./src/platform-stream.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

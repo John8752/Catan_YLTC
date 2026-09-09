@@ -1,5 +1,5 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
-import { GAME_CATALOG, type GameType } from "@catan/protocol";
+import { GAME_CATALOG, type GameType } from "@catan/protocol/platform";
 import { cn } from "../lib/utils.js";
 
 export interface WelcomeProps {

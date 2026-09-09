@@ -6,7 +6,7 @@
 
 | 范围 | 交付 | 主要入口 |
 | --- | --- | --- |
-| 大厅框架 / platform | 创建时选择游戏，类型锁定；通用成员、房主、连接、账号接管；结束后回房间重开；新的 matchId | `apps/server/src/rooms.ts`、`apps/web/src/App.tsx`、`packages/protocol/src/platform.ts` |
+| 大厅框架 / platform | 创建时选择游戏，类型锁定；通用成员、房主、连接、账号接管；结束后回房间重开；新的 matchId | `apps/server/src/rooms.ts`、`apps/web/src/App.tsx`、`packages/protocol/src/platform` |
 | 卡坦 / catan | 保留现有规则与增量同步；规则适配器和桌面组件从公共入口中拆出；重开隔离旧命令、计时器与 AI 回调 | `apps/server/src/games/catan`、`apps/web/src/games/catan`、core 的既有领域模块 |
 | 传画猜词 / draw-guess | 3–6 人同时出题、传画、猜词；原创词库；画笔/橡皮/撤销/重做；私密草稿双端恢复；超时收稿；逐页揭晓、完整画册和再来一局 | 规则、协议、服务端与网页各自的 `draw-guess` 目录 |
 
@@ -15,6 +15,12 @@
 两个游戏使用显式分派与独立类型，不引入动态插件系统、通用回合引擎或万能状态对象。核心规则仍只有 `game-core` 一个包；Catan 的领域模块继续遵守 ADR-0004，传画猜词不依赖这些领域。`protocol` 中的玩家视图按 `gameId` 区分，传画猜词没有假的地图、手牌或获胜者。
 
 房间目录只保留一份权威记录。游戏适配器处理游戏本身的创建、开始、设置、命令、投影、计时器与结算；账号和成员不会分别实现两遍。现有 npm 包名暂时保留 `@catan/*`，避免一次大面积改名造成无关发布风险。
+
+包内入口已经按领域拆开，不再提供 `@catan/game-core` 或 `@catan/protocol` 根入口。导入规则分别使用 `/catan`、`/draw-guess` 和 `/primitives`；协议使用 `/platform`、`/catan`、`/draw-guess`，跨游戏传输分派使用 `/transport`。旧的 `PlayerSessionResponse` 已删除，座位响应统一为 `RoomSession`，需要限制游戏时使用 `RoomSession<RoomView>`。
+
+网页公共 `RoomUpdates` 只负责会话、版本和状态发布。Catan 的历史缓冲、补页与 ACK 确认在 `apps/web/src/games/catan/room-sync.ts`；传画猜词不创建这套同步策略。公共账号历史按需加载游戏各自的记录组件，Catan 的业务组件归入 `games/catan/components`。现有卡坦动画继续按 AGENTS.md 留在 `src/effects`。
+
+服务端 `games/<gameId>/routes.ts` 与 `schemas.ts` 承接游戏接口；Catan 的 AI、历史投影、计时和结算实现归入自己的目录。适配器只拿到按 ID 查询本游戏房间的函数，成员和凭证仍由同一份房间目录管理。边界检查覆盖 core、protocol、server、web，并允许通过公共入口使用 primitives。
 
 ## 添加第三个游戏
 

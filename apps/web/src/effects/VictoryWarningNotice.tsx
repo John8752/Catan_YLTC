@@ -1,4 +1,4 @@
-import { victoryWarningMessage, type VictoryWarningEffectView } from "@catan/protocol";
+import { victoryWarningMessage, type VictoryWarningEffectView } from "@catan/protocol/catan";
 import { Trophy } from "lucide-react";
 
 export function VictoryWarningNotice({ notice }: { readonly notice: VictoryWarningEffectView }) {

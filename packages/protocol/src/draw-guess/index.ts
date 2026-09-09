@@ -1,5 +1,5 @@
 import { taskFor, type AlbumPage, type Draft, type DrawGuessState, type DrawGuessPlayerCommand, type PageContent } from "@catan/game-core/draw-guess";
-import type { RoomBaseView } from "../platform.js";
+import type { RoomBaseView } from "../platform/room-base.js";
 
 export interface DrawGuessSettings {
   readonly textSeconds: 30 | 60 | 90;

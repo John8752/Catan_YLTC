@@ -1,4 +1,4 @@
-import type { AccountView } from "@catan/protocol";
+import type { AccountView } from "@catan/protocol/platform";
 export interface AccountRecord extends AccountView {
   readonly passwordHash: string;
   readonly status: "active" | "disabled";

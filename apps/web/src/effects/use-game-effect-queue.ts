@@ -1,4 +1,4 @@
-import type { GameView, PublicGameEffectView } from "@catan/protocol";
+import type { GameView, PublicGameEffectView } from "@catan/protocol/catan";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 export function useGameEffectQueue(game: GameView | null, snapshotEpoch = 0): {

@@ -1,8 +1,8 @@
-import type { PublicGameEffectView } from "@catan/protocol";
-import type { ResourceHand } from "@catan/game-core";
+import type { PublicGameEffectView } from "@catan/protocol/catan";
+import type { ResourceHand } from "@catan/game-core/catan";
 import { Gift, Magnet, Route, Shield } from "lucide-react";
 import { useLayoutEffect, useMemo } from "react";
-import { resourceLabel } from "@/components/ResourceCard.js";
+import { resourceLabel } from "../games/catan/components/ResourceCard.js";
 
 type DevelopmentEffect = Extract<PublicGameEffectView, { readonly kind: "development-card-play" | "free-road-built" }>;
 

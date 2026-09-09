@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AiCommentator } from "./ai-commentary.js";
+import type { AiCommentator } from "./games/catan/ai-commentary.js";
 import { buildApp } from "./app.js";
 import { RoomRegistry } from "./rooms.js";
 

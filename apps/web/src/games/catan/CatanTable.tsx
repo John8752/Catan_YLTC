@@ -1,32 +1,37 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { PlayerColor } from "@catan/game-core/catan";
-import type { AnyRoomView, GameCommand, RoomSettingsInput, RoomView } from "@catan/protocol";
-import { useRoomHistory } from "../../hooks/use-room-history.js";
+import type { PlayerColor } from "@catan/game-core/primitives";
+import type { AnyRoomView } from "@catan/protocol/platform";
+import type { GameCommand, RoomSettingsInput, RoomView } from "@catan/protocol/catan";
+import { useRoomHistory } from "./use-room-history.js";
+import { getCatanSync } from "./room-sync.js";
 import type { RoomUpdates } from "../../room-updates.js";
-import { ApiError, getCatanRoom as getRoom, rerollRoomMap, shuffleRoomMembers, submitGameCommand, updatePlayerColor, updateRoomSettings, type PlayerSession } from "../../api.js";
-import { Board } from "../../components/Board.js";
-import { BankSupply } from "../../components/BankSupply.js";
-import { BankSupplyButton } from "../../components/BankSupplyButton.js";
-import { ResponsiveRoomPanel } from "../../components/ResponsiveRoomPanel.js";
+import { ApiError } from "../../http.js";
+import { shuffleRoomMembers, updatePlayerColor } from "../../api.js";
+import { type PlayerSession } from "../../room-session.js";
+import { getCatanRoom as getRoom, rerollRoomMap, submitGameCommand, updateRoomSettings } from "./api.js";
+import { Board } from "./components/Board.js";
+import { BankSupply } from "./components/BankSupply.js";
+import { BankSupplyButton } from "./components/BankSupplyButton.js";
+import { ResponsiveRoomPanel } from "./components/ResponsiveRoomPanel.js";
 import { useMediaQuery } from "../../hooks/use-media-query.js";
-import { GameResult } from "../../components/GameResult.js";
-import { LobbySetup } from "../../components/LobbySetup.js";
-import { GameSidebar } from "../../components/GameSidebar.js";
-import { OpponentStrip } from "../../components/OpponentStrip.js";
-import { TurnForecastBar } from "../../components/TurnForecastBar.js";
-import { TableUtilities } from "../../components/TableUtilities.js";
-import { PlayerDock } from "../../components/PlayerDock.js";
-import { RoomPanel } from "../../components/RoomPanel.js";
-import { ActiveTradePanel } from "../../components/ActiveTradePanel.js";
-import { AiCommentaryControl } from "../../components/AiCommentaryControl.js";
+import { GameResult } from "./GameResult.js";
+import { LobbySetup } from "./components/LobbySetup.js";
+import { GameSidebar } from "./components/GameSidebar.js";
+import { OpponentStrip } from "./components/OpponentStrip.js";
+import { TurnForecastBar } from "./components/TurnForecastBar.js";
+import { TableUtilities } from "./components/TableUtilities.js";
+import { PlayerDock } from "./components/PlayerDock.js";
+import { RoomPanel } from "./components/RoomPanel.js";
+import { ActiveTradePanel } from "./components/ActiveTradePanel.js";
+import { AiCommentaryControl } from "./components/AiCommentaryControl.js";
 import { ResourceEffectLayer } from "../../effects/ResourceEffectLayer.js";
 import { DevelopmentEffectLayer, isDevelopmentEffect } from "../../effects/DevelopmentEffectLayer.js";
 import { useGameEffectQueue } from "../../effects/use-game-effect-queue.js";
 import { useActionAttention } from "../../effects/use-action-attention.js";
 import { useVictoryWarnings } from "../../effects/use-victory-warnings.js";
 import { useGameSounds } from "../../effects/use-game-sounds.js";
-import { SoundControl } from "../../components/SoundControl.js";
-import { canRetryStaleTradeCommand } from "../../lib/trade-command-retry.js";
+import { SoundControl } from "./components/SoundControl.js";
+import { canRetryStaleTradeCommand } from "./trade-command-retry.js";
 
 interface Props {
   readonly room: RoomView;
@@ -48,7 +53,8 @@ interface Props {
 export function CatanTable({ room, session, updates, busy, error, connectionState, snapshotEpoch, accountControl, compactAccountControl, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby }: Props) {
   const bankInSidebar = useMediaQuery("(min-width: 1024px)");
   const [boardInfoHost, setBoardInfoHost] = useState<HTMLDivElement | null>(null);
-  const historyControls = useRoomHistory(session, room, updates);
+  const sync = getCatanSync(updates);
+  const historyControls = useRoomHistory(session, room, sync);
   const [buildMode, setBuildMode] = useState<"road" | "settlement" | "city" | null>(null);
   const [selectedRobberHexId, setSelectedRobberHexId] = useState<string | null>(null);
   // Where the AI said someone is heading, parked here so the dialog can close
@@ -124,7 +130,7 @@ export function CatanTable({ room, session, updates, busy, error, connectionStat
     await runBusy(async () => {
       try {
         const response = await submitGameCommand(session, submittedGame.revision, command, submittedGame.id);
-        await updates.confirm(response, session, (after) => getRoom(session, after), connectionState === "live");
+        await sync.confirm(response, session, (after) => getRoom(session, after), connectionState === "live");
       } catch (caught) {
         if (isStaleStateError(caught)) {
           const latestRoom = await getRoom(session);
@@ -134,7 +140,7 @@ export function CatanTable({ room, session, updates, busy, error, connectionStat
             canRetryStaleTradeCommand(command, submittedGame, latestRoom.game, session.playerId)
           ) {
             const response = await submitGameCommand(session, latestRoom.game.revision, command, latestRoom.game.id);
-            await updates.confirm(response, session, (after) => getRoom(session, after), connectionState === "live");
+            await sync.confirm(response, session, (after) => getRoom(session, after), connectionState === "live");
             return;
           }
         }

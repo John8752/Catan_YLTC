@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { RoomRegistry } from "./test-helpers/catan-registry.js";
+import { RoomRegistry } from "./games/catan/test-helpers/registry.js";
 import {
   AiCommentaryUpstreamError,
   buildAiGameContext,
   DeepSeekCommentator,
   type PublicSetupAnalysisInput,
-} from "./ai-commentary.js";
+} from "./games/catan/ai-commentary.js";
 
 describe("DeepSeekCommentator", () => {
   it("sends a compact player-safe snapshot with the key only in the authorization header", async () => {

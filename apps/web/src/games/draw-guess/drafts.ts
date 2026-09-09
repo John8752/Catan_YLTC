@@ -1,6 +1,6 @@
 import { validatePage, type EditablePage } from "@catan/game-core/draw-guess";
 import type { Draft } from "@catan/game-core/draw-guess";
-import type { PlayerSession } from "../../api.js";
+import type { PlayerSession } from "../../room-session.js";
 const PREFIX = "yltc:draw-draft:";
 interface StoredDraft extends Draft { readonly savedAt: number }
 export function draftKey(session: PlayerSession, matchId: string, taskId: string): string {

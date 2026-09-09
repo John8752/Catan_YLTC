@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { CATAN_GAME_ID } from "@catan/protocol";
+import { DEFAULT_GAME_ID } from "@catan/protocol/platform";
 import { AccountService, publicAccount } from "./account-service.js";
 import { accountContext, sameOrigin, sessionCookie, readAccountCookie } from "./http.js";
 import type { MatchRepository } from "../database/match-repository.js";
@@ -57,7 +57,7 @@ export function registerAuthRoutes(app: FastifyInstance, service: AccountService
   });
   app.get("/api/account/matches", async (request) => {
     const context = accountContext(service, request);
-    const query = z.object({ gameId: z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/).default(CATAN_GAME_ID),
+    const query = z.object({ gameId: z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/).default(DEFAULT_GAME_ID),
       offset: z.coerce.number().int().min(0).max(100_000).default(0), limit: z.coerce.number().int().min(1).max(50).default(20) }).parse(request.query);
     return matches.history(context.account.id, query.gameId, query.offset, query.limit);
   });

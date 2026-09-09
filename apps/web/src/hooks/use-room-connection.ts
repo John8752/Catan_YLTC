@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { connectToRoom, getRoom, type PlayerSession } from "../api.js";
+import { connectToRoom, getRoom } from "../api.js";
+import { type PlayerSession } from "../room-session.js";
 import { ROOM_SNAPSHOT_WAIT_MS, type RoomUpdates } from "../room-updates.js";
 
 interface Callbacks {

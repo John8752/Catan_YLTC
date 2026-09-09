@@ -1,5 +1,5 @@
-import { createGame, resourceAmounts, type GameState, type PlayerSeed, type GameEventRecord } from "../../packages/game-core/src/index.js";
-import { createRoomStreamEncoder, projectGameForPlayer, type RoomView } from "../../packages/protocol/src/index.js";
+import { createGame, resourceAmounts, type GameState, type PlayerSeed, type GameEventRecord } from "../../packages/game-core/src/catan.js";
+import { createRoomStreamEncoder, projectGameForPlayer, type RoomView } from "../../packages/protocol/src/catan/index.js";
 import { expect, type Browser, type BrowserContextOptions, type Page, type WebSocketRoute } from "@playwright/test";
 
 const players: PlayerSeed[] = [

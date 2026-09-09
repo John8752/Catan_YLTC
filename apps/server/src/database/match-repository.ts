@@ -1,4 +1,4 @@
-import type { AccountMatchRecord, MatchHistoryResponse, MatchRecord } from "@catan/protocol";
+import type { AccountMatchRecord, MatchHistoryResponse, MatchRecord } from "@catan/protocol/platform";
 import type { SqliteDatabase } from "./sqlite-database.js";
 
 export interface MatchParticipant { readonly accountId: string; readonly playerId: string }

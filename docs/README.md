@@ -6,6 +6,8 @@ Current product areas:
 - **Catan**: the base/extended rules, first-playable plan, map/HUD/trade/effects and transport validation below.
 - **Draw-guess**: [Drawing telephone rules](./rules/draw-guess.md), [Multi-game verification](./validation/multi-game.md).
 
+Platform/game isolation refactor: [Ownership and validation](./validation/game-isolation.md).
+
 Read documents in this order:
 
 1. [Product direction](../PRODUCT.md)

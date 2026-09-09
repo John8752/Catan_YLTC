@@ -1,4 +1,4 @@
-import type { PlayerColor } from "@catan/game-core";
+import type { PlayerColor } from "@catan/game-core/primitives";
 
 export const PLAYER_SWATCH_CLASSES = {
   terracotta: "bg-[#c94f3d]",

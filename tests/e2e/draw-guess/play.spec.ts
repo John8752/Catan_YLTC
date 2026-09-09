@@ -1,6 +1,6 @@
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
 import type { DrawGuessRoomView } from "../../../packages/protocol/src/draw-guess/index.js";
-import type { RoomSession } from "../../../packages/protocol/src/platform.js";
+import type { RoomSession } from "../../../packages/protocol/src/platform/index.js";
 import { primaryPhoneCases } from "../viewport-cases.js";
 import { mkdir } from "node:fs/promises";
 

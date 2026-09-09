@@ -24,3 +24,7 @@ Account implementation validation: [Accounts and final settlements](./validation
 Transport optimization validation: [Cached maps and command acknowledgements](./validation/room-transport-phase1.md).
 
 Incremental history validation: [Room events and complete public history](./validation/room-transport-phase2.md).
+
+Roll controls and audio validation: [Mobile actions and distinct game sounds](./validation/roll-actions-and-sounds.md).
+
+Mobile disclosure validation: [Compact controls and negotiation](./validation/mobile-organization.md).

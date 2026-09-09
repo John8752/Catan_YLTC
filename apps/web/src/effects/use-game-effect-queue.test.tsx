@@ -17,6 +17,11 @@ const effect: PublicGameEffectView = {
 };
 
 describe("useGameEffectQueue", () => {
+  it("leaves dice audio out of the visual queue so production starts immediately", () => {
+    const { result, rerender } = renderHook(({ game }) => useGameEffectQueue(game), { initialProps: { game: gameView(6, []) } });
+    rerender({ game: gameView(7, [{ kind: "dice-roll", id: "7:dice-roll", revision: 7, playerId: "player_1" }, effect]) });
+    expect(result.current.activeEffect?.id).toBe(effect.id);
+  });
   it("does not replay an initial snapshot and deduplicates repeated live revisions", () => {
     const initial = gameView(6, []);
     const { result, rerender } = renderHook(

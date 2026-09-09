@@ -4,10 +4,10 @@ import { Button } from "./ui/button.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog.js";
 import { BankSupply } from "./BankSupply.js";
 
-export function BankSupplyButton({ resources }: { readonly resources: ResourceHand | null }) {
+export function BankSupplyButton({ resources, effectAnchor = true }: { readonly resources: ResourceHand | null; readonly effectAnchor?: boolean }) {
   return <Dialog>
     <DialogTrigger asChild>
-      <Button type="button" size="sm" variant="secondary" aria-label="查看银行库存" data-resource-source="bank">
+      <Button type="button" size="sm" variant="secondary" aria-label="查看银行库存" data-resource-source={effectAnchor ? "bank" : undefined}>
         <Landmark aria-hidden="true" />银行
       </Button>
     </DialogTrigger>

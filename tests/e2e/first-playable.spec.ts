@@ -1,3 +1,4 @@
+import { closeGameMenu, openGameMenu } from "./game-tools.js";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
@@ -291,6 +292,7 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await expect.poll(() => boardTransform.evaluate((element) => getComputedStyle(element).transform)).not.toBe(fittedTransform);
     await mapViewport.dblclick({ position: { x: 12, y: 12 } });
     await expect.poll(() => boardTransform.evaluate((element) => getComputedStyle(element).transform)).toBe(fittedTransform);
+    await openGameMenu(host);
     const gameInfoTrigger = host.getByRole("button", { name: /打开公开记录与房间信息/ });
     await expect(gameInfoTrigger).toBeVisible();
     await gameInfoTrigger.click();
@@ -302,6 +304,7 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     await host.keyboard.press("Escape");
     await expect(gameInfoDialog).toBeHidden();
     await expect(gameInfoTrigger).toBeVisible();
+    await closeGameMenu(host);
     await host.screenshot({ path: path.join(artifactDir, "e2e-mobile.png"), fullPage: true });
   } finally {
     await Promise.allSettled(contexts.map((context) => context.close()));

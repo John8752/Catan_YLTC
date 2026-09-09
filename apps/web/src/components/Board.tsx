@@ -29,6 +29,7 @@ import { SettlementShape } from "./PlayerSettlementIcon.js";
 import { ActionAttentionBanner } from "@/effects/ActionAttentionBanner.js";
 
 export interface BoardProps {
+  readonly toolsInMenu?: boolean;
   readonly game: GameView;
   readonly compact?: boolean;
   readonly infoHost?: HTMLElement | null;
@@ -61,6 +62,7 @@ const SETTLEMENT_TERRAIN_LABELS: Readonly<Record<GameView["map"]["hexes"][number
 export function Board({
   game,
   compact = false,
+  toolsInMenu = false,
   infoHost = null,
   roomControls,
   bankSupply = <BankSupply resources={game.bankResources} />,
@@ -89,12 +91,12 @@ export function Board({
   };
 
   const heading = <>
-    <div className="board-heading flex flex-wrap items-center justify-between gap-1">
+    {toolsInMenu && compact ? null : <div className="board-heading flex flex-wrap items-center justify-between gap-1">
       {infoHost === null ? <p className="eyebrow">种子 {game.seed}</p> : null}
       {bankSupply}
       <span className="phase-chip whitespace-nowrap">{phaseLabel(game)}</span>
       {roomControls}
-    </div>
+    </div>}
     {infoHost === null || actionNotice !== null || victoryNotice !== null
       ? <ActionAttentionBanner notice={actionNotice} victoryNotice={victoryNotice} />
       : null}

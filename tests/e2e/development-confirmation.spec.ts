@@ -29,7 +29,6 @@ for (const viewport of viewports) {
           game: { ...room.game, revision: game.revision + 1, developmentCardPlayedThisTurn: true } } } });
       });
       try {
-        if (viewport.width < 1024) await page.getByRole("button", { name: "展开本回合操作" }).click();
         await page.locator(".development-drawer > summary").click();
         const item = page.locator(".development-card").filter({ has: page.getByText(card.label, { exact: true }) });
         expect(await item.getByRole("combobox").count()).toBe(0);

@@ -15,9 +15,12 @@ function view(step: "roll" | "action" | "discard", playerId = "p1", turnNumber =
 }
 const details = <button>执行操作</button>;
 
-it("collapses optional actions on compact screens and returns space after selecting a build", () => {
+it("opens actions on compact screens, permits manual collapse and returns space for building", () => {
   const game = view("action");
   const { rerender } = render(<DockActions game={game} compact buildMode={null} selectedRobberHexId={null}>{details}</DockActions>);
+  expect(screen.getByRole("button", { name: "执行操作" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "收起本回合操作" }));
+  rerender(<DockActions game={{ ...game, revision: game.revision + 1 }} compact buildMode={null} selectedRobberHexId={null}>{details}</DockActions>);
   expect(screen.queryByRole("button", { name: "执行操作" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "展开本回合操作" }));
   expect(screen.getByRole("button", { name: "执行操作" })).toBeTruthy();
@@ -35,9 +38,23 @@ it.each(["roll", "discard"] as const)("keeps %s resolution immediately available
 it("resets expanded details between turns and shows desktop controls without disclosure", () => {
   const renderActions = (game: ReturnType<typeof view>, compact = true) => <DockActions game={game} compact={compact} buildMode={null} selectedRobberHexId={null}>{details}</DockActions>;
   const { rerender } = render(renderActions(view("action")));
-  fireEvent.click(screen.getByRole("button", { name: "展开本回合操作" }));
   rerender(renderActions(view("action", "p2", 2)));
   expect(screen.queryByRole("button", { name: "执行操作" })).toBeNull();
   rerender(renderActions(view("action", "p2", 2), false));
+  expect(screen.getByRole("button", { name: "执行操作" })).toBeTruthy();
+});
+
+it("keeps actions open after rolling, including seven resolution and paired actions", () => {
+  const renderActions = (game: ReturnType<typeof view>) => <DockActions game={game} compact buildMode={null} selectedRobberHexId={null}>{details}</DockActions>;
+  const { rerender } = render(renderActions(view("roll")));
+  rerender(renderActions(view("action")));
+  expect(screen.getByRole("button", { name: "执行操作" })).toBeTruthy();
+  rerender(renderActions(view("discard")));
+  rerender(renderActions(view("action")));
+  expect(screen.getByRole("button", { name: "执行操作" })).toBeTruthy();
+  rerender(renderActions(view("action", "p2", 2)));
+  const game = view("action", "p1", 2);
+  if (game.interaction.kind !== "turn-action") throw new Error("Expected action");
+  rerender(renderActions({ ...game, interaction: { ...game.interaction, pairedPlayer: true } }));
   expect(screen.getByRole("button", { name: "执行操作" })).toBeTruthy();
 });

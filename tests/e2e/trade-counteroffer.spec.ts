@@ -94,7 +94,6 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await proposerPage.keyboard.press("Escape");
     await expect(proposerPage.getByRole("dialog", { name: "交易桌" })).toBeHidden();
     await proposerPage.setViewportSize({ width: 390, height: 844 });
-    await proposerPage.getByRole("button", { name: "展开本回合操作" }).click();
     await proposerPage.getByRole("button", { name: "发起交易" }).click();
     await expect(proposerPage.getByRole("dialog", { name: "交易桌" })).toBeVisible();
     await expect.poll(() => proposerPage.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
@@ -110,6 +109,9 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
       horizontal: document.documentElement.scrollWidth <= window.innerWidth,
       vertical: document.documentElement.scrollHeight <= window.innerHeight + 1,
     }))).toEqual({ horizontal: true, vertical: true });
+
+    await responderPage.getByRole("button", { name: /展开交易详情/ }).click();
+    await thirdResponderPage.getByRole("button", { name: /展开交易详情/ }).click();
 
     let forcedStaleRevision = false;
     const commandUrl = new RegExp(`/api/rooms/${responder.roomId}/commands$`);

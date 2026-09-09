@@ -38,7 +38,6 @@ for (const viewport of [{ name: "desktop", options: { viewport: { width: 1280, h
       await page.goto("/");
       await expect(page.locator(".hex-tile")).toHaveCount(30);
       expect(reads).toBe(0);
-      if (viewport.name !== "desktop") await page.getByRole("button", { name: "展开本回合操作" }).click();
       await page.locator(".development-drawer > summary").click();
       const buy = page.getByRole("button", { name: /购买发展卡/ });
       await buy.click();

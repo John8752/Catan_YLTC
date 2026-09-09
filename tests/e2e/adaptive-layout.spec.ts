@@ -1,3 +1,4 @@
+import { clickGameTool, closeGameMenu } from "./game-tools.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { resourceAmounts } from "../../packages/game-core/src/index.js";
@@ -21,12 +22,7 @@ for (const count of [4, 6] as const) {
           expect(await run.page.evaluate(() => ({ width: innerWidth, height: innerHeight, dpr: devicePixelRatio, touch: navigator.maxTouchPoints > 0 })))
             .toEqual({ width, height, dpr: 3, touch: true });
         }
-        if (width < 1024) {
-          await expect(run.page.getByRole("button", { name: "结束回合", exact: true })).toBeHidden();
-          await run.page.getByRole("button", { name: "展开本回合操作" }).click();
-        }
         await expect(run.page.getByRole("button", { name: "结束回合", exact: true })).toBeVisible();
-        if (width < 1024) await run.page.getByRole("button", { name: "收起本回合操作" }).click();
         await expect(run.page.locator("[data-player-target]")).toHaveCount(count);
         await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
         await expect(run.page.locator('[data-turn-forecast]')).toBeVisible();
@@ -42,9 +38,9 @@ for (const count of [4, 6] as const) {
         // the dock -- the local seat deliberately appears in both.
         await expect(run.page.locator('.seat-column [data-player-score]')).toHaveCount(count);
         await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("0");
-        const bankHost = width >= 1024 ? '[data-game-sidebar]' : '.board-heading';
+        const bankHost = width >= 1024 ? '[data-game-sidebar]' : '.seat-column';
         await expect(run.page.locator(`${bankHost} [data-resource-source="bank"]`)).toBeVisible();
-        if (width < 1024) await run.page.getByRole("button", { name: "查看银行库存" }).click();
+        if (width < 1024) await clickGameTool(run.page, "查看银行库存");
         const bankCards = await run.page.locator('[aria-label="银行剩余资源"] [data-resource-card]').evaluateAll((cards) => cards.map((card) => {
           const count = card.querySelector('[data-resource-count]')!;
           const illustration = card.querySelector('[data-resource-illustration]')!;
@@ -64,6 +60,7 @@ for (const count of [4, 6] as const) {
         }
         if (width < 1024) {
           await run.page.keyboard.press("Escape");
+          await closeGameMenu(run.page);
           await expect(run.page.getByRole("dialog")).toHaveCount(0);
         }
         const scoreBounds = await run.page.locator('.self-seat [data-player-score="p1"]').boundingBox();
@@ -128,7 +125,7 @@ for (const count of [4, 6] as const) {
         await writeFile(path.join(dir, `adaptive-${count}-${width}x${height}.json`), JSON.stringify(metrics, null, 2));
         await run.page.screenshot({ path: path.join(dir, `adaptive-${count}-${width}x${height}.png`), fullPage: true, scale: "css" });
         if (count === 6 && (width === 1920 && height === 1021 || width === 390)) {
-          if (width < 1024) await run.page.getByRole("button", { name: "查看银行库存" }).click();
+          if (width < 1024) await clickGameTool(run.page, "查看银行库存");
           await run.page.getByRole("region", { name: "银行剩余资源", exact: true }).screenshot({ path: path.join(dir, `bank-cards-${width}.png`) });
         }
         expect(run.errors).toEqual([]);
@@ -158,14 +155,16 @@ for (const { name, width, height, options } of [...primaryPhoneCases, viewportCa
     const { page } = run;
     try {
       const bank = page.getByRole("button", { name: "查看银行库存" });
-      await bank.click();
+      await clickGameTool(page, "查看银行库存");
       room = { ...room, revision: 41, game: { ...room.game!, revision: 41, bankResources: resourceAmounts({ brick: 7 }) } };
       run.push(room);
       await expect(page.getByLabel("银行剩余砖 7 张", { exact: true })).toBeVisible();
       await expect(page.locator('[data-resource-source="bank"]')).toHaveCount(1);
       await page.keyboard.press("Escape");
-      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(page.getByRole("dialog", { name: "银行库存", exact: true })).toHaveCount(0);
       await expect(bank).toBeFocused();
+      await closeGameMenu(page);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
 
       const fitted = await measure(page);
       const mapViewport = page.getByRole("region", { name: "可移动地图视口", exact: true });
@@ -178,7 +177,6 @@ for (const { name, width, height, options } of [...primaryPhoneCases, viewportCa
       await expect.poll(async () => (await measure(page)).tile.x).toBeCloseTo(fitted.tile.x, 1);
       await expect(mapViewport).toBeFocused();
 
-      await page.getByRole("button", { name: "展开本回合操作" }).click();
       await expect(page.getByRole("button", { name: "结束回合", exact: true })).toBeVisible();
       await page.getByRole("button", { name: "道路", exact: true }).click();
       await expect(page.getByRole("button", { name: "结束回合", exact: true })).toBeHidden();
@@ -212,16 +210,18 @@ test("opponent anchors survive breakpoints and removed live-room actions stay ab
       await expect(run.page.locator('[data-player-target="p2"]')).toBeVisible();
       await expect(run.page.locator('[data-resource-source="bank"]')).toHaveCount(1);
       await expect(run.page.locator('.self-seat [data-player-score="p1"]')).toHaveText("6");
-      if (width! < 1024) await run.page.getByRole("button", { name: "查看银行库存" }).click();
+      if (width! < 1024) await clickGameTool(run.page, "查看银行库存");
       await expect(run.page.getByLabel("银行剩余砖 7 张", { exact: true })).toBeVisible();
       if (width! < 1024) await run.page.keyboard.press("Escape");
-      await expect(run.page.locator(`${width! >= 1024 ? '[data-game-sidebar]' : '.board-heading'} [data-resource-source="bank"]`)).toBeVisible();
+          await closeGameMenu(run.page);
+      await expect(run.page.locator(`${width! >= 1024 ? '[data-game-sidebar]' : '.seat-column'} [data-resource-source="bank"]`)).toBeVisible();
       expect(await anchor!.evaluate((e) => e.isConnected)).toBe(true);
-      if (width! < 1024) await run.page.getByRole("button", { name: /打开公开记录与房间信息/ }).click();
+      if (width! < 1024) await clickGameTool(run.page, /打开公开记录与房间信息/);
       await expect(run.page.getByRole("button", { name: "退出座位", exact: true })).toHaveCount(0);
       await expect(run.page.getByRole("button", { name: "在新标签页开一个座位", exact: true })).toHaveCount(0);
       await expect(run.page.getByRole("region", { name: "公开记录", exact: true })).toBeVisible();
       if (width! < 1024) await run.page.keyboard.press("Escape");
+          await closeGameMenu(run.page);
     }
   } finally { await run.context.close(); }
 });
@@ -247,10 +247,11 @@ test("history appends below, follows live updates, preserves reading and reopens
     await run.page.getByRole("button", { name: /有新记录/ }).click();
     await expect.poll(atBottom).toBe(true);
     await run.page.setViewportSize({ width: 390, height: 844 });
-    await run.page.getByRole("button", { name: /打开公开记录与房间信息/ }).click();
+    await clickGameTool(run.page, /打开公开记录与房间信息/);
     await expect(run.page.getByRole("dialog", { name: "公开记录与房间信息" })).toBeVisible();
     await expect.poll(atBottom).toBe(true);
     await run.page.keyboard.press("Escape");
+          await closeGameMenu(run.page);
     await expect(run.page.getByRole("dialog")).toHaveCount(0);
     expect(run.errors).toEqual([]);
   } finally { await run.context.close(); }

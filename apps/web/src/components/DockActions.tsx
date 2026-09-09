@@ -12,10 +12,13 @@ export function DockActions({ game, compact, buildMode, selectedRobberHexId, chi
   readonly selectedRobberHexId: string | null;
   readonly children: ReactNode;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(game.interaction.kind === "turn-action");
   const prompt = describeAction(game.interaction);
   const turnNumber = game.phase.kind === "turn" ? game.phase.turnNumber : null;
-  useEffect(() => setExpanded(false), [game.id, game.you.id, game.interaction.kind, turnNumber, compact]);
+  // Entering ordinary or paired actions must keep End Turn within reach after
+  // a roll (including seven's mandatory resolutions). Manual collapse persists
+  // across snapshots within that interaction.
+  useEffect(() => setExpanded(game.interaction.kind === "turn-action"), [game.id, game.you.id, game.interaction.kind, turnNumber, compact]);
   useEffect(() => { if (buildMode !== null) setExpanded(false); }, [buildMode]);
   const mustResolve = game.interaction.kind === "turn-roll" || game.interaction.kind === "discard" ||
     (game.interaction.kind === "robber" && game.interaction.targets.some((target) => target.hexId === selectedRobberHexId && target.victimIds.length > 1));

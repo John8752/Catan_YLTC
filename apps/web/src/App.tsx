@@ -43,6 +43,8 @@ import { DevelopmentEffectLayer, isDevelopmentEffect } from "./effects/Developme
 import { useGameEffectQueue } from "./effects/use-game-effect-queue.js";
 import { useActionAttention } from "./effects/use-action-attention.js";
 import { useVictoryWarnings } from "./effects/use-victory-warnings.js";
+import { useGameSounds } from "./effects/use-game-sounds.js";
+import { SoundControl } from "./components/SoundControl.js";
 import { canRetryStaleTradeCommand } from "./lib/trade-command-retry.js";
 import {
   adoptLegacyTabSession,
@@ -82,6 +84,7 @@ export function App() {
   const [intentFocusVertexId, setIntentFocusVertexId] = useState<string | null>(null);
   const { activeEffect, completeActiveEffect } = useGameEffectQueue(room?.game ?? null, snapshotEpoch);
   const actionNotice = useActionAttention(room?.game ?? null, snapshotEpoch, connectionState === "live");
+  const sound = useGameSounds(room?.game ?? null, snapshotEpoch, connectionState === "live");
   const victoryNotice = useVictoryWarnings(room?.game ?? null, snapshotEpoch, connectionState === "live", actionNotice !== null);
 
   useEffect(() => {
@@ -302,21 +305,22 @@ export function App() {
   // Route one bank/effect anchor to its current surface; do not mount hidden copies.
   const bankSupply = liveGame === null ? null : bankInSidebar
     ? <BankSupply resources={liveGame.bankResources} className="mr-0 w-full shrink-0 justify-center border-transparent bg-transparent shadow-none backdrop-blur-none lg:rounded-none lg:[&>span]:bg-white/5 lg:[&>span]:text-[var(--game-rail-muted)]" />
-    : <BankSupplyButton resources={liveGame.bankResources} />;
-  const roomControls = <ResponsiveRoomPanel {...historyControls}
-    room={room} playerId={session.playerId} connectionState={connectionState} busy={busy}
-    onStart={handleStart} onSettingsChange={handleRoomSettingsChange}
-    onPlayerColorChange={handlePlayerColorChange} onShufflePlayers={handleShufflePlayers}
-    onLeave={handleLeave} onDisband={handleDisband}
-    embedded showPlayers={false} className="min-h-0 flex-1"
-    headerAction={liveGame === null ? null : <AiCommentaryControl
+    : <BankSupplyButton resources={liveGame.bankResources} effectAnchor={false} />;
+  const aiControl = liveGame === null ? null : <AiCommentaryControl compact={!bankInSidebar}
       session={session}
       revision={liveGame.revision}
       turnNumber={liveGame.phase.kind === "turn" ? liveGame.phase.turnNumber : null}
       setupAnalysis={room.setupAnalysis}
       players={room.members}
       onFocusVertex={setIntentFocusVertexId}
-    />}
+    />;
+  const roomControls = <ResponsiveRoomPanel {...historyControls}
+    room={room} playerId={session.playerId} connectionState={connectionState} busy={busy}
+    onStart={handleStart} onSettingsChange={handleRoomSettingsChange}
+    onPlayerColorChange={handlePlayerColorChange} onShufflePlayers={handleShufflePlayers}
+    onLeave={handleLeave} onDisband={handleDisband}
+    embedded showPlayers={false} className="min-h-0 flex-1"
+    headerAction={bankInSidebar ? aiControl : null}
   />;
 
   return (
@@ -333,6 +337,10 @@ export function App() {
           <TurnForecastBar
             game={liveGame}
             actions={<TableUtilities
+              compact={!bankInSidebar}
+              tools={<>{bankSupply}{roomControls}</>}
+              persistentControl={aiControl}
+              soundControl={<SoundControl {...sound} />}
               accountControl={<AccountControl compact account={account} session={session} onLogin={installAccount} onLogout={clearAccount} onProfile={setAccount} />}
               room={room}
               playerId={session.playerId}
@@ -356,11 +364,11 @@ export function App() {
             <Board
               game={room.game}
               compact={!bankInSidebar}
+              toolsInMenu
               infoHost={bankInSidebar ? boardInfoHost : null}
-              roomControls={bankInSidebar ? null : roomControls}
               actionNotice={actionNotice}
               victoryNotice={victoryNotice}
-              bankSupply={bankInSidebar ? null : bankSupply}
+              bankSupply={null}
               busy={busy}
               buildMode={buildMode}
               selectedRobberHexId={selectedRobberHexId}
@@ -394,6 +402,7 @@ export function App() {
         onInfoMount={setBoardInfoHost}
       >
         <PlayerDock
+          tradePanel={!bankInSidebar && liveGame.openTrade ? <ActiveTradePanel game={liveGame} busy={busy} onCommand={handleGameCommand} compact /> : null}
           game={liveGame}
           compact={!bankInSidebar}
           busy={busy}
@@ -403,7 +412,7 @@ export function App() {
           onBuildModeChange={setBuildMode}
         />
       </GameSidebar>}
-      {liveGame?.openTrade === null || liveGame === null ? null : (
+      {!bankInSidebar || liveGame?.openTrade === null || liveGame === null ? null : (
         <div className="active-trade-surface">
           <ActiveTradePanel game={liveGame} busy={busy} onCommand={handleGameCommand} />
         </div>

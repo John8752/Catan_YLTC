@@ -1,3 +1,4 @@
+import { clickGameTool, closeGameMenu } from "./game-tools.js";
 import { mkdir } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { fixture, measure, openFixture } from "./layout-fixture.js";
@@ -110,9 +111,10 @@ test("primary phones preserve anchors and usable bounds as browser bars and safe
           expect(metrics.maxPortOverflow).toBeLessThanOrEqual(metrics.tile.width * 0.2);
           expect(metrics.dock.bottom).toBeLessThanOrEqual(size.height - 34);
           expect(await anchor!.evaluate((element) => element.isConnected)).toBe(true);
-          await run.page.getByRole("button", { name: "查看银行库存" }).click();
-          await expect(run.page.getByRole("dialog")).toBeVisible();
+          await clickGameTool(run.page, "查看银行库存");
+          await expect(run.page.getByRole("dialog", { name: "银行库存", exact: true })).toBeVisible();
           await run.page.keyboard.press("Escape");
+          await closeGameMenu(run.page);
         }
       } finally { await run.context.close(); }
     }

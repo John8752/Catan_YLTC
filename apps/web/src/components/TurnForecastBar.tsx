@@ -10,6 +10,7 @@ export function TurnForecastBar({ game, actions }: {
   if (game.phase.kind !== "turn" || game.turnQueue.length === 0) {
     return actions === undefined ? null : (
       <section className="flex w-fit shrink-0 items-center rounded-xl border border-[#f0c56b]/35 bg-[#102f31]/94 px-1 py-0.5 shadow-[0_5px_16px_rgba(6,31,32,.2)]" data-turn-forecast-utilities-only="true">
+        {game.phase.kind === "setup" ? <span className="px-2 text-xs font-bold text-[#fff4d6] lg:hidden">初始摆放 {game.phase.placementIndex + 1}/{game.phase.placementOrder.length}</span> : null}
         {actions}
       </section>
     );

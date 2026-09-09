@@ -63,7 +63,12 @@ export function TradeControls({
         variant="outline"
         size="sm"
         className="w-full border-[var(--sidebar-line,#a65c4340)] bg-[var(--sidebar-control,#fffaf0cc)] shadow-sm"
-        onClick={() => document.getElementById("active-trade-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+        onClick={() => {
+          const panel = document.getElementById("active-trade-panel");
+          const trigger = panel?.querySelector<HTMLButtonElement>("[data-trade-details-trigger]");
+          if (trigger) trigger.click();
+          else panel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }}
       >
         <Handshake className="size-4" />查看交易桌
       </Button>

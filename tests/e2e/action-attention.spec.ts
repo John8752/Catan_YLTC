@@ -1,3 +1,4 @@
+import { clickGameTool, closeGameMenu } from "./game-tools.js";
 import { mkdir } from "node:fs/promises";
 import { createGame, resourceAmounts, type GameState } from "../../packages/game-core/src/index.js";
 import { projectGameForPlayer, type RoomView, type TurnTimerView } from "../../packages/protocol/src/index.js";
@@ -75,10 +76,11 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
         });
       }
       await expect(page.locator('[data-resource-source="bank"] [data-resource-count]')).toHaveCount(0);
-      if (width < 1024) await page.getByRole("button", { name: "查看银行库存" }).click();
+      if (width < 1024) await clickGameTool(page, "查看银行库存");
       await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-card]')).toHaveCount(5);
       await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-count]')).toHaveCount(0);
       if (width < 1024) await page.keyboard.press("Escape");
+      await closeGameMenu(page);
       const mapViewport = page.getByRole("region", { name: "可移动地图视口", exact: true });
       await mapViewport.focus();
       run.push(scenario(2, turn("roll")));

@@ -11,6 +11,7 @@ import type { VictoryWarningEffectView } from "./victory-warning.js";
 
 export type PublicGameEffectView =
   | ActionAttentionEffectView
+  | DiceRollEffectView
   | VictoryWarningEffectView
   | PublicResourceGrantEffectView
   | PrivateResourceTransferEffectView
@@ -19,6 +20,13 @@ export type PublicGameEffectView =
   | PublicRobberMoveEffectView
   | PublicDevelopmentCardPlayEffectView
   | PublicFreeRoadBuiltEffectView;
+
+export interface DiceRollEffectView {
+  readonly id: string;
+  readonly revision: number;
+  readonly kind: "dice-roll";
+  readonly playerId: string;
+}
 
 export interface PublicResourceGrantEffectView {
   readonly id: string;
@@ -104,6 +112,9 @@ export function projectPlayerSafeEffect(
   viewerId: string,
 ): readonly PublicGameEffectView[] {
   const event = record.event;
+  if (event.type === "dice_rolled") {
+    return [{ id: `${record.revision}:dice-roll`, revision: record.revision, kind: "dice-roll", playerId: event.playerId }];
+  }
   if (event.type === "resources_produced") {
     if (event.triggeredHexIds.length === 0) return [];
     return [{

@@ -1,3 +1,4 @@
+import { clickGameTool } from "./game-tools.js";
 import { mkdir } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { fixture, openFixture } from "./layout-fixture.js";
@@ -31,8 +32,8 @@ for (const viewportName of focusedSetupTipViewports) {
 
       // The finished read is flagged on the button, not thrown over the board.
       const trigger = run.page.getByRole("button", { name: "AI 解说，开局点评已就绪" });
-      await expect(trigger).toBeVisible();
       await expect(run.page.getByRole("dialog")).toHaveCount(0);
+      await expect(trigger).toBeVisible();
       await trigger.click();
 
       const dialog = run.page.getByRole("dialog");
@@ -76,7 +77,7 @@ for (const viewport of [
         } });
       });
 
-      await run.page.getByRole("button", { name: "AI 解说" }).click();
+      await clickGameTool(run.page, "AI 解说");
       // Opening costs nothing; every paid call is one explicit press of 生成.
       expect(requests).toEqual([]);
       await run.page.getByRole("button", { name: "生成", exact: true }).click();

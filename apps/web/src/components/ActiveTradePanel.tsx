@@ -1,9 +1,11 @@
 import type { GameCommand, GameView } from "@catan/protocol";
-import { ArrowRightLeft, Check, ChevronDown, CircleEllipsis, Handshake, MessageSquareReply, Send, X } from "lucide-react";
+import { ArrowRightLeft, Check, CircleEllipsis, Handshake, MessageSquareReply, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge.js";
 import { Button } from "@/components/ui/button.js";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible.js";
+import { TradePanelShell } from "./TradePanelShell.js";
+import { resourceLabel } from "./ResourceCard.js";
+import { RESOURCE_TYPES } from "@catan/game-core";
 import { PLAYER_TONE_CLASSES } from "@/lib/player-palette.js";
 import { cn } from "@/lib/utils.js";
 import {
@@ -18,18 +20,14 @@ import { TradeValidationNote, tradeProblem } from "./TradePresentation.js";
 type OpenTrade = NonNullable<GameView["openTrade"]>;
 type OfferResponse = OpenTrade["responses"][number];
 
-export function ActiveTradePanel({ game, busy, onCommand }: {
+export function ActiveTradePanel({ game, busy, onCommand, compact = false }: {
+  readonly compact?: boolean;
   readonly game: GameView;
   readonly busy: boolean;
   readonly onCommand: (command: GameCommand) => void;
 }) {
   const offer = game.openTrade;
-  const [expanded, setExpanded] = useState(true);
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
-
-  useEffect(() => {
-    if (offer !== null) setExpanded(true);
-  }, [offer?.offerId]);
 
   useEffect(() => {
     if (offer === null || offer.proposerId !== game.you.id) return;
@@ -49,30 +47,16 @@ export function ActiveTradePanel({ game, busy, onCommand }: {
   const selectedAffordable = selectedTerms !== null && hasTradeResources(game.you.resources, selectedTerms.give);
 
   return (
-    <Collapsible open={expanded} onOpenChange={setExpanded} asChild>
-      <section
-        id="active-trade-panel"
-        className="overflow-hidden rounded-2xl border border-[#8d5b3f]/20 bg-[#fff8e8]/96 shadow-[0_8px_20px_rgba(65,45,28,.24)] backdrop-blur-sm"
-        aria-label={ownOffer ? "等待桌上回应" : "查看报价并回应"}
-      >
-        <CollapsibleTrigger asChild>
-          <button type="button" className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-white/35">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#214d48] text-[#fff8df]"><Handshake className="size-4" /></span>
-            <span className="min-w-0 flex-1">
-              <small className="block text-[10px] font-black tracking-[.12em] text-[#99543d] uppercase">{ownOffer ? "你的公开报价" : `${proposer?.name ?? "玩家"} 的报价`}</small>
-              <strong className="block truncate text-sm text-[#294b47]">{ownOffer ? "等待桌上回应" : "选择回应方式"}</strong>
-            </span>
-            <TradeResponseCount game={game} />
-            <ChevronDown className={cn("size-4 shrink-0 text-[#526a63] transition-transform", expanded && "rotate-180")} />
-          </button>
-        </CollapsibleTrigger>
-
-        <CollapsibleContent className="border-t border-[#6d5434]/12 px-3 py-3">
+    <TradePanelShell key={`${offer.offerId}:${compact}`} compact={compact}
+      label={ownOffer ? "等待桌上回应" : "查看报价并回应"}
+      title={ownOffer ? "你的公开报价" : `${proposer?.name ?? "玩家"} 的报价`}
+      summary={`${briefResources(offer.give)} 换 ${briefResources(offer.receive)} · ${offer.responses.length}/${game.players.length - 1} 已回应`}
+      badge={<TradeResponseCount game={game} />}>
           <CompactTerms give={offer.give} receive={offer.receive} responderView={!ownOffer} />
           {ownOffer ? (
             <>
-              <ProposerResponses game={game} offer={offer} busy={busy} selectedPartnerId={selectedPartnerId} onSelectedPartnerId={setSelectedPartnerId} />
-              <div className="mt-3 grid gap-2">
+              <ProposerResponses game={game} offer={offer} busy={busy} selectedPartnerId={selectedPartnerId} onSelectedPartnerId={setSelectedPartnerId} compact={compact} />
+              <div className="sticky -bottom-3 mt-3 grid gap-2 border-t border-[#6d5434]/15 bg-[#fff8e8] py-3">
                 <Button
                   className="bg-[#214d48] text-[#fff8df] hover:bg-[#173d39]"
                   disabled={busy || selectedResponse === undefined || selectedResponse.response === "declined" || !selectedAffordable}
@@ -89,13 +73,12 @@ export function ActiveTradePanel({ game, busy, onCommand }: {
           ) : (
             <ResponderActions game={game} offer={offer} busy={busy} response={ownResponse} onCommand={onCommand} />
           )}
-        </CollapsibleContent>
-      </section>
-    </Collapsible>
+    </TradePanelShell>
   );
 }
 
-function ProposerResponses({ game, offer, busy, selectedPartnerId, onSelectedPartnerId }: {
+function ProposerResponses({ game, offer, busy, selectedPartnerId, onSelectedPartnerId, compact }: {
+  readonly compact: boolean;
   readonly game: GameView;
   readonly offer: OpenTrade;
   readonly busy: boolean;
@@ -104,8 +87,10 @@ function ProposerResponses({ game, offer, busy, selectedPartnerId, onSelectedPar
 }) {
   return (
     <section className="mt-3 grid gap-2" aria-label="桌上回应">
+      {compact && game.players.length - 1 > offer.responses.length ? <p className="m-0 text-xs text-[#65706a]">还有 {game.players.length - 1 - offer.responses.length} 位玩家未回应</p> : null}
       {game.players.filter((player) => player.id !== game.you.id).map((player) => {
         const response = offer.responses.find((candidate) => candidate.playerId === player.id);
+        if (compact && response === undefined) return null;
         const terms = response === undefined ? null : responseTerms(offer, response);
         const selectable = response !== undefined && response.response !== "declined";
         const affordable = terms !== null && hasTradeResources(game.you.resources, terms.give);
@@ -229,4 +214,8 @@ function ownResponseMessage(response: OfferResponse | undefined): string {
   if (response?.response === "countered") return "反报价已公开，可以继续修改";
   if (response?.response === "declined") return "你已拒绝，仍可修改回应";
   return "选择同意、拒绝或提出反报价。";
+}
+
+function briefResources(resources: TradeBasket): string {
+  return RESOURCE_TYPES.filter((resource) => resources[resource] > 0).map((resource) => `${resources[resource]}${resourceLabel(resource)}`).join("+") || "无资源";
 }

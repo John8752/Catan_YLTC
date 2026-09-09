@@ -1,6 +1,6 @@
 import { RESOURCE_TYPES, type ResourceHand, type ResourceType } from "@catan/game-core";
 import { describeAction, victoryWarningTier, type GameCommand, type GameView } from "@catan/protocol";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Card } from "@/components/ui/card.js";
 import { GameControls } from "./GameControls.js";
 import { DockActions } from "./DockActions.js";
@@ -11,8 +11,10 @@ import { PlayerColorDot } from "./PlayerColorDot.js";
 import { PlayerScoreBadge } from "./PlayerScoreBadge.js";
 import { TurnTimerBadge } from "./TurnTimerBadge.js";
 import { cn } from "@/lib/utils.js";
+import { PlayerDetails } from "./PlayerDetails.js";
 
 export interface PlayerDockProps {
+  readonly tradePanel?: ReactNode;
   readonly game: GameView;
   readonly compact?: boolean;
   readonly busy: boolean;
@@ -30,6 +32,7 @@ export function PlayerDock({
   buildMode,
   selectedRobberHexId,
   onBuildModeChange,
+  tradePanel,
 }: PlayerDockProps) {
   const [discardSelection, setDiscardSelection] = useState<ResourceHand>(emptyResourceSelection);
 
@@ -64,8 +67,8 @@ export function PlayerDock({
         >
           <PlayerColorDot color={game.you.color} className="size-2.5 ring-[#6d5434]/25 lg:size-3" />
           <div className={cn("min-w-0 flex-1", nearVictory && "max-md:contents")}>
-            <strong className={cn("block truncate text-xs text-[#243d39] lg:text-base lg:text-[var(--game-rail-ink)]", nearVictory && "max-md:col-span-2")} title={game.you.name}>{game.you.name}</strong>
-            <span data-self-resource-total="true" className={cn("block text-[9px] font-bold text-[#6c6d62] lg:text-xs lg:text-[var(--game-rail-muted)]", nearVictory && "max-md:col-span-2 max-md:whitespace-nowrap")}>资源总数 {game.you.resourceCardCount}</span>
+            <PlayerDetails player={game.you}><button type="button" aria-label="查看自己的玩家详情" className={cn("block max-w-full truncate text-left text-xs font-bold text-[#243d39] lg:text-base lg:text-[var(--game-rail-ink)]", nearVictory && "max-md:col-span-2")} title={game.you.name}><span className="lg:hidden">我</span><span className="hidden lg:inline">{game.you.name}</span></button></PlayerDetails>
+            <span data-self-resource-total="true" className={cn("block text-[9px] font-bold text-[#6c6d62] lg:text-xs lg:text-[var(--game-rail-muted)]", nearVictory && "max-md:col-span-2 max-md:whitespace-nowrap")}><span className="lg:hidden">资源 {game.you.resourceCardCount}</span><span className="hidden lg:inline">资源总数 {game.you.resourceCardCount}</span></span>
           </div>
           <div className="ml-auto flex shrink-0 flex-col items-end gap-1">
             <PlayerScoreBadge player={game.you} victoryPointsToWin={game.victoryPointsToWin} active={game.phase.kind === "turn"} />
@@ -100,9 +103,10 @@ export function PlayerDock({
           player={game.you}
           tone="light"
           density="compact"
-          className="col-span-2 rounded-lg border border-[#6d5434]/10 bg-white/25 p-0.5 md:col-span-1 md:col-start-1 md:row-start-3 lg:border-transparent lg:bg-transparent lg:[&>span]:bg-white/5 lg:[&_span]:text-[var(--game-rail-muted)] lg:[&_b]:text-[var(--game-rail-ink)]"
+          className="col-span-2 hidden rounded-lg border border-[#6d5434]/10 bg-white/25 p-0.5 md:col-span-1 md:col-start-1 md:row-start-3 lg:grid lg:border-transparent lg:bg-transparent lg:[&>span]:bg-white/5 lg:[&_span]:text-[var(--game-rail-muted)] lg:[&_b]:text-[var(--game-rail-ink)]"
         />
 
+        {tradePanel}
         <DockActions game={game} compact={compact} buildMode={buildMode} selectedRobberHexId={selectedRobberHexId}>
           <GameControls
             game={game}

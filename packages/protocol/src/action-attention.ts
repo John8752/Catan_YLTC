@@ -11,6 +11,7 @@ export interface ActionAttentionEffectView extends ActionPrompt {
   readonly kind: "action-attention";
   readonly id: string;
   readonly revision: number;
+  readonly sound?: "your-turn";
 }
 
 /** Copy follows the authoritative interaction, never client-side legality. */
@@ -56,5 +57,7 @@ export function projectActionAttention(
       opportunity = `${turn}:${interaction.kind}:${trigger?.revision ?? 0}`;
     } else opportunity = turn;
   }
-  return [{ ...prompt, kind: "action-attention", id: `attention:${viewerId}:${opportunity}`, revision: state.revision }];
+  const sound = ["setup-settlement", "setup-road", "turn-roll", "turn-action"].includes(interaction.kind)
+    ? { sound: "your-turn" as const } : {};
+  return [{ ...prompt, ...sound, kind: "action-attention", id: `attention:${viewerId}:${opportunity}`, revision: state.revision }];
 }

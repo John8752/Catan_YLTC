@@ -38,7 +38,8 @@ interface CommentaryLogEntry {
   readonly intent: TableIntentContent | null;
 }
 
-export function AiCommentaryControl({ session, revision, turnNumber, setupAnalysis, players, onFocusVertex }: {
+export function AiCommentaryControl({ session, revision, turnNumber, setupAnalysis, players, onFocusVertex, compact = false }: {
+  readonly compact?: boolean;
   readonly session: PlayerSession;
   readonly revision: number;
   /** null outside a turn, where nobody has a next build to read yet. */
@@ -112,7 +113,7 @@ export function AiCommentaryControl({ session, revision, turnNumber, setupAnalys
       <DialogTrigger asChild>
         <Button
           className="relative shrink-0"
-          size="sm"
+          size={compact ? "icon-sm" : "sm"}
           variant="secondary"
           disabled={loading}
           aria-label={unreadSetup ? "AI 解说，开局点评已就绪" : undefined}
@@ -121,7 +122,7 @@ export function AiCommentaryControl({ session, revision, turnNumber, setupAnalys
             setUnreadSetup(false);
           }}
         >
-          <Sparkles className="size-4" />AI 解说
+          <Sparkles className="size-4" /><span className={compact ? "sr-only" : undefined}>AI 解说</span>
           {unreadSetup ? (
             <span
               className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-[#c2553c] ring-2 ring-[#f8ecd2]"

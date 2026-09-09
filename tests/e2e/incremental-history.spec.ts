@@ -1,3 +1,4 @@
+import { clickGameTool } from "./game-tools.js";
 import { expect, test, type WebSocketRoute } from "@playwright/test";
 import { createRoomEventEncoder, ROOM_EVENT_TRANSPORT, type GameHistoryPage, type RoomView } from "../../packages/protocol/src/index.js";
 import { fixture } from "./layout-fixture.js";
@@ -40,7 +41,7 @@ for (const viewport of [{ name: "desktop", width: 1280, height: 800, options: {}
     const panel = page.getByRole("region", { name: "公开记录", exact: true });
     const scroll = panel.locator('[data-slot="scroll-area-viewport"]');
     const rows = panel.locator("[data-history-key]");
-    const openPanel = async () => { if (viewport.width < 1024) await page.getByRole("button", { name: /打开公开记录与房间信息/ }).click(); };
+    const openPanel = async () => { if (viewport.width < 1024) await clickGameTool(page, /打开公开记录与房间信息/); };
     try {
       await page.goto("/"); await expect(page.locator(".hex-tile")).toHaveCount(30); await openPanel();
       await expect(rows).toHaveCount(50); expect(requests).toBe(0);

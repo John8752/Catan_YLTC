@@ -2,7 +2,35 @@ import type { GameCommand } from "@catan/game-core";
 import type { PlayerSessionResponse, PublicSetupAnalysisContent, RoomView } from "@catan/protocol";
 import { expect, it, vi } from "vitest";
 import type { AiCommentator, PublicSetupAnalysisInput } from "./ai-commentary.js";
-import { RoomRegistry } from "./rooms.js";
+import { RoomRegistry } from "./test-helpers/catan-registry.js";
+import type { RoomRecord } from "./room-types.js";
+
+it("ignores a prior match's AI result even when the new match has the same source revision", async () => {
+  let seed = 403;
+  const callbacks: ((analysis: PublicSetupAnalysisContent) => void)[] = [];
+  const analyzeSetup = vi.fn<AiCommentator["analyzeSetup"]>(() => new Promise((resolve) => callbacks.push(resolve)));
+  const registry = new RoomRegistry({ nextSeed: () => ++seed, aiCommentator: { analyze: async () => "unused", analyzeSetup, analyzeIntent: unusedIntent } });
+  try {
+    const sessions = createStartedRoom(registry), host = sessions[0]!;
+    completeSetup(registry, sessions);
+    const room = (registry as unknown as { rooms: Map<string, RoomRecord> }).rooms.get(host.roomId)!;
+    room.game = { ...room.game!, phase: { kind: "finished", winnerId: host.playerId } };
+    registry.returnToLobby(host.roomId, host.seatToken, room.matchId!); registry.startRoom(host.roomId, host.seatToken);
+    // Drive the same setup sequence with match-scoped commands in the replay.
+    while (room.game?.phase.kind === "setup") {
+      const phase = room.game.phase, actor = sessions.find((seat) => seat.playerId === phase.placementOrder[phase.placementIndex])!;
+      const game = registry.getRoom(host.roomId, actor.seatToken).game!;
+      const command: GameCommand = game.interaction.kind === "setup-settlement" ? { type: "PlaceInitialSettlement", vertexId: game.interaction.vertexIds[0]! } : { type: "PlaceInitialRoad", edgeId: game.interaction.edgeIds[0]! };
+      registry.executeCommand(host.roomId, actor.seatToken, `new-${game.revision}`, game.revision, command, "ack", room.matchId!);
+    }
+    expect(analyzeSetup).toHaveBeenCalledTimes(2);
+    expect(analyzeSetup.mock.calls[0]![0].sourceRevision).toBe(analyzeSetup.mock.calls[1]![0].sourceRevision);
+    callbacks[0]!(resultFor(analyzeSetup.mock.calls[0]![0])); await Promise.resolve();
+    expect(registry.getRoom(host.roomId, host.seatToken).setupAnalysis?.status).toBe("loading");
+    callbacks[1]!(resultFor(analyzeSetup.mock.calls[1]![0])); await Promise.resolve();
+    expect(registry.getRoom(host.roomId, host.seatToken).setupAnalysis?.status).toBe("ready");
+  } finally { registry.dispose(); }
+});
 
 it("generates one public setup analysis, broadcasts it to every seat, and retains it on reconnect", async () => {
   let resolveAnalysis!: (analysis: PublicSetupAnalysisContent) => void;

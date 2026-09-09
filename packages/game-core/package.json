@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./catan": "./src/index.ts",
+    "./primitives": "./src/primitives/index.ts",
+    "./draw-guess": "./src/draw-guess/index.ts",
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"

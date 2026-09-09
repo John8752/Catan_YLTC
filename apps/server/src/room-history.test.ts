@@ -1,6 +1,6 @@
 import type { RoomView, GameHistoryPage } from "@catan/protocol";
 import { expect, it } from "vitest";
-import { RoomRegistry } from "./rooms.js";
+import { RoomRegistry } from "./test-helpers/catan-registry.js";
 import { buildApp } from "./app.js";
 import type { RoomRecord } from "./room-types.js";
 

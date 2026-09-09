@@ -167,12 +167,8 @@ export type GameInteractionView =
       readonly edgeIds: readonly string[];
     };
 
-export interface LobbyMemberView {
-  readonly id: string;
-  readonly name: string;
-  readonly color: PlayerColor;
-  readonly isHost: boolean;
-}
+import type { RoomBaseView } from "./platform.js";
+export type { LobbyMemberView } from "./platform.js";
 
 export interface RoomSettingsView {
   readonly ruleProfile: PlayableRuleProfile;
@@ -230,11 +226,8 @@ export type PublicSetupAnalysisView =
 
 export type RoomSettingsInput = Omit<RoomSettingsView, "mapSeed" | "playerLimit">;
 
-export interface RoomView {
-  readonly id: string;
-  readonly revision: number;
-  readonly hostPlayerId: string;
-  readonly members: readonly LobbyMemberView[];
+export interface RoomView extends RoomBaseView {
+  readonly gameId: "catan";
   readonly settings: RoomSettingsView;
   readonly previewMap: GameMap | null;
   readonly game: GameView | null;

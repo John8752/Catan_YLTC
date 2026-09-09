@@ -1,7 +1,8 @@
 import type { GameCommandAck, GameCommandResponse } from "@catan/protocol";
 import { expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
-import { RoomRegistry } from "./rooms.js";
+import { RoomRegistry } from "./test-helpers/catan-registry.js";
+import { CatanRoomGame } from "./games/catan/room-game.js";
 
 it("acknowledges without building an extra private projection, preserves idempotency and legacy full replies", async () => {
   const registry = new RoomRegistry({ nextSeed: () => 42 }), app = await buildApp(registry);
@@ -9,14 +10,14 @@ it("acknowledges without building an extra private projection, preserves idempot
     const host = registry.createRoom("甲"); registry.joinRoom(host.roomId, "乙");
     const started = registry.startRoom(host.roomId, host.seatToken);
     const vertexId = started.game!.interaction.vertexIds[0]!;
-    const project = vi.spyOn(registry as unknown as { projectRoom: (...args: unknown[]) => unknown }, "projectRoom");
+    const project = vi.spyOn(CatanRoomGame.prototype, "project");
     const payload = { seatToken: host.seatToken, commandId: "one", expectedRevision: started.game!.revision,
       responseMode: "ack", command: { type: "PlaceInitialSettlement", vertexId } };
     const response = await app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/commands`, payload });
     expect(response.statusCode, response.body).toBe(200);
     expect(project).not.toHaveBeenCalled(); // No subscribers in this case; ACK itself must not project.
     const ack = response.json<GameCommandAck>();
-    expect(ack).toEqual({ commandId: "one", roomId: host.roomId, roomRevision: started.revision + 1, gameRevision: started.game!.revision + 1 });
+    expect(ack).toEqual({ commandId: "one", roomId: host.roomId, matchId: started.matchId, roomRevision: started.revision + 1, gameRevision: started.game!.revision + 1 });
     expect(Buffer.byteLength(response.body)).toBeLessThan(200);
     const retry = await app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/commands`, payload });
     expect(retry.json()).toEqual(ack);

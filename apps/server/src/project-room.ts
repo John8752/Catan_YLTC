@@ -4,6 +4,8 @@ import type { RoomRecord } from "./room-types.js";
 
 export function projectRoomView(room: RoomRecord, viewerId: string, turnTimer: TurnTimerView | null, eventAfterRevision?: number | null): RoomView {
   return {
+    gameId: "catan",
+    matchId: room.matchId,
     id: room.id,
     revision: room.revision,
     hostPlayerId: room.hostPlayerId,

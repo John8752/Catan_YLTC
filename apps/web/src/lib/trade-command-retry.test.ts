@@ -14,6 +14,14 @@ const offer: OpenTrade = {
 };
 
 describe("stale trade command retry", () => {
+  it("never carries an old response into another match even if the offer is identical", () => {
+    expect(canRetryStaleTradeCommand(
+      { type: "AcceptTradeOffer", offerId: offer.offerId },
+      { id: "old-match", openTrade: offer },
+      { id: "new-match", openTrade: offer },
+      "player_2",
+    )).toBe(false);
+  });
   it("retries responses and cancellation when only unrelated responses changed", () => {
     const updated: OpenTrade = {
       ...offer,
@@ -57,5 +65,5 @@ describe("stale trade command retry", () => {
 });
 
 function retry(command: GameCommand, before: OpenTrade, after: OpenTrade, actorId: string): boolean {
-  return canRetryStaleTradeCommand(command, before, after, actorId);
+  return canRetryStaleTradeCommand(command, { id: "match", openTrade: before }, { id: "match", openTrade: after }, actorId);
 }

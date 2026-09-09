@@ -1,6 +1,6 @@
 import type { PlayerColor, PlayableRuleProfile } from "@catan/game-core";
 import type { GameSummaryView } from "./game-summary.js";
-import type { PlayerSessionResponse } from "./messages.js";
+import type { RoomSession } from "./platform.js";
 
 /** Game type, distinct from a particular match's unique matchId. */
 export const CATAN_GAME_ID = "catan" as const;
@@ -12,7 +12,7 @@ export interface AccountView {
 export interface AuthResponse {
   readonly account: AccountView;
   readonly csrfToken: string;
-  readonly activeSeat: PlayerSessionResponse | null;
+  readonly activeSeat: RoomSession | null;
 }
 export interface LoginRequest {
   readonly username: string;

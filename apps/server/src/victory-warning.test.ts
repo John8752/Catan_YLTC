@@ -1,7 +1,7 @@
 import { RESOURCE_TYPES, resourceAmounts } from "@catan/game-core";
 import type { GameCommand, GameView, RoomView } from "@catan/protocol";
 import { expect, it } from "vitest";
-import { RoomRegistry } from "./rooms.js";
+import { RoomRegistry } from "./test-helpers/catan-registry.js";
 
 it("broadcasts a real scoring milestone, retains it on reconnect and deduplicates command retries", () => {
   const registry = new RoomRegistry({ nextSeed: () => 42, now: () => 0 });

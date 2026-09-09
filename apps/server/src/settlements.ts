@@ -9,7 +9,7 @@ export function prepareSettlement(room: RoomRecord, state: GameState, events: re
   const summary = projectGameSummary(state, [...room.history, ...events.map((event) => ({ revision: state.revision, event }))]);
   if (!summary) return null;
   return {
-    record: { gameId: CATAN_GAME_ID, matchId: room.matchId, dataVersion: 1, startedAt: room.startedAt, finishedAt,
+    record: { gameId: CATAN_GAME_ID, matchId: room.matchId!, dataVersion: 1, startedAt: room.startedAt, finishedAt,
       data: { ruleProfile: room.settings.ruleProfile, victoryPointsToWin: state.victoryPointsToWin, winnerId: state.phase.winnerId,
         players: room.members.map(({ id, name, color }) => ({ id, name, color })), summary } },
     participants: room.members.flatMap((member) => member.accountId === null ? [] : [{ accountId: member.accountId, playerId: member.id }]),

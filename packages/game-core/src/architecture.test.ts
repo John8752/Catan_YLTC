@@ -6,6 +6,11 @@ import { describe, expect, it } from "vitest";
 const sourceRoot = dirname(fileURLToPath(import.meta.url));
 
 describe("game-core module boundaries", () => {
+  it("keeps drawing telephone independent of Catan domains and ambient nondeterminism", () => {
+    for (const file of sourceFiles(join(sourceRoot, "draw-guess"))) {
+      expect(readFileSync(file, "utf8"), relative(sourceRoot, file)).not.toMatch(/from\s+["'](?:\.\.\/|@catan\/)|Math\.random|Date\.|setTimeout|document|window|fetch/);
+    }
+  });
   it("keeps authentication, persistence and transport outside the rules engine", () => {
     for (const file of sourceFiles(sourceRoot)) {
       expect(readFileSync(file, "utf8"), relative(sourceRoot, file))

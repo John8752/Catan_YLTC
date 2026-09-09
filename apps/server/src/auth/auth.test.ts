@@ -28,7 +28,7 @@ it("replaces login globally, rotates seat before socket eviction, rejects old HT
   registry.startRoom(host.roomId, host.seatToken);
   let evicted = false;
   registry.subscribe(host.roomId, host.seatToken, () => {}, undefined, () => {
-    expect(() => registry.getRoom(host.roomId, host.seatToken)).toThrow("credential"); evicted = true;
+    expect(() => registry.getRoom(host.roomId, host.seatToken)).toThrow("座位凭证"); evicted = true;
   });
   const second = await app.inject({ method: "POST", url: "/api/auth/login", headers: { origin }, payload: credentials });
   expect(second.statusCode, second.body).toBe(200);

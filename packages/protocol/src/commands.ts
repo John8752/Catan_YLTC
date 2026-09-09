@@ -4,6 +4,7 @@ import type { RoomView } from "./views.js";
 export type { GameCommand } from "@catan/game-core";
 
 export interface SubmitGameCommandRequest {
+  readonly matchId?: string;
   readonly responseMode?: "ack";
   readonly seatToken: string;
   readonly commandId: string;
@@ -18,6 +19,7 @@ export interface GameCommandResponse {
 
 /** Current authoritative revisions, also returned on an idempotent retry. */
 export interface GameCommandAck {
+  readonly matchId?: string;
   readonly commandId: string;
   readonly roomId: string;
   readonly roomRevision: number;

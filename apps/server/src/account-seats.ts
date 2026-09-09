@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
-import type { PlayerSessionResponse, RoomView } from "@catan/protocol";
-import type { RoomMember, RoomRecord, Subscription } from "./room-types.js";
+import type { RoomSession, AnyRoomView } from "@catan/protocol";
+import type { RoomMember, AnyRoomRecord, Subscription } from "./room-types.js";
 
 export class AccountSeats {
-  constructor(private readonly rooms: Map<string, RoomRecord>, private readonly subscriptions: Map<string, Set<Subscription>>,
-    private readonly project: (room: RoomRecord, playerId: string) => RoomView) {}
-  private find(accountId: string): { room: RoomRecord; member: RoomMember } | null {
+  constructor(private readonly rooms: Map<string, AnyRoomRecord>, private readonly subscriptions: Map<string, Set<Subscription>>,
+    private readonly project: (room: AnyRoomRecord, playerId: string) => AnyRoomView) {}
+  private find(accountId: string): { room: AnyRoomRecord; member: RoomMember } | null {
     for (const room of this.rooms.values()) {
       if (room.game?.phase.kind === "finished") continue;
       const member = room.members.find((member) => member.accountId === accountId);
@@ -13,7 +13,7 @@ export class AccountSeats {
     }
     return null;
   }
-  seat(accountId: string): PlayerSessionResponse | null {
+  seat(accountId: string): RoomSession | null {
     const found = this.find(accountId);
     if (!found) return null;
     const { room, member } = found;

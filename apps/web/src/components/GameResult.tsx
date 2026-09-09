@@ -10,7 +10,7 @@ import { ResourceIcon } from "./ResourceIcon.js";
 const RESOURCES = ["brick", "lumber", "wool", "grain", "ore"] as const;
 const CONFETTI_COLORS = ["#f0c75e", "#d96b4e", "#75a889", "#72a9c0", "#f5e1a4"] as const;
 
-export function GameResult({ game }: { readonly game: GameView }) {
+export function GameResult({ game, onReplay, busy = false }: { readonly game: GameView; readonly onReplay?: (() => void) | undefined; readonly busy?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
   if (game.phase.kind !== "finished" || game.summary === null) return null;
 
@@ -30,16 +30,18 @@ export function GameResult({ game }: { readonly game: GameView }) {
         ))}
       </div>
       <CatanResultPanel result={{ players: game.players, winnerId: game.phase.winnerId,
-        victoryPointsToWin: game.victoryPointsToWin, summary: game.summary }} onViewBoard={() => setCollapsed(true)} />
+        victoryPointsToWin: game.victoryPointsToWin, summary: game.summary }} onViewBoard={() => setCollapsed(true)}
+        actions={onReplay ? <Button className="m-4" disabled={busy} onClick={onReplay}>回到房间，再来一局</Button> : null} />
     </section>
   );
 }
 
 /** One presentation for live results and durable account history; needs no live game state. */
 type ResultData = Pick<CatanSettlementV1, "players" | "winnerId" | "victoryPointsToWin" | "summary">;
-export function CatanResultPanel({ result: game, onViewBoard }: {
+export function CatanResultPanel({ result: game, onViewBoard, actions }: {
   readonly result: ResultData;
   readonly onViewBoard?: () => void;
+  readonly actions?: ReactNode;
 }) {
   const winner = game.players.find((player) => player.id === game.winnerId);
   const winnerSummary = game.summary.players.find((player) => player.playerId === game.winnerId);
@@ -78,6 +80,7 @@ export function CatanResultPanel({ result: game, onViewBoard }: {
         <TabsContent value="activity"><ActivitySummary game={game} /></TabsContent>
         <TabsContent value="resources"><ResourceSummary game={game} /></TabsContent>
       </Tabs>
+      {actions}
     </section>
   );
 }

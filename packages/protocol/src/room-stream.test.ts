@@ -6,7 +6,7 @@ import { projectGameForPlayer, type RoomView } from "./views.js";
 function room(count: 4 | 6, seed = 42): RoomView {
   const players = Array.from({ length: count }, (_, i) => ({ id: `p${i}`, name: `玩家${i}`, color: PLAYER_COLORS[i]! }));
   const state = createGame({ id: "GAME", seed, players, ruleProfile: count === 4 ? "base-3-4" : "extended-5-6" });
-  return { id: "ROOM", revision: 1, hostPlayerId: "p0", members: players.map((p, i) => ({ ...p, isHost: i === 0 })),
+  return { id: "ROOM", gameId: "catan", matchId: "GAME", revision: 1, hostPlayerId: "p0", members: players.map((p, i) => ({ ...p, isHost: i === 0 })),
     settings: { ruleProfile: count === 4 ? "base-3-4" : "extended-5-6", playerLimit: count, mapSeed: seed, victoryPointsToWin: 10, bankCountsPublic: true },
     previewMap: null, game: projectGameForPlayer(state, "p0"), setupAnalysis: null };
 }

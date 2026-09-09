@@ -42,6 +42,7 @@ function startedRoom(): RoomView {
   ];
   const game = createBaseGame({ id: "table_utilities", seed: 42, players });
   return {
+    gameId: "catan", matchId: "table_utilities",
     id: "ABC123",
     revision: 1,
     hostPlayerId: "player_1",

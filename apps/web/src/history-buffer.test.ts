@@ -8,7 +8,7 @@ const page = (afterRevision: number, throughRevision: number): GameHistoryPage =
   entries: Array.from({ length: throughRevision - afterRevision }, (_, i) => ({ id: `e:${String(i + afterRevision + 1).padStart(16, "0")}`, revision: i + afterRevision + 1, type: "test", message: `记录 ${i + afterRevision + 1}`, privateDetail: null })) });
 const session = { roomId: "ROOM", playerId: "p1", seatToken: "token" };
 const game = projectGameForPlayer(createBaseGame({ id: "GAME", seed: 8, players: [{ id: "p1", name: "甲", color: "pine" }, { id: "p2", name: "乙", color: "ocean" }] }), "p1");
-const room = (data: GameHistoryPage): RoomView => ({ id: "ROOM", revision: data.range.throughRevision, hostPlayerId: "p1", members: [], previewMap: null, setupAnalysis: null,
+const room = (data: GameHistoryPage): RoomView => ({ id: "ROOM", gameId: "catan", matchId: "GAME", revision: data.range.throughRevision, hostPlayerId: "p1", members: [], previewMap: null, setupAnalysis: null,
   settings: { ruleProfile: "base-3-4", playerLimit: 4, mapSeed: 8, victoryPointsToWin: 10, bankCountsPublic: true },
   game: { ...game, revision: data.range.throughRevision, history: data.entries, historyRange: data.range } });
 

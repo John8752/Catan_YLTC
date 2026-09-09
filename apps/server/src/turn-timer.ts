@@ -75,7 +75,7 @@ function timerSpec(game: GameState): TimerSpec | null {
   const { activePlayerId, step, turnNumber } = game.phase;
   if (step === "roll") {
     return {
-      key: `${turnNumber}:${activePlayerId}:roll`,
+      key: `${game.id}:${turnNumber}:${activePlayerId}:roll`,
       playerId: activePlayerId,
       kind: "roll",
       durationMs: ROLL_TIMEOUT_MS,
@@ -84,7 +84,7 @@ function timerSpec(game: GameState): TimerSpec | null {
   }
   if (step === "action" || step === "paired-action") {
     return {
-      key: `${turnNumber}:${activePlayerId}:${step}`,
+      key: `${game.id}:${turnNumber}:${activePlayerId}:${step}`,
       playerId: activePlayerId,
       kind: "action",
       durationMs: ACTION_TIMEOUT_MS,

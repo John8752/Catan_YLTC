@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RoomRegistry } from "./rooms.js";
+import { RoomRegistry } from "./test-helpers/catan-registry.js";
 import {
   AiCommentaryUpstreamError,
   buildAiGameContext,

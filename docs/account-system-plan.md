@@ -1,5 +1,7 @@
 # Account system implementation plan
 
+Scope: **Platform accounts and game-owned settlements**. Accounts and sessions are shared. Catan and draw-guess own separate versioned final results; see [multi-game-plan.md](./multi-game-plan.md). Catan examples below do not constrain another game's result model.
+
 ## Outcome
 
 Add optional username/password accounts backed by a server-local SQLite database while preserving the existing guest flow. An account may have exactly one live login session and one active room seat at a time.

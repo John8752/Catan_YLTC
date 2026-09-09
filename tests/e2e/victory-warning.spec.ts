@@ -15,7 +15,7 @@ async function openGame(browser: Browser, width: number, height: number, options
   };
   let warnings: readonly VictoryWarningEffectView[] = [];
   const room = (): RoomView => ({
-    id: "VICTORY", revision: state.revision, hostPlayerId: "p1", previewMap: null,
+    id: "VICTORY", gameId: "catan", matchId: state.id, revision: state.revision, hostPlayerId: "p1", previewMap: null,
     members: state.players.map((player) => ({ id: player.id, name: player.name, color: player.color, isHost: player.id === "p1" })),
     settings: { ruleProfile: "extended-5-6", playerLimit: 6, victoryPointsToWin: state.victoryPointsToWin, mapSeed: 42, bankCountsPublic: true },
     game: projectGameForPlayer(state, "p1", warnings.map((warning) => ({ revision: warning.revision, event: { type: "piece_built", playerId: warning.playerId, piece: "city", locationId: "fixture" } })), null, { bankCountsPublic: true }, warnings),
@@ -25,7 +25,6 @@ async function openGame(browser: Browser, width: number, height: number, options
   await context.addInitScript(() => localStorage.setItem("catan-yltc-seat", JSON.stringify({ roomId: "VICTORY", playerId: "p1", seatToken: "fixture" })));
   const page = await context.newPage();
   await page.clock.install();
-  await page.clock.pauseAt(new Date(Date.now() + 100));
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.route(/\/api\/rooms\/VICTORY\?/, (route) => route.fulfill({ json: room() }));
@@ -33,6 +32,8 @@ async function openGame(browser: Browser, width: number, height: number, options
   await page.routeWebSocket(/\/ws\?/, (route) => { socket = route; route.send(JSON.stringify({ type: "room_state", room: room() })); });
   await page.goto("/");
   await expect(page.locator(".hex-tile")).toHaveCount(30);
+  // Let lazy game chunks and React's Suspense retry mount before freezing game-effect time.
+  await page.clock.pauseAt(new Date(Date.now() + 100));
   await expect.poll(() => socket !== undefined).toBe(true);
   return { page, context, errors,
     push(score: number, phase: GameState["phase"] = state.phase, playerId = "p2") {
@@ -104,8 +105,11 @@ test("milestones respect action priority, escalation, history, score loss, recon
     run.push(9);
     await expect(page.locator('[data-victory-notice]')).toContainText("9/10");
     await expect(page.locator('[data-history-type="victory-warning"]')).toHaveCount(3);
+    // Reload also needs a running scheduler to mount the lazy game screen.
+    await page.clock.resume();
     await page.reload();
     await expect(page.locator('[data-player-score="p2"]')).toHaveText("9/10");
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
     await expect(page.locator('[data-victory-notice]')).toHaveCount(0);
     run.push(6);
     await expect(page.locator('[data-player-score="p2"]')).not.toHaveAttribute("data-victory-proximity");

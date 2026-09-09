@@ -7,22 +7,8 @@ import type { RuleProfile } from "../rulesets/index.js";
 import type { TradeOfferState } from "../trade/index.js";
 import type { BalancedDiceBagState } from "./dice-bag.js";
 
-export const PLAYER_COLORS = [
-  "terracotta",
-  "ocean",
-  "pine",
-  "wheat",
-  "plum",
-  "charcoal",
-  "coral",
-  "orange",
-  "navy",
-  "emerald",
-  "lavender",
-  "graphite",
-] as const;
-
-export type PlayerColor = (typeof PLAYER_COLORS)[number];
+import type { PlayerColor } from "../primitives/index.js";
+export { PLAYER_COLORS, type PlayerColor } from "../primitives/index.js";
 
 export interface PlayerSeed {
   readonly id: PlayerId;

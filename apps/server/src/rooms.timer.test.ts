@@ -1,7 +1,7 @@
 import type { GameCommand, PlayerSessionResponse, RoomView } from "@catan/protocol";
 import { resourceAmounts } from "@catan/game-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RoomRegistry } from "./rooms.js";
+import { RoomRegistry } from "./test-helpers/catan-registry.js";
 
 afterEach(() => {
   vi.useRealTimers();

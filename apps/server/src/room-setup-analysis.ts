@@ -1,11 +1,11 @@
-import type { RoomRecord } from "./room-types.js";
+import type { AnyRoomRecord, RoomRecord } from "./room-types.js";
 import type { RoomView, PublicSetupAnalysisView } from "@catan/protocol";
 import { buildPublicSetupAnalysisInput, type AiCommentator, type PublicSetupAnalysisInput } from "./ai-commentary.js";
 const SETUP_ANALYSIS_RETRY_DELAYS_MS = [1_000, 4_000] as const;
 export class RoomSetupAnalysis {
   private readonly setupAnalysisRetries = new Map<string, ReturnType<typeof setTimeout>>();
   private disposed = false;
-  constructor(private readonly rooms: Map<string, RoomRecord>, private aiCommentator: AiCommentator | null,
+  constructor(private readonly rooms: Map<string, AnyRoomRecord>, private aiCommentator: AiCommentator | null,
     private readonly projectRoom: (room: RoomRecord, playerId: string) => RoomView,
     private readonly notify: (room: RoomRecord) => void) {}
   configure(value: AiCommentator | null): void { this.aiCommentator = value; }
@@ -15,7 +15,7 @@ export class RoomSetupAnalysis {
 
     const input = buildPublicSetupAnalysisInput(this.projectRoom(room, room.hostPlayerId));
     room.publicSetupAnalysis = { status: "loading", sourceRevision: input.sourceRevision };
-    this.runPublicSetupAnalysis(room.id, input, 0);
+    this.runPublicSetupAnalysis(room.id, input, 0, room.matchId);
   }
 
   /**
@@ -28,21 +28,22 @@ export class RoomSetupAnalysis {
     roomId: string,
     input: PublicSetupAnalysisInput,
     attempt: number,
+    matchId: string | null,
   ): void {
     const commentator = this.aiCommentator;
     if (commentator === null) return;
     const sourceRevision = input.sourceRevision;
 
     void commentator.analyzeSetup(input).then(
-      (analysis) => this.finishPublicSetupAnalysis(roomId, sourceRevision, {
+      (analysis) => this.finishPublicSetupAnalysis(roomId, sourceRevision, matchId, {
         status: "ready",
         sourceRevision,
         ...analysis,
       }),
       () => {
         const delay = SETUP_ANALYSIS_RETRY_DELAYS_MS[attempt];
-        if (delay === undefined || !this.isAwaitingSetupAnalysis(roomId, sourceRevision)) {
-          this.finishPublicSetupAnalysis(roomId, sourceRevision, {
+        if (delay === undefined || !this.isAwaitingSetupAnalysis(roomId, sourceRevision, matchId)) {
+          this.finishPublicSetupAnalysis(roomId, sourceRevision, matchId, {
             status: "failed",
             sourceRevision,
             message: "AI 开局点评暂时没有生成成功",
@@ -52,8 +53,8 @@ export class RoomSetupAnalysis {
 
         this.setupAnalysisRetries.set(roomId, setTimeout(() => {
           this.setupAnalysisRetries.delete(roomId);
-          if (this.isAwaitingSetupAnalysis(roomId, sourceRevision)) {
-            this.runPublicSetupAnalysis(roomId, input, attempt + 1);
+          if (this.isAwaitingSetupAnalysis(roomId, sourceRevision, matchId)) {
+            this.runPublicSetupAnalysis(roomId, input, attempt + 1, matchId);
           }
         }, delay));
       },
@@ -61,10 +62,11 @@ export class RoomSetupAnalysis {
   }
 
   /** Whether the room is still waiting on the very analysis run that is reporting back. */
-  private isAwaitingSetupAnalysis(roomId: string, sourceRevision: number): boolean {
+  private isAwaitingSetupAnalysis(roomId: string, sourceRevision: number, matchId: string | null): boolean {
     if (this.disposed) return false;
-    const analysis = this.rooms.get(roomId)?.publicSetupAnalysis;
-    return analysis?.status === "loading" && analysis.sourceRevision === sourceRevision;
+    const room = this.rooms.get(roomId);
+    const analysis = room?.gameId === "catan" ? room.publicSetupAnalysis : null;
+    return room?.matchId === matchId && analysis?.status === "loading" && analysis.sourceRevision === sourceRevision;
   }
 
   cancel(roomId: string): void {
@@ -77,12 +79,15 @@ export class RoomSetupAnalysis {
   private finishPublicSetupAnalysis(
     roomId: string,
     sourceRevision: number,
+    matchId: string | null,
     analysis: PublicSetupAnalysisView,
   ): void {
     if (this.disposed) return;
     const room = this.rooms.get(roomId);
     if (
       room === undefined ||
+      room.gameId !== "catan" ||
+      room.matchId !== matchId ||
       room.publicSetupAnalysis?.status !== "loading" ||
       room.publicSetupAnalysis.sourceRevision !== sourceRevision
     ) return;

@@ -2,11 +2,20 @@
 
 ## Product purpose
 
-Catan YLTC is a synchronous browser board game for private groups of 2–6 people. A player should be able to open a link, choose a display name, enter a room and finish a match without installing software or creating an account.
+YLTC is a synchronous browser tabletop hub for private groups. A player opens the site, chooses a game and display name, shares a room code and completes a match without installing software or creating an account.
 
-The first production path proves a complete, reliable 3–4 player base-rules match. Two-player and 5–6 player play are separate rule profiles built on the same deterministic engine.
+## Platform and supported games
 
-## Player fantasy and verbs
+- **Platform**: optional accounts, anonymous entry, one authoritative room directory, membership/host succession, seat recovery, safe per-player transport and game-scoped final settlements. A room selects `gameId` at creation and cannot switch it. Finished rooms may return to their own lobby; every subsequent start gets a new `matchId`.
+- **Catan (`catan`)**: 2–6 players, its existing rule profiles, island renderer, trade, hidden cards, history and victory summaries. The historical milestones below describe this game only.
+- **Drawing telephone (`draw-guess`, 传画猜词)**: 3–6 players, simultaneous prompts/drawing/guessing, private checkpointed drafts, authoritative deadlines, shared sequential reveal and a finished gallery. Original prompts and rules inspired by the genre; no licensed assets or rulebook text.
+- Voice chat remains external. HTTPS, microphone capture, public matchmaking, spectators, AI drawing and durable live-game recovery are not part of this milestone.
+
+Current cross-game plan and ownership: [Platform and game roadmap](docs/multi-game-plan.md). Drawing rules: [Draw-guess](docs/rules/draw-guess.md).
+
+The historical Catan production path proves a complete, reliable 3–4 player base-rules match. Two-player and 5–6 player play are separate rule-profile targets built on that game's deterministic engine.
+
+## Catan: player fantasy and verbs
 
 Players grow a settlement network on a shared island by producing resources, negotiating trades, building roads and settlements, upgrading cities and disrupting opponents with the robber.
 
@@ -23,11 +32,11 @@ Primary verbs:
 - Rules correctness and shared-state consistency come before animation and art.
 - The server decides legality and exposes a player-specific view of the game.
 - A room link and display name are enough for the first release.
-- The board remains the dominant visual surface; secondary information stays in compact DOM panels.
-- Every match can be reproduced from its initial seed and recorded command/event history.
+- The game surface remains dominant; secondary information stays in compact DOM panels. Catan uses SVG; drawing telephone uses Canvas 2D for drawing and DOM for text and controls.
+- Game cores are deterministic given explicit inputs. Tests may record commands for replay; production does not persist live command history or private drawing content.
 - Desktop and mobile browsers are supported from the first playable slice.
 
-## Rule profiles
+## Catan: rule profiles
 
 - `base-3-4`: first complete rules target; seats two to four, all playing the same game.
 - `two-player`: planned *variant* with its own setup and turn policy. Not what a two-seat match uses today.
@@ -35,7 +44,7 @@ Primary verbs:
 
 Player count is never used as a substitute for a named rule profile.
 
-## M0 scope
+## Catan: historical M0 scope
 
 - pnpm monorepo and validation gate;
 - deterministic 19-hex board generation;
@@ -45,7 +54,7 @@ Player count is never used as a substitute for a named rule profile.
 - React/SVG board shell with a compact room HUD;
 - tests for determinism, board composition and information redaction.
 
-## Explicit non-goals for M0
+## Catan: explicit non-goals for historical M0
 
 - complete building, trading, robber and development-card rules;
 - accounts, public matchmaking, ranking, spectators or bots;
@@ -54,9 +63,9 @@ Player count is never used as a substitute for a named rule profile.
 - final artwork, sound, monetization or public deployment;
 - copying official artwork, logos or rulebook text.
 
-## Post-M0 account milestone
+## Platform: post-M0 account milestone
 
-Accounts are an optional enhancement rather than a new entry requirement. Guest players must still be able to open a link, choose a display name and enter a room without registering. A registered account provides a durable profile and one active login across devices; the newest successful login takes over any live room seat and invalidates the previous device. Account persistence also includes final match settlements, partitioned by game type (`gameId`) with a unique `matchId` and versioned game-specific payload. Only completed results are durable; this does not imply room or in-progress match recovery. The current game type is `catan`; accounts are shared identities across future game types.
+Accounts are an optional enhancement rather than a new entry requirement. Guest players must still be able to open a link, choose a display name and enter a room without registering. A registered account provides a durable profile and one active login across devices; the newest successful login takes over any live room seat and invalidates the previous device. Account persistence also includes final match settlements, partitioned by game type (`gameId`) with a unique `matchId` and versioned game-specific payload. Only completed results are durable; this does not imply room or in-progress match recovery. Accounts are shared identities across `catan` and `draw-guess`; each game owns its versioned final-result payload. Drawing telephone stores contribution counts, not drawings, phrases or drafts.
 
 ## Visual direction
 

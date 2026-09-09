@@ -20,6 +20,10 @@ import { AiCommentaryUpstreamError, type AiCommentator } from "./ai-commentary.j
 import { buildTableIntentInput } from "./ai-intent.js";
 import { RoomError } from "./room-errors.js";
 import { RoomRegistry } from "./rooms.js";
+import { GAME_CATALOG } from "@catan/protocol";
+import { DrawGuessError } from "@catan/game-core/draw-guess";
+import { createRoomSchema, returnToLobbySchema } from "./route-schemas.js";
+import { drawCommandSchema, drawSettingsSchema } from "./games/draw-guess/schemas.js";
 
 /** A room with no connected socket is collected once it goes untouched this long. */
 export const DEFAULT_IDLE_ROOM_TTL_MS = 60 * 60 * 1000;
@@ -146,6 +150,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
   registerAuthRoutes(app, accounts, matches, sessionLifetimeMs);
 
   app.get("/health", async () => ({ ok: true, service: "catan-server", rooms: registry.roomCount }));
+  app.get("/api/games", async () => ({ games: GAME_CATALOG }));
 
   app.post("/api/rooms", {
     config: {
@@ -156,10 +161,10 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
     },
   }, async (request, reply) => {
     try {
-      const body = playerNameSchema.parse(request.body);
+      const body = createRoomSchema.parse(request.body);
       return reply.code(201).send(registry.createRoom(
         readAccountCookie(request) ? accountContext(accounts, request, true).account.displayName : body.playerName,
-        readAccountCookie(request) ? accountContext(accounts, request, true).account.id : null));
+        readAccountCookie(request) ? accountContext(accounts, request, true).account.id : null, body.gameId));
     } catch (error) {
       return sendError(reply, error);
     }
@@ -292,11 +297,27 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
           body.expectedRevision,
           body.command,
           body.responseMode,
+          body.matchId,
         ),
       );
     } catch (error) {
       return sendError(reply, error);
     }
+  });
+
+  app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/return-to-lobby", async (request, reply) => {
+    try { const body = returnToLobbySchema.parse(request.body); return reply.send(registry.returnToLobby(request.params.roomId, body.seatToken, body.matchId)); }
+    catch (error) { return sendError(reply, error); }
+  });
+  app.patch<{ Params: { roomId: string } }>("/api/rooms/:roomId/draw-guess/settings", async (request, reply) => {
+    try { const body = drawSettingsSchema.parse(request.body); return reply.send(registry.updateDrawSettings(request.params.roomId, body.seatToken, body.expectedRevision, { textSeconds: body.textSeconds, drawingSeconds: body.drawingSeconds })); }
+    catch (error) { return sendError(reply, error); }
+  });
+  app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/draw-guess/commands", {
+    bodyLimit: 128 * 1024, config: { rateLimit: { max: 600, timeWindow: "1 minute", groupId: "draw-guess" } },
+  }, async (request, reply) => {
+    try { const body = drawCommandSchema.parse(request.body); return reply.send(registry.executeDrawCommand(request.params.roomId, body.seatToken, body.commandId, body.command)); }
+    catch (error) { return sendError(reply, error); }
   });
 
   app.post<{ Params: { roomId: string } }>("/api/rooms/:roomId/ai-commentary", {
@@ -312,7 +333,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
   }, async (request, reply) => {
     try {
       const body = aiCommentarySchema.parse(request.body);
-      const room = registry.getRoom(request.params.roomId, body.seatToken);
+      const room = registry.getCatanRoom(request.params.roomId, body.seatToken);
       if (room.game === null) {
         return sendApiError(reply, 400, "AI_GAME_NOT_STARTED", "开局后才能请 AI 解说");
       }
@@ -334,7 +355,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
         // Built from public topology only and answered to this seat alone: the
         // read never enters room state, so no one else learns what was asked.
         const intent = await options.aiCommentator.analyzeIntent(buildTableIntentInput(room));
-        registry.recordTableIntentUse(request.params.roomId, body.seatToken);
+        registry.recordTableIntentUse(request.params.roomId, body.seatToken, room.game.id, room.game.phase.turnNumber);
         return reply.code(200).send({ mode, revision: room.game.revision, content: intent.overview, intent });
       }
 
@@ -361,7 +382,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
           roomId,
           seatToken,
           (room) => {
-            socket.send(JSON.stringify(encode ? encode(room) : { type: "room_state", room }));
+            socket.send(JSON.stringify(encode && room.gameId === "catan" ? encode(room) : { type: "room_state", room }));
           },
           () => {
             // Say why before closing, or the client just sees a dropped socket and
@@ -416,7 +437,7 @@ function sendApiError(reply: FastifyReply, statusCode: number, code: string, mes
 }
 
 function normalizeError(error: unknown): { code: string; message: string } {
-  if (error instanceof RoomError) {
+  if (error instanceof RoomError || error instanceof DrawGuessError) {
     return { code: error.code, message: error.message };
   }
 

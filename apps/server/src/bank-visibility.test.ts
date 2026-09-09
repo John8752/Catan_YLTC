@@ -1,7 +1,7 @@
 import type { RoomView } from "@catan/protocol";
 import { expect, it } from "vitest";
 import { buildApp } from "./app.js";
-import { RoomRegistry } from "./rooms.js";
+import { RoomRegistry } from "./test-helpers/catan-registry.js";
 
 it("locks bank visibility to host lobby settings and redacts commands, reads and broadcasts", async () => {
   const registry = new RoomRegistry({ nextSeed: () => 42 });

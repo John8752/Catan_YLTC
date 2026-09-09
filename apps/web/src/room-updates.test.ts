@@ -7,7 +7,7 @@ const session = { roomId: "ROOM", playerId: "p1", seatToken: "seat" };
 const game = projectGameForPlayer(createBaseGame({ id: "GAME", seed: 8, players: [
   { id: "p1", name: "甲", color: "ocean" }, { id: "p2", name: "乙", color: "pine" },
 ] }), "p1");
-const room = (revision: number, gameRevision = revision): RoomView => ({ id: "ROOM", revision, hostPlayerId: "p1", members: [], previewMap: null,
+const room = (revision: number, gameRevision = revision): RoomView => ({ id: "ROOM", gameId: "catan", matchId: "GAME", revision, hostPlayerId: "p1", members: [], previewMap: null,
   settings: { ruleProfile: "base-3-4", playerLimit: 4, mapSeed: 8, victoryPointsToWin: 10, bankCountsPublic: true },
   game: { ...game, revision: gameRevision }, setupAnalysis: null });
 const ack: GameCommandAck = { commandId: "cmd", roomId: "ROOM", roomRevision: 3, gameRevision: 3 };

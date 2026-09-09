@@ -1,607 +1,232 @@
-import { projectRoomView } from "./project-room.js";
-import type { RoomMember, RoomRecord, RoomListener, Subscription } from "./room-types.js";
+import { randomBytes, randomInt } from "node:crypto";
+import { PLAYER_COLORS, type PlayerColor } from "@catan/game-core/primitives";
+import type { PlayableRuleProfile, GameCommand } from "@catan/game-core/catan";
+import { projectHistoryPage, type AnyRoomView, type GameType, type RoomSession, type RoomView, type PlayerSessionResponse, type GameCommandResponse, type GameCommandReply, type GameHistoryPage, type LeaveRoomResponse } from "@catan/protocol";
+import type { DrawGuessPlayerCommand } from "@catan/game-core/draw-guess";
+import type { DrawGuessRoomView, DrawGuessSettings } from "@catan/protocol/draw-guess";
+import type { AnyRoomRecord, RoomBase, RoomRecord, DrawRoomRecord, RoomListener, Subscription } from "./room-types.js";
 import { AccountSeats } from "./account-seats.js";
-import { prepareSettlement } from "./settlements.js";
 import type { MatchRepository } from "./database/match-repository.js";
-import { randomBytes, randomInt, randomUUID } from "node:crypto";
-import {
-  createGame,
-  DEFAULT_VICTORY_POINTS_TO_WIN,
-  executeGameCommand,
-  MAX_VICTORY_POINTS_TO_WIN,
-  MIN_VICTORY_POINTS_TO_WIN,
-  getRuleProfileDefinition,
-  PLAYER_COLORS,
-  type GameCommand,
-  type PlayerColor,
-  type PlayableRuleProfile,
-} from "@catan/game-core";
-import {
-  type GameCommandResponse,
-  type GameCommandReply,
-  projectHistoryPage, type GameHistoryPage,
-  type LeaveRoomResponse,
-  collectVictoryWarnings,
-  type PlayerSessionResponse,
-  type RoomView,
-} from "@catan/protocol";
 import type { AiCommentator } from "./ai-commentary.js";
-import { RoomSetupAnalysis } from "./room-setup-analysis.js";
 import { normalizePlayerName, RoomError } from "./room-errors.js";
-import { TurnTimerManager, type TurnTimerExpiry } from "./turn-timer.js";
+import { CatanRoomGame } from "./games/catan/room-game.js";
+import { DrawGuessRoomGame } from "./games/draw-guess/room-game.js";
 
+/** One authoritative directory and one seat/connection lifecycle for every game. */
 export class RoomRegistry {
-  private readonly rooms = new Map<string, RoomRecord>();
+  private readonly rooms = new Map<string, AnyRoomRecord>();
   private readonly subscriptions = new Map<string, Set<Subscription>>();
-  private readonly accountSeats = new AccountSeats(this.rooms, this.subscriptions, (room, playerId) => this.projectRoom(room, playerId));
-  private matchRepository: MatchRepository | null = null;
-  private onSettlementError: () => void = () => {};
+  private readonly accountSeats = new AccountSeats(this.rooms, this.subscriptions, (room, id) => this.project(room, id));
   private accountIsActive: (accountId: string) => boolean = () => true;
   private readonly nextSeed: () => number;
   private readonly now: () => number;
-  private readonly turnTimers: TurnTimerManager;
-  private readonly setupAnalysis: RoomSetupAnalysis;
-
-  constructor(
-    options: {
-      readonly nextSeed?: () => number;
-      readonly now?: () => number;
-      readonly aiCommentator?: AiCommentator | null;
-    } = {},
-  ) {
+  private readonly catan: CatanRoomGame;
+  private readonly drawGuess: DrawGuessRoomGame;
+  constructor(options: { readonly nextSeed?: () => number; readonly now?: () => number; readonly aiCommentator?: AiCommentator | null } = {}) {
     this.nextSeed = options.nextSeed ?? (() => randomInt(1, 2_147_483_647));
-    this.now = options.now ?? (() => Date.now());
-    this.turnTimers = new TurnTimerManager(this.now);
-    this.setupAnalysis = new RoomSetupAnalysis(this.rooms, options.aiCommentator ?? null, (room, id) => this.projectRoom(room, id), (room) => this.notify(room));
+    this.now = options.now ?? Date.now;
+    this.catan = new CatanRoomGame(this.rooms, this.now, (room) => this.notify(room), options.aiCommentator ?? null);
+    this.drawGuess = new DrawGuessRoomGame(this.rooms, this.now, (room) => this.notify(room));
   }
+  configureAiCommentator(ai: AiCommentator | null) { this.catan.configureAi(ai); }
+  configureMatchRepository(repository: MatchRepository, onError: () => void = () => {}) { this.catan.repository = repository; this.catan.onSettlementError = onError; this.drawGuess.repository = repository; }
+  configureAccountValidation(validate: (accountId: string) => boolean) { this.accountIsActive = validate; }
+  accountSeat(accountId: string): RoomSession | null { return this.accountSeats.seat(accountId); }
+  prepareAccountTakeover(accountId: string, guestSeat?: { readonly roomId: string; readonly seatToken: string }): () => void { return this.accountSeats.prepare(accountId, guestSeat); }
 
-  configureAiCommentator(aiCommentator: AiCommentator | null): void {
-    this.setupAnalysis.configure(aiCommentator);
-  }
-
-  configureMatchRepository(repository: MatchRepository, onError: () => void = () => {}): void {
-    this.matchRepository = repository;
-    this.onSettlementError = onError;
-  }
-  configureAccountValidation(validate: (accountId: string) => boolean): void { this.accountIsActive = validate; }
-
-  accountSeat(accountId: string): PlayerSessionResponse | null { return this.accountSeats.seat(accountId); }
-  prepareAccountTakeover(accountId: string, guestSeat?: { readonly roomId: string; readonly seatToken: string }): () => void {
-    return this.accountSeats.prepare(accountId, guestSeat);
-  }
-
-  createRoom(playerName: string, accountId: string | null = null): PlayerSessionResponse {
+  createRoom(playerName: string, accountId?: null, gameId?: "catan"): PlayerSessionResponse;
+  createRoom(playerName: string, accountId: string | null, gameId?: GameType): RoomSession;
+  createRoom(playerName: string, accountId: string | null = null, gameId: GameType = "catan"): RoomSession {
+    if (gameId !== "catan" && gameId !== "draw-guess") throw new RoomError("INVALID_REQUEST", "未知游戏");
     const existing = accountId === null ? null : this.accountSeat(accountId);
     if (existing) return existing;
     const name = normalizePlayerName(playerName);
     const roomId = this.createRoomId();
-    const playerId = `player_${randomUUID()}`;
+    const playerId = "player_" + randomBytes(16).toString("hex");
     const seatToken = randomBytes(24).toString("base64url");
-    const room: RoomRecord = {
-      id: roomId,
-      matchId: randomUUID(),
-      startedAt: 0,
-      hostPlayerId: playerId,
-      seed: this.createSeed(),
-      revision: 1,
-      members: [{ id: playerId, seatToken, accountId, name, color: PLAYER_COLORS[0] }],
-      settings: { ruleProfile: "base-3-4", victoryPointsToWin: DEFAULT_VICTORY_POINTS_TO_WIN, bankCountsPublic: true },
-      game: null,
-      appliedCommands: new Set(),
-      history: [],
-      victoryWarnings: [],
-      publicSetupAnalysis: null,
-      tableIntentTurns: new Map(),
-      lastActiveAt: this.now(),
-    };
-
+    const base: RoomBase = { id: roomId, matchId: null, startedAt: 0, matchesStarted: 0, hostPlayerId: playerId, seed: this.createSeed(), revision: 1,
+      members: [{ id: playerId, seatToken, accountId, name, color: PLAYER_COLORS[0] }], appliedCommands: new Set(), lastActiveAt: this.now() };
+    const room = gameId === "catan" ? this.catan.create(base) : this.drawGuess.create(base);
     this.rooms.set(roomId, room);
-
-    return {
-      roomId,
-      playerId,
-      seatToken,
-      room: this.projectRoom(room, playerId),
-    };
+    return { roomId, playerId, seatToken, room: this.project(room, playerId) };
   }
-
-  joinRoom(roomId: string, playerName: string, accountId: string | null = null): PlayerSessionResponse {
+  joinRoom(roomId: string, playerName: string, accountId: string | null = null): RoomSession {
     const existing = accountId === null ? null : this.accountSeat(accountId);
     if (existing) return existing;
-    const room = this.requireRoom(roomId);
-    const name = normalizePlayerName(playerName);
-
-    if (room.game !== null) {
-      throw new RoomError("ROOM_ALREADY_STARTED", "This room has already started");
-    }
-
-    const seatCap = getRuleProfileDefinition(room.settings.ruleProfile).maxPlayers;
-    if (room.members.length >= seatCap) {
-      throw new RoomError("ROOM_FULL", `This room is limited to ${seatCap} players`);
-    }
-
-    const color = PLAYER_COLORS.find(
-      (candidate) => !room.members.some((member) => member.color === candidate),
-    );
-
-    if (color === undefined) {
-      throw new RoomError("ROOM_FULL", "No player color is available");
-    }
-
-    const playerId = `player_${randomUUID()}`;
-    const seatToken = randomBytes(24).toString("base64url");
-    room.members.push({ id: playerId, seatToken, accountId, name, color });
-    room.revision += 1;
-    this.notify(room);
-
-    return {
-      roomId: room.id,
-      playerId,
-      seatToken,
-      room: this.projectRoom(room, playerId),
-    };
+    const room = this.requireRoom(roomId); const name = normalizePlayerName(playerName);
+    if (room.game !== null) throw new RoomError("ROOM_ALREADY_STARTED", "房间已开局");
+    const cap = room.gameId === "catan" ? this.catan.capacity(room) : 6;
+    if (room.members.length >= cap) throw new RoomError("ROOM_FULL", "房间已满");
+    const color = PLAYER_COLORS.find((candidate) => !room.members.some((member) => member.color === candidate));
+    if (!color) throw new RoomError("ROOM_FULL", "房间已满");
+    const playerId = "player_" + randomBytes(16).toString("hex"); const seatToken = randomBytes(24).toString("base64url");
+    room.members.push({ id: playerId, seatToken, accountId, name, color }); room.revision++; this.notify(room);
+    return { roomId: room.id, playerId, seatToken, room: this.project(room, playerId) };
   }
-
-  updateSettings(
-    roomId: string,
-    seatToken: string,
-    expectedRevision: number,
-    settings: {
-      readonly ruleProfile: PlayableRuleProfile;
-      readonly victoryPointsToWin: number;
-      readonly bankCountsPublic?: boolean | undefined;
-    },
-  ): RoomView {
-    const room = this.requireConfigurableRoom(roomId, seatToken, expectedRevision);
-    const profile = getRuleProfileDefinition(settings.ruleProfile);
-    if (
-      !Number.isInteger(settings.victoryPointsToWin) ||
-      settings.victoryPointsToWin < MIN_VICTORY_POINTS_TO_WIN ||
-      settings.victoryPointsToWin > MAX_VICTORY_POINTS_TO_WIN
-    ) {
-      throw new RoomError(
-        "INVALID_ROOM_SETTINGS",
-        `Victory target must be ${MIN_VICTORY_POINTS_TO_WIN}–${MAX_VICTORY_POINTS_TO_WIN} points`,
-      );
+  startRoom(roomId: string, seatToken: string): AnyRoomView {
+    const room = this.requireRoom(roomId); const member = this.credential(room, seatToken);
+    if (member.id !== room.hostPlayerId) throw new RoomError("ONLY_HOST_CAN_START", "只有房主可以开始游戏");
+    if (room.game !== null) throw new RoomError("ROOM_ALREADY_STARTED", "房间已开局");
+    // Finished rooms can coexist with a newer active seat. Never reactivate a linked account twice.
+    for (const member of room.members) {
+      const active = member.accountId === null ? null : this.accountSeat(member.accountId);
+      if (active && active.roomId !== room.id) throw new RoomError("ACCOUNT_BUSY", "有玩家已在另一个房间，请先退出旧座位");
     }
-    // Switching profiles is what can shrink the room now, so the seated players
-    // are what the new profile has to be able to hold.
-    if (profile.maxPlayers < room.members.length) {
-      throw new RoomError("ROOM_CAPACITY_TOO_SMALL", "Player limit cannot be lower than the occupied seats");
-    }
-
-    room.settings = {
-      ruleProfile: settings.ruleProfile,
-      victoryPointsToWin: settings.victoryPointsToWin,
-      bankCountsPublic: settings.bankCountsPublic ?? room.settings.bankCountsPublic,
-    };
-    room.revision += 1;
-    this.notify(room);
-    return this.projectRoom(room, room.hostPlayerId);
+    if (room.gameId === "catan") this.catan.start(room); else this.drawGuess.start(room);
+    room.matchesStarted++;
+    room.revision++; this.notify(room); return this.project(room, member.id);
   }
-
-  rerollMap(roomId: string, seatToken: string, expectedRevision: number): RoomView {
-    const room = this.requireConfigurableRoom(roomId, seatToken, expectedRevision);
-    room.seed = this.createSeed(room.seed);
-    room.revision += 1;
-    this.notify(room);
-    return this.projectRoom(room, room.hostPlayerId);
+  returnToLobby(roomId: string, seatToken: string, matchId: string): AnyRoomView {
+    const room = this.requireRoom(roomId); const member = this.credential(room, seatToken);
+    if (member.id !== room.hostPlayerId) throw new RoomError("ONLY_HOST_CAN_CONFIGURE", "只有房主可以再来一局");
+    if (room.matchId !== matchId || room.game?.phase.kind !== "finished") throw new RoomError("MATCH_NOT_FINISHED", "当前对局尚未结束或已更换");
+    for (const seat of room.members) {
+      const active = seat.accountId === null ? null : this.accountSeat(seat.accountId);
+      if (active && active.roomId !== room.id) throw new RoomError("ACCOUNT_BUSY", "有玩家已在另一个房间，请先释放这个房间的座位");
+    }
+    if (room.gameId === "catan") this.catan.reset(room); else this.drawGuess.reset(room);
+    for (const sub of this.subscriptions.get(room.id) ?? []) if (sub.eventAfterRevision !== undefined) sub.eventAfterRevision = null;
+    room.seed = this.createSeed(room.seed); room.revision++; this.notify(room); return this.project(room, member.id);
   }
-
-  updatePlayerColor(
-    roomId: string,
-    seatToken: string,
-    expectedRevision: number,
-    color: PlayerColor,
-  ): RoomView {
-    const room = this.requireOpenLobby(roomId, seatToken, expectedRevision);
-    const member = this.requireCredential(room, seatToken);
-    if (member.color === color) return this.projectRoom(room, member.id);
-    if (room.members.some((candidate) => candidate.color === color)) {
-      throw new RoomError("PLAYER_COLOR_TAKEN", "这个颜色已经被其他玩家选择");
-    }
-
-    member.color = color;
-    room.revision += 1;
-    this.notify(room);
-    return this.projectRoom(room, member.id);
+  updatePlayerColor(roomId: string, seatToken: string, revision: number, color: PlayerColor): AnyRoomView {
+    const room = this.openLobby(roomId, seatToken, revision); const member = this.credential(room, seatToken);
+    if (!PLAYER_COLORS.includes(color)) throw new RoomError("INVALID_REQUEST", "未知颜色");
+    if (member.color === color) return this.project(room, member.id);
+    if (room.members.some((m) => m.color === color)) throw new RoomError("PLAYER_COLOR_TAKEN", "这个颜色已经被其他玩家选择");
+    member.color = color; room.revision++; this.notify(room); return this.project(room, member.id);
   }
-
-  shuffleMembers(roomId: string, seatToken: string, expectedRevision: number): RoomView {
-    const room = this.requireOpenLobby(roomId, seatToken, expectedRevision);
-    const member = this.requireCredential(room, seatToken);
-    if (member.id !== room.hostPlayerId) {
-      throw new RoomError("ONLY_HOST_CAN_SHUFFLE", "只有房主可以打乱玩家顺序");
-    }
-    if (room.members.length < 2) return this.projectRoom(room, room.hostPlayerId);
-
-    const previousOrder = room.members.map((member) => member.id);
-    for (let index = room.members.length - 1; index > 0; index -= 1) {
-      const target = randomInt(index + 1);
-      [room.members[index], room.members[target]] = [room.members[target]!, room.members[index]!];
-    }
-    if (room.members.every((member, index) => member.id === previousOrder[index])) {
-      room.members.push(room.members.shift()!);
-    }
-
-    room.revision += 1;
-    this.notify(room);
-    return this.projectRoom(room, room.hostPlayerId);
+  shuffleMembers(roomId: string, seatToken: string, revision: number): AnyRoomView {
+    const room = this.openLobby(roomId, seatToken, revision); const member = this.credential(room, seatToken);
+    if (member.id !== room.hostPlayerId) throw new RoomError("ONLY_HOST_CAN_SHUFFLE", "只有房主可以打乱玩家顺序");
+    if (room.members.length < 2) return this.project(room, member.id);
+    const previous = room.members.map((m) => m.id);
+    for (let i = room.members.length - 1; i > 0; i--) { const j = randomInt(i + 1); [room.members[i], room.members[j]] = [room.members[j]!, room.members[i]!]; }
+    if (room.members.every((m, i) => m.id === previous[i])) room.members.push(room.members.shift()!);
+    room.revision++; this.notify(room); return this.project(room, member.id);
   }
-
   leaveRoom(roomId: string, seatToken: string): LeaveRoomResponse {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
-    if (room.game !== null) {
-      throw new RoomError(
-        "CANNOT_LEAVE_STARTED_GAME",
-        "Players cannot release their seat after the game starts",
-      );
-    }
-
-    const memberIndex = room.members.findIndex((candidate) => candidate.id === member.id);
-    room.members.splice(memberIndex, 1);
-    this.removeSubscriptions(room.id, member.id);
-
-    if (room.members.length === 0) {
-      this.turnTimers.clear(room.id);
-      this.setupAnalysis.cancel(room.id);
-      this.rooms.delete(room.id);
-      this.subscriptions.delete(room.id);
-      return { roomDeleted: true, newHostPlayerId: null };
-    }
-
-    if (room.hostPlayerId === member.id) {
-      const nextHost = room.members[0];
-      if (nextHost === undefined) throw new Error("Room has no host candidate");
-      room.hostPlayerId = nextHost.id;
-    }
-    room.revision += 1;
-    this.notify(room);
-    return { roomDeleted: false, newHostPlayerId: room.hostPlayerId };
+    const room = this.requireRoom(roomId); const member = this.credential(room, seatToken);
+    if (room.game !== null && room.game.phase.kind !== "finished") throw new RoomError("CANNOT_LEAVE_STARTED_GAME", "对局中请保留座位，方便断线重连");
+    room.members.splice(room.members.indexOf(member), 1);
+    const subs = this.subscriptions.get(room.id);
+    for (const sub of subs ?? []) if (sub.playerId === member.id) { subs!.delete(sub); sub.onClosed?.(); }
+    if (subs?.size === 0) this.subscriptions.delete(room.id);
+    if (room.members.length === 0) { this.remove(room); return { roomDeleted: true, newHostPlayerId: null }; }
+    if (room.hostPlayerId === member.id) room.hostPlayerId = room.members[0]!.id;
+    room.revision++; this.notify(room); return { roomDeleted: false, newHostPlayerId: room.hostPlayerId };
   }
-
-  /**
-   * Ends the room for everybody, started or not.
-   *
-   * `leaveRoom` deliberately refuses once a game is running, which left a host
-   * with no way out of a match nobody wants to finish, and left an abandoned room
-   * sitting in memory until the idle sweep. This is the deliberate version of
-   * that: only the host, and everyone is told before the room stops existing.
-   */
-  disbandRoom(roomId: string, seatToken: string): void {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
-    if (member.id !== room.hostPlayerId) {
-      throw new RoomError("ONLY_HOST_CAN_DISBAND", "Only the room host can disband the room");
-    }
-
-    for (const subscription of this.subscriptions.get(room.id) ?? []) subscription.onClosed?.();
-    this.turnTimers.clear(room.id);
-    this.setupAnalysis.cancel(room.id);
-    this.rooms.delete(room.id);
-    this.subscriptions.delete(room.id);
+  disbandRoom(roomId: string, seatToken: string) {
+    const room = this.requireRoom(roomId); const member = this.credential(room, seatToken);
+    if (member.id !== room.hostPlayerId) throw new RoomError("ONLY_HOST_CAN_DISBAND", "只有房主可以解散房间");
+    for (const sub of this.subscriptions.get(room.id) ?? []) { try { sub.onClosed?.(); } catch { /* Other seats still close. */ } }
+    this.remove(room);
   }
-
-  startRoom(roomId: string, seatToken: string): RoomView {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
-    const playerId = member.id;
-
-    if (playerId !== room.hostPlayerId) {
-      throw new RoomError("ONLY_HOST_CAN_START", "Only the room host can start the game");
-    }
-
-    if (room.game !== null) {
-      throw new RoomError("ROOM_ALREADY_STARTED", "This room has already started");
-    }
-
-    const profile = getRuleProfileDefinition(room.settings.ruleProfile);
-    if (room.members.length < profile.minPlayers) {
-      throw new RoomError("NOT_ENOUGH_PLAYERS", `At least ${profile.minPlayers} players are required`);
-    }
-
-    room.startedAt = this.now();
-    room.game = createGame({
-      id: `game_${room.id.toLowerCase()}`,
-      seed: room.seed,
-      players: room.members.map(({ id, name, color }) => ({ id, name, color })),
-      victoryPointsToWin: room.settings.victoryPointsToWin,
-      ruleProfile: room.settings.ruleProfile,
-    });
-    room.revision += 1;
-    this.syncTurnTimer(room);
-    this.notify(room);
-
-    return this.projectRoom(room, playerId);
+  getRoom(roomId: string, seatToken: string, after?: number | null): AnyRoomView {
+    const room = this.requireRoom(roomId); const member = this.credential(room, seatToken);
+    if (room.gameId === "catan" && after != null && (!room.game || after > room.game.revision)) throw new RoomError("INVALID_REQUEST", "记录游标无效");
+    return this.project(room, member.id, after);
   }
-
-  /**
-   * Drops rooms that have no live subscriber and have not been touched within
-   * `idleMs`. A room with an open socket is never evicted, however long a player
-   * takes to act; abandoned rooms are what leak. Returns the evicted room ids.
-   */
+  subscribe(roomId: string, seatToken: string, listener: RoomListener, onClosed?: () => void, onReplaced?: () => void, incremental = false): () => void {
+    const room = this.requireRoom(roomId); const member = this.credential(room, seatToken);
+    const sub: Subscription = { playerId: member.id, listener, onClosed, onReplaced, eventAfterRevision: incremental && room.gameId === "catan" ? null : undefined };
+    const subs = this.subscriptions.get(room.id) ?? new Set<Subscription>(); subs.add(sub); this.subscriptions.set(room.id, subs);
+    listener(this.project(room, member.id, sub.eventAfterRevision));
+    if (sub.eventAfterRevision !== undefined) sub.eventAfterRevision = room.game?.revision ?? null;
+    return () => { subs.delete(sub); if (subs.size === 0) this.subscriptions.delete(room.id); };
+  }
   evictIdleRooms(idleMs: number): string[] {
-    const cutoff = this.now() - idleMs;
-    const evicted: string[] = [];
-
-    for (const room of this.rooms.values()) {
-      if ((this.subscriptions.get(room.id)?.size ?? 0) > 0) continue;
-      if (room.lastActiveAt > cutoff) continue;
-
-      this.rooms.delete(room.id);
-      this.subscriptions.delete(room.id);
-      this.turnTimers.clear(room.id);
-      this.setupAnalysis.cancel(room.id);
-      evicted.push(room.id);
-    }
-
-    return evicted;
+    const ids: string[] = [];
+    for (const room of this.rooms.values()) if (!(this.subscriptions.get(room.id)?.size) && room.lastActiveAt <= this.now() - idleMs) { ids.push(room.id); this.remove(room); }
+    return ids;
   }
+  get roomCount() { return this.rooms.size; }
+  dispose() { this.catan.dispose(); this.drawGuess.dispose(); }
 
-  get roomCount(): number {
-    return this.rooms.size;
+  // Typed game entry points. HTTP dispatch validates the corresponding DTO before calling these.
+  updateSettings(roomId: string, seatToken: string, revision: number, settings: { readonly ruleProfile: PlayableRuleProfile; readonly victoryPointsToWin: number; readonly bankCountsPublic?: boolean | undefined }): RoomView {
+    const room = this.catanRoom(this.configurable(roomId, seatToken, revision)); this.catan.settings(room, settings);
+    room.revision++; this.notify(room); return this.catan.project(room, room.hostPlayerId);
   }
-
-  getRoom(roomId: string, seatToken: string, eventAfterRevision?: number | null): RoomView {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
-    if (eventAfterRevision != null && (!room.game || eventAfterRevision > room.game.revision)) throw new RoomError("INVALID_REQUEST", "记录游标无效");
-    return this.projectRoom(room, member.id, eventAfterRevision);
+  rerollMap(roomId: string, seatToken: string, revision: number): RoomView {
+    const room = this.catanRoom(this.configurable(roomId, seatToken, revision)); room.seed = this.createSeed(room.seed);
+    room.revision++; this.notify(room); return this.catan.project(room, room.hostPlayerId);
   }
-
+  updateDrawSettings(roomId: string, seatToken: string, revision: number, settings: DrawGuessSettings): DrawGuessRoomView {
+    const room = this.drawRoom(this.configurable(roomId, seatToken, revision)); this.drawGuess.settings(room, settings);
+    room.revision++; this.notify(room); return this.drawGuess.project(room, room.hostPlayerId);
+  }
+  executeDrawCommand(roomId: string, seatToken: string, commandId: string, command: DrawGuessPlayerCommand): DrawGuessRoomView {
+    const room = this.drawRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
+    return this.drawGuess.command(room, member.id, commandId, command);
+  }
+  executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand): GameCommandResponse;
+  executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand, responseMode: "ack" | undefined, matchId?: string): GameCommandReply;
+  executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand, responseMode?: "ack", matchId?: string): GameCommandReply {
+    const room = this.catanRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
+    return this.catan.command(room, member.id, commandId, expectedRevision, command, responseMode, matchId);
+  }
   getHistory(roomId: string, seatToken: string, gameId: string, beforeRevision?: number): GameHistoryPage {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
+    const room = this.catanRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
     if (!room.game || room.game.id !== gameId) throw new RoomError("GAME_NOT_STARTED", "对局已变更，请刷新");
     if (beforeRevision !== undefined && beforeRevision > room.game.revision + 1) throw new RoomError("INVALID_REQUEST", "记录游标无效");
     return projectHistoryPage(room.game, member.id, room.history, room.victoryWarnings, beforeRevision);
   }
-
-  /**
-   * Whether this seat may still ask what the table is planning this turn.
-   *
-   * Reading every opponent's next build is the strongest thing the commentator
-   * does, so it is rationed per turn rather than per minute: one look, then
-   * play. The allowance lives on the room record so it is discarded with the
-   * room instead of outliving it in a registry-wide map.
-   */
   tableIntentAvailable(roomId: string, seatToken: string): boolean {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
-    const phase = room.game?.phase;
-    if (phase === undefined || phase.kind !== "turn") return false;
-    return room.tableIntentTurns.get(member.id) !== phase.turnNumber;
+    const room = this.catanRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
+    return room.game?.phase.kind === "turn" && room.tableIntentTurns.get(member.id) !== room.game.phase.turnNumber;
+  }
+  recordTableIntentUse(roomId: string, seatToken: string, matchId: string, turnNumber: number) {
+    const room = this.catanRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
+    if (room.matchId !== matchId) throw new RoomError("STALE_MATCH", "这次分析属于上一局，请重新分析");
+    if (room.game?.phase.kind !== "turn" || room.game.phase.turnNumber !== turnNumber) throw new RoomError("STALE_REVISION", "回合已更新，请重新分析");
+    room.tableIntentTurns.set(member.id, turnNumber);
+  }
+  getCatanRoom(roomId: string, seatToken: string, after?: number | null): RoomView {
+    const view = this.getRoom(roomId, seatToken, after); if (view.gameId !== "catan") throw new RoomError("WRONG_GAME", "此操作仅适用于卡坦"); return view;
+  }
+  startCatanRoom(roomId: string, seatToken: string): RoomView {
+    this.getCatanRoom(roomId, seatToken); const view = this.startRoom(roomId, seatToken);
+    if (view.gameId !== "catan") throw new RoomError("WRONG_GAME", "游戏不匹配"); return view;
   }
 
-  /** Spend the allowance, once the model has actually answered. */
-  recordTableIntentUse(roomId: string, seatToken: string): void {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
-    const phase = room.game?.phase;
-    if (phase === undefined || phase.kind !== "turn") return;
-    room.tableIntentTurns.set(member.id, phase.turnNumber);
+  private requireRoom(roomId: string): AnyRoomRecord {
+    const room = this.rooms.get(roomId.trim().toUpperCase()); if (!room) throw new RoomError("ROOM_NOT_FOUND", "房间不存在");
+    room.lastActiveAt = this.now(); return room;
   }
-
-  executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand): GameCommandResponse;
-  executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand, responseMode: "ack" | undefined): GameCommandReply;
-  executeCommand(
-    roomId: string,
-    seatToken: string,
-    commandId: string,
-    expectedRevision: number,
-    command: GameCommand,
-    responseMode?: "ack",
-  ): GameCommandReply {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
-    const playerId = member.id;
-    const response = (): GameCommandReply => responseMode === "ack"
-      ? { commandId, roomId: room.id, roomRevision: room.revision, gameRevision: room.game!.revision }
-      : { commandId, room: this.projectRoom(room, playerId) };
-    const cacheKey = `${playerId}:${commandId}`;
-    if (room.appliedCommands.has(cacheKey)) {
-      // Answer a retry from live state. Keeping the original response per command
-      // meant retaining a full room projection -- map and entire history -- for
-      // every move ever made, which made room memory quadratic in game length.
-      return response();
-    }
-    if (room.game === null) throw new RoomError("GAME_NOT_STARTED", "The game has not started");
-    if (room.game.revision !== expectedRevision) {
-      throw new RoomError("STALE_REVISION", "游戏状态已更新，请重试");
-    }
-
-    const result = executeGameCommand(room.game, playerId, command);
-    if (!result.accepted) throw new RoomError(result.error.code, result.error.message);
-
-    if (result.state.revision === room.game.revision && result.events.length === 0) {
-      room.appliedCommands.add(cacheKey);
-      return response();
-    }
-
-    const settlement = prepareSettlement(room, result.state, result.events, this.now());
-    if (settlement && this.matchRepository) this.matchRepository.save(settlement.record, settlement.participants);
-    room.victoryWarnings.push(...collectVictoryWarnings(room.game, result.state, room.victoryWarnings));
-    room.game = result.state;
-    room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
-    room.revision += 1;
-    room.appliedCommands.add(cacheKey);
-    if (result.events.some((event) => event.type === "setup_completed")) {
-      this.setupAnalysis.start(room);
-    }
-    this.syncTurnTimer(room);
-    const reply = response();
-    this.notify(room);
-    return reply;
+  private credential(room: AnyRoomRecord, token: string) {
+    const member = room.members.find((m) => m.seatToken === token);
+    if (!member) throw new RoomError("PLAYER_NOT_FOUND", "座位凭证已失效");
+    if (member.accountId !== null && !this.accountIsActive(member.accountId)) { this.prepareAccountTakeover(member.accountId)(); throw new RoomError("PLAYER_NOT_FOUND", "账号登录已失效，请重新登录"); }
+    return member;
   }
-
-  subscribe(
-    roomId: string,
-    seatToken: string,
-    listener: RoomListener,
-    onClosed?: () => void,
-    onReplaced?: () => void,
-    incremental = false,
-  ): () => void {
-    const room = this.requireRoom(roomId);
-    const member = this.requireCredential(room, seatToken);
-    const playerId = member.id;
-
-    const subscription: Subscription = { playerId, listener, onClosed, onReplaced, eventAfterRevision: incremental ? null : undefined };
-    const roomSubscriptions = this.subscriptions.get(room.id) ?? new Set<Subscription>();
-    roomSubscriptions.add(subscription);
-    this.subscriptions.set(room.id, roomSubscriptions);
-    listener(this.projectRoom(room, playerId, subscription.eventAfterRevision));
-    if (incremental) subscription.eventAfterRevision = room.game?.revision ?? null;
-
-    return () => {
-      roomSubscriptions.delete(subscription);
-
-      if (roomSubscriptions.size === 0) {
-        this.subscriptions.delete(room.id);
-      }
-    };
+  private openLobby(roomId: string, token: string, revision: number) {
+    const room = this.requireRoom(roomId); this.credential(room, token);
+    if (room.game !== null) throw new RoomError("ROOM_ALREADY_STARTED", "开局后不能更改房间设置");
+    if (room.revision !== revision) throw new RoomError("STALE_ROOM_REVISION", "房间已更新，请重试"); return room;
   }
-
-  dispose(): void {
-    this.turnTimers.dispose();
-    this.setupAnalysis.dispose();
+  private configurable(roomId: string, token: string, revision: number) {
+    const room = this.openLobby(roomId, token, revision);
+    if (this.credential(room, token).id !== room.hostPlayerId) throw new RoomError("ONLY_HOST_CAN_CONFIGURE", "只有房主可以修改设置"); return room;
   }
-
-  private createRoomId(): string {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      const roomId = randomBytes(3).toString("hex").toUpperCase();
-
-      if (!this.rooms.has(roomId)) {
-        return roomId;
-      }
+  private catanRoom(room: AnyRoomRecord): RoomRecord { if (room.gameId !== "catan") throw new RoomError("WRONG_GAME", "此操作仅适用于卡坦"); return room; }
+  private drawRoom(room: AnyRoomRecord): DrawRoomRecord { if (room.gameId !== "draw-guess") throw new RoomError("WRONG_GAME", "此操作仅适用于传画猜词"); return room; }
+  private project(room: AnyRoomRecord, id: string, after?: number | null): AnyRoomView {
+    if (!room.members.some((m) => m.id === id)) throw new RoomError("PLAYER_NOT_FOUND", "玩家不属于这个房间");
+    return room.gameId === "catan" ? this.catan.project(room, id, after) : this.drawGuess.project(room, id);
+  }
+  private notify(room: AnyRoomRecord) {
+    for (const sub of this.subscriptions.get(room.id) ?? []) {
+      sub.listener(this.project(room, sub.playerId, sub.eventAfterRevision));
+      if (sub.eventAfterRevision !== undefined) sub.eventAfterRevision = room.game?.revision ?? null;
     }
-
+  }
+  private remove(room: AnyRoomRecord) { if (room.gameId === "catan") this.catan.cancel(room.id); else this.drawGuess.cancel(room.id); this.rooms.delete(room.id); this.subscriptions.delete(room.id); }
+  private createRoomId() {
+    for (let i = 0; i < 20; i++) { const id = randomBytes(3).toString("hex").toUpperCase(); if (!this.rooms.has(id)) return id; }
     throw new Error("Unable to allocate a unique room id");
   }
-
-  private createSeed(excludedSeed?: number): number {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      const seed = this.nextSeed();
-      if (Number.isInteger(seed) && seed > 0 && seed < 2_147_483_647 && seed !== excludedSeed) return seed;
-    }
-    throw new Error("Unable to allocate a map seed");
-  }
-
-  private requireRoom(roomId: string): RoomRecord {
-    const room = this.rooms.get(roomId.trim().toUpperCase());
-
-    if (room === undefined) {
-      throw new RoomError("ROOM_NOT_FOUND", "Room not found");
-    }
-
-    room.lastActiveAt = this.now();
-    return room;
-  }
-
-  private requireMember(room: RoomRecord, playerId: string): RoomMember {
-    const member = room.members.find((candidate) => candidate.id === playerId);
-
-    if (member === undefined) {
-      throw new RoomError("PLAYER_NOT_FOUND", "Player does not belong to this room");
-    }
-
-    return member;
-  }
-
-  private requireCredential(room: RoomRecord, seatToken: string): RoomMember {
-    const member = room.members.find((candidate) => candidate.seatToken === seatToken);
-    if (member === undefined) {
-      throw new RoomError("PLAYER_NOT_FOUND", "Seat credential is invalid");
-    }
-    if (member.accountId !== null && !this.accountIsActive(member.accountId)) {
-      this.prepareAccountTakeover(member.accountId)();
-      throw new RoomError("PLAYER_NOT_FOUND", "账号登录已失效，请重新登录");
-    }
-    return member;
-  }
-
-  private requireConfigurableRoom(roomId: string, seatToken: string, expectedRevision: number): RoomRecord {
-    const room = this.requireOpenLobby(roomId, seatToken, expectedRevision);
-    const member = this.requireCredential(room, seatToken);
-    if (member.id !== room.hostPlayerId) {
-      throw new RoomError("ONLY_HOST_CAN_CONFIGURE", "Only the room host can change settings");
-    }
-    return room;
-  }
-
-  private requireOpenLobby(roomId: string, seatToken: string, expectedRevision: number): RoomRecord {
-    const room = this.requireRoom(roomId);
-    this.requireCredential(room, seatToken);
-    if (room.game !== null) {
-      throw new RoomError("ROOM_ALREADY_STARTED", "Room settings are locked after the game starts");
-    }
-    if (room.revision !== expectedRevision) {
-      throw new RoomError("STALE_ROOM_REVISION", "Room settings changed; refresh and try again");
-    }
-    return room;
-  }
-
-  private projectRoom(room: RoomRecord, viewerId: string, eventAfterRevision?: number | null): RoomView {
-    this.requireMember(room, viewerId);
-    return projectRoomView(room, viewerId, this.turnTimers.view(room.id), eventAfterRevision);
-  }
-
-  private syncTurnTimer(room: RoomRecord): void {
-    if (room.game === null) {
-      this.turnTimers.clear(room.id);
-      return;
-    }
-    this.turnTimers.sync(room.id, room.game, (expiry) => this.applyTurnTimeout(room.id, expiry));
-  }
-
-  private applyTurnTimeout(roomId: string, expiry: TurnTimerExpiry): void {
-    const room = this.rooms.get(roomId);
-    if (room?.game === null || room?.game === undefined) return;
-    const result = executeGameCommand(room.game, expiry.playerId, expiry.command);
-    if (!result.accepted) {
-      this.syncTurnTimer(room);
-      return;
-    }
-
-    const settlement = prepareSettlement(room, result.state, result.events, this.now());
-    try {
-      if (settlement && this.matchRepository) this.matchRepository.save(settlement.record, settlement.participants);
-    } catch {
-      this.onSettlementError();
-      // Keep the previous authoritative state and re-arm its timeout for retry.
-      this.syncTurnTimer(room);
-      this.notify(room);
-      return;
-    }
-    room.victoryWarnings.push(...collectVictoryWarnings(room.game, result.state, room.victoryWarnings));
-    room.game = result.state;
-    room.history.push(...result.events.map((event) => ({ revision: result.state.revision, event })));
-    room.revision += 1;
-    this.syncTurnTimer(room);
-    this.notify(room);
-  }
-
-  private notify(room: RoomRecord): void {
-    const roomSubscriptions = this.subscriptions.get(room.id);
-
-    if (roomSubscriptions === undefined) {
-      return;
-    }
-
-    for (const subscription of roomSubscriptions) {
-      subscription.listener(this.projectRoom(room, subscription.playerId, subscription.eventAfterRevision));
-      if (subscription.eventAfterRevision !== undefined) subscription.eventAfterRevision = room.game?.revision ?? null;
-    }
-  }
-
-  private removeSubscriptions(roomId: string, playerId: string): void {
-    const roomSubscriptions = this.subscriptions.get(roomId);
-    if (roomSubscriptions === undefined) return;
-
-    for (const subscription of roomSubscriptions) {
-      if (subscription.playerId === playerId) roomSubscriptions.delete(subscription);
-    }
-    if (roomSubscriptions.size === 0) this.subscriptions.delete(roomId);
+  private createSeed(excluded?: number) {
+    for (let i = 0; i < 20; i++) { const seed = this.nextSeed(); if (Number.isInteger(seed) && seed > 0 && seed < 2_147_483_647 && seed !== excluded) return seed; }
+    throw new Error("Unable to allocate a game seed");
   }
 }

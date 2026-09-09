@@ -1,4 +1,4 @@
-import type { GameCommandAck, GameCommandReply, RoomView, GameHistoryPage, IndexedHistoryEntry } from "@catan/protocol";
+import type { GameCommandAck, GameCommandReply, AnyRoomView, GameHistoryPage, IndexedHistoryEntry } from "@catan/protocol";
 import type { PlayerSession } from "./api.js";
 import { HistoryBuffer } from "./history-buffer.js";
 
@@ -9,11 +9,11 @@ export class RoomSessionChangedError extends Error {
 
 /** All HTTP/WS snapshots pass here before rendering. Credentials scope every asynchronous read. */
 export class RoomUpdates {
-  private current: RoomView | null = null;
+  private current: AnyRoomView | null = null;
   private readonly listeners = new Set<() => void>();
   private readonly history = new HistoryBuffer();
   get hasHistoryGap(): boolean { return this.history.hasGap; }
-  constructor(private session: PlayerSession | null, private readonly publish: (room: RoomView | null) => void) {}
+  constructor(private session: PlayerSession | null, private readonly publish: (room: AnyRoomView | null) => void) {}
 
   reset(session: PlayerSession | null): void {
     if (session !== null && this.belongsTo(session)) return;
@@ -28,16 +28,17 @@ export class RoomUpdates {
     return this.session?.seatToken === session.seatToken && this.session.roomId === session.roomId && this.session.playerId === session.playerId;
   }
 
-  accept(room: RoomView, session: PlayerSession): boolean {
+  accept(room: AnyRoomView, session: PlayerSession): boolean {
     if (!this.belongsTo(session) || room.id !== session.roomId || (room.game !== null && room.game.you.id !== session.playerId)) return false;
     // Room metadata (including AI completion) can advance without a game revision.
-    const upgrade = room.game?.historyRange !== undefined && this.current?.game?.historyRange === undefined;
+    const previousGame = this.current?.gameId === "catan" ? this.current.game : null;
+    const upgrade = room.gameId === "catan" && room.game?.historyRange !== undefined && previousGame?.historyRange === undefined;
     if (this.current !== null && (room.revision < this.current.revision || (room.revision === this.current.revision && !upgrade))) return false;
     if (room.game?.id !== this.current?.game?.id) this.history.clear();
-    if (room.game?.historyRange) {
+    if (room.gameId === "catan" && room.game?.historyRange) {
       this.history.add({ gameId: room.game.id, range: room.game.historyRange, entries: room.game.history as readonly IndexedHistoryEntry[] });
-      const visible = this.history.hasGap && this.current?.game?.historyRange
-        ? { entries: this.current.game.history, range: this.current.game.historyRange } : this.history.latest!;
+      const visible = this.history.hasGap && previousGame?.historyRange
+        ? { entries: previousGame.history, range: previousGame.historyRange } : this.history.latest!;
       room = { ...room, game: { ...room.game, history: visible.entries, historyRange: visible.range } };
     }
     this.current = room;
@@ -52,7 +53,7 @@ export class RoomUpdates {
     if (!latest || latest.range.afterRevision === 0) return;
     const before = latest.range.afterRevision + 1;
     const page = await read(latest.gameId, before);
-    if (!this.belongsTo(session) || this.current?.game?.id !== latest.gameId) throw new RoomSessionChangedError();
+    if (!this.belongsTo(session) || this.current?.gameId !== "catan" || this.current.game?.id !== latest.gameId) throw new RoomSessionChangedError();
     if (page.gameId !== latest.gameId || page.range.throughRevision !== before - 1 || page.range.afterRevision >= before - 1) {
       throw new Error("记录加载范围无效，请重试");
     }
@@ -61,7 +62,7 @@ export class RoomUpdates {
     this.publish(this.current); // History cannot advance/replace dynamic game state or enqueue effects.
   }
 
-  async confirm(reply: GameCommandReply, session: PlayerSession, read: (afterRevision?: number) => Promise<RoomView>, connected: boolean): Promise<void> {
+  async confirm(reply: GameCommandReply, session: PlayerSession, read: (afterRevision?: number) => Promise<AnyRoomView>, connected: boolean): Promise<void> {
     if (!this.belongsTo(session)) throw new RoomSessionChangedError();
     if ("room" in reply) { this.accept(reply.room, session); return; } // Older server during deployment.
     if (reply.roomId !== session.roomId) throw new Error("操作确认的房间不匹配");
@@ -85,6 +86,7 @@ export class RoomUpdates {
 
   private hasRevision(ack: GameCommandAck): boolean {
     return this.current !== null && this.current.revision >= ack.roomRevision &&
+      (ack.matchId === undefined || ack.matchId === this.current.matchId) &&
       this.current.game !== null && this.current.game.revision >= ack.gameRevision;
   }
   private notify(): void { for (const listener of this.listeners) listener(); }

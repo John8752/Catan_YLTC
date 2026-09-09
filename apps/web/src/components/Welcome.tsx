@@ -1,11 +1,13 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { GAME_CATALOG, type GameType } from "@catan/protocol";
+import { cn } from "../lib/utils.js";
 
 export interface WelcomeProps {
   readonly accountControl?: ReactNode;
   readonly defaultPlayerName?: string;
   readonly busy: boolean;
   readonly error: string | null;
-  readonly onCreate: (playerName: string) => void;
+  readonly onCreate: (playerName: string, gameId: GameType) => void;
   readonly onJoin: (roomId: string, playerName: string) => void;
 }
 
@@ -20,12 +22,13 @@ const TABLE_LEGENDS = [
 
 export function Welcome({ busy, error, onCreate, onJoin, accountControl, defaultPlayerName = "" }: WelcomeProps) {
   const [playerName, setPlayerName] = useState("");
+  const [gameId, setGameId] = useState<GameType>("catan");
   useEffect(() => { if (defaultPlayerName) setPlayerName(defaultPlayerName); }, [defaultPlayerName]);
   const [roomId, setRoomId] = useState("");
 
   function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onCreate(playerName);
+    onCreate(playerName, gameId);
   }
 
   function handleJoin(event: FormEvent<HTMLFormElement>) {
@@ -36,10 +39,10 @@ export function Welcome({ busy, error, onCreate, onJoin, accountControl, default
   return (
     <main className="welcome-layout">
       <section className="welcome-copy">
-        <p className="eyebrow">六人远征队 · 随时开岛</p>
-        <h1>六个人，<br />一座不肯安静的岛。</h1>
+        <p className="eyebrow">YLTC 桌游小馆 · 朋友到齐就开桌</p>
+        <h1>朋友在语音里，<br />快乐在桌面上。</h1>
         <p className="welcome-lead">
-          今晚，友谊按资源计价，承诺写在道路上。谁先把胜利握在手里，谁就负责讲述这座岛真正发生过什么。
+          今晚想认真经营一座岛，还是把一句话画到面目全非？选个游戏，发出房间码，和熟悉的人一起玩。
         </p>
 
         <div className="mt-7 max-w-[38rem] border-l border-[#efbd79]/45 pl-4" aria-label="今晚的六位开拓者">
@@ -55,8 +58,8 @@ export function Welcome({ busy, error, onCreate, onJoin, accountControl, default
         </div>
 
         <div className="milestone-note">
-          <span className="whitespace-nowrap">今晚规则</span>
-          <p>3–6 人都能上桌，地图会尽量公平；至于交易是否公平，全看你们。</p>
+          <span className="whitespace-nowrap">开桌约定</span>
+          <p>创建时选定游戏，房间内不再更换。语音照常用你们熟悉的软件；本站无需麦克风权限。</p>
         </div>
       </section>
 
@@ -65,7 +68,7 @@ export function Welcome({ busy, error, onCreate, onJoin, accountControl, default
           <span className="brand-mark" aria-hidden="true">⬡</span>
           <div>
             <p className="eyebrow">YLTC 六人局</p>
-            <h2>报上名号，准备登岛</h2>
+            <h2>报上名号，准备开桌</h2>
           </div>
         </div>
 
@@ -81,8 +84,15 @@ export function Welcome({ busy, error, onCreate, onJoin, accountControl, default
         />
 
         <form onSubmit={handleCreate}>
+          <fieldset className="my-4 grid gap-2" disabled={busy}>
+            <legend className="mb-2 text-sm font-bold">选择游戏</legend>
+            {GAME_CATALOG.map((game) => <label key={game.id} className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-left", gameId === game.id ? "border-primary bg-primary/10" : "border-border")}>
+              <input className="mt-1 size-4 shrink-0 accent-primary" type="radio" name="game" value={game.id} checked={gameId === game.id} onChange={() => setGameId(game.id)} />
+              <span className="min-w-0"><span className="flex flex-wrap items-baseline gap-x-3"><strong>{game.name}</strong><small>{game.players}</small></span><span className="mt-1 block text-sm opacity-75">{game.description}</span></span>
+            </label>)}
+          </fieldset>
           <button className="primary-button" type="submit" disabled={busy || playerName.trim().length === 0}>
-            {busy ? "正在准备桌面…" : "创建今晚的岛"}
+            {busy ? "正在准备桌面…" : gameId === "catan" ? "创建今晚的岛" : "创建传画猜词房间"}
           </button>
         </form>
 

@@ -9,3 +9,5 @@ export * from "./game-summary.js";
 export * from "./messages.js";
 export * from "./turn-timer.js";
 export * from "./views.js";
+export * from "./platform.js";
+export * from "./platform-stream.js";

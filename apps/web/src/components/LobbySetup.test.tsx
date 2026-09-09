@@ -165,6 +165,7 @@ describe("lobby setup", () => {
 
 function lobbyRoom(): RoomView {
   return {
+    gameId: "catan", matchId: null,
     id: "ABC123",
     revision: 1,
     hostPlayerId: "player_1",

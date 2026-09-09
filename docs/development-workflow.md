@@ -17,7 +17,9 @@ Use Conventional Commit-style subjects:
 <type>(<scope>): <imperative summary>
 ```
 
-Common types are `feat`, `fix`, `refactor`, `test`, `docs`, `build` and `chore`. Scopes should name a stable domain such as `core`, `protocol`, `server`, `web`, `room` or `setup`.
+Common types are `feat`, `fix`, `refactor`, `test`, `docs`, `build` and `chore`. Product-facing scopes distinguish `platform`, `catan` and `draw-guess`; use these even for cross-layer changes. Technical scopes such as `build` remain appropriate for repository infrastructure. Do not label a Catan-only feature as generic `game` or `room` behavior.
+
+For a change that necessarily spans product areas, label each entry in `Changes` and `Validation` with its area. Example: `feat(platform): support immutable game rooms and drawing telephone`, followed by separate `platform`, `catan` and `draw-guess` explanations. Prefer separate green commits when a mechanical refactor can stand alone safely; never split an atomic protocol producer/consumer migration into broken commits.
 
 Milestone, cross-layer and bug-fix commits use this body:
 

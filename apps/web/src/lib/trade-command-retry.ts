@@ -13,10 +13,12 @@ type TradeCommand = Extract<GameCommand, {
 
 export function canRetryStaleTradeCommand(
   command: GameCommand,
-  before: OpenTrade | null,
-  after: OpenTrade | null,
+  previousGame: Pick<GameView, "id" | "openTrade">,
+  currentGame: Pick<GameView, "id" | "openTrade">,
   actorId: string,
 ): boolean {
+  if (previousGame.id !== currentGame.id) return false;
+  const before = previousGame.openTrade, after = currentGame.openTrade;
   if (!isRetryableTradeCommand(command) || before === null || after === null) return false;
   if (command.offerId !== before.offerId || !sameOffer(before, after)) return false;
 

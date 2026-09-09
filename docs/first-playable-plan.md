@@ -1,5 +1,7 @@
 # First playable implementation plan
 
+Scope: **Catan**. This historical plan describes Catan only. The current platform and independent games are tracked in [multi-game-plan.md](./multi-game-plan.md).
+
 ## Outcome
 
 Deliver one locally operated, complete `base-3-4` match that three or four human players can finish in separate browser tabs or devices. Delivery is one playable version, but implementation uses small green commits so failures remain diagnosable and agent handoffs remain safe.

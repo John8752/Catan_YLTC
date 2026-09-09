@@ -1,5 +1,11 @@
 # Documentation index
 
+Current product areas:
+
+- **Platform**: [Multi-game roadmap and ownership](./multi-game-plan.md), [ADR-0014](./adr/0014-multi-game-rooms.md), [Accounts](./account-system-plan.md), [Deployment](./deployment.md).
+- **Catan**: the base/extended rules, first-playable plan, map/HUD/trade/effects and transport validation below.
+- **Draw-guess**: [Drawing telephone rules](./rules/draw-guess.md), [Multi-game verification](./validation/multi-game.md).
+
 Read documents in this order:
 
 1. [Product direction](../PRODUCT.md)

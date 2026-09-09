@@ -1,15 +1,18 @@
 import { z } from "zod";
 import { PLAYER_COLORS } from "@catan/game-core";
-import { AI_COMMENTARY_MODES } from "@catan/protocol";
+import { AI_COMMENTARY_MODES, GAME_IDS } from "@catan/protocol";
 export const playerNameSchema = z.object({
   playerName: z.string(),
 });
+export const createRoomSchema = playerNameSchema.extend({ gameId: z.enum(GAME_IDS).default("catan") });
+export const returnToLobbySchema = z.object({ seatToken: z.string().min(1), matchId: z.string().min(1) }).strict();
 
 export const startRoomSchema = z.object({
   seatToken: z.string().min(1),
 });
 
 export const roomSettingsSchema = z.object({
+  gameId: z.never().optional(),
   seatToken: z.string().min(1),
   expectedRevision: z.number().int().positive(),
   ruleProfile: z.enum(["base-3-4", "extended-5-6"]),
@@ -38,6 +41,7 @@ export const leaveRoomSchema = z.object({
 });
 
 export const gameCommandSchema = z.object({
+  matchId: z.string().min(1).optional(),
   responseMode: z.literal("ack").optional(),
   seatToken: z.string().min(1),
   commandId: z.string().min(1).max(100),

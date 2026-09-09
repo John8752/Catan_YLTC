@@ -1,4 +1,4 @@
-import type { RoomView } from "@catan/protocol";
+import type { AnyRoomView } from "@catan/protocol";
 import { DoorClosed } from "lucide-react";
 import { Button } from "@/components/ui/button.js";
 import {
@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils.js";
 
 export function DisbandRoomControl({ room, busy, onDisband, compact = false, className }: {
-  readonly room: RoomView;
+  readonly room: AnyRoomView;
   readonly busy: boolean;
   readonly onDisband: () => void | Promise<void>;
   readonly compact?: boolean;

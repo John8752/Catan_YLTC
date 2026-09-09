@@ -1,7 +1,9 @@
 import type { RoomSettingsInput, RoomView, TableIntentContent } from "./views.js";
 import type { PlayerColor } from "@catan/game-core";
+import type { GameType } from "./platform.js";
 
 export interface CreateRoomRequest {
+  readonly gameId?: GameType;
   readonly playerName: string;
 }
 

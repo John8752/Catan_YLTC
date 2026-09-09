@@ -1,0 +1,23 @@
+import { createDrawGuess, executeDrawGuess, taskFor } from "@catan/game-core/draw-guess";
+import { expect, it } from "vitest";
+import { projectDrawGuess } from "./index.js";
+const players = ["a", "b", "c"].map((id) => ({ id, name: id }));
+it("sends only the assigned previous page and own private draft; reveal is a prefix", () => {
+  let state = createDrawGuess("match", players, 71);
+  state = executeDrawGuess(state, "a", { type: "draft", matchId: state.id, taskId: taskFor(state, "a")!.id, sequence: 1, page: { kind: "text", text: "PRIVATE_DRAFT_A" } });
+  expect(JSON.stringify(projectDrawGuess(state, "b", null))).not.toContain("PRIVATE_DRAFT_A");
+  expect(projectDrawGuess(state, "a", null).task?.draft?.page).toEqual({ kind: "text", text: "PRIVATE_DRAFT_A" });
+  for (const player of players) state = executeDrawGuess(state, player.id, { type: "submit", matchId: state.id, taskId: taskFor(state, player.id)!.id, page: { kind: "text", text: `SECRET_${player.id}` } });
+  const a = projectDrawGuess(state, "a", null);
+  expect(a.task?.input).toEqual({ kind: "text", text: "SECRET_c" });
+  expect(JSON.stringify(a)).not.toContain("SECRET_b"); expect(a.albums).toEqual([]); expect(a.task?.suggestions).toEqual([]);
+  expect(JSON.stringify(a)).not.toContain("PRIVATE_DRAFT_A");
+  state = executeDrawGuess(state, null, { type: "expire", matchId: state.id, step: 1 });
+  state = executeDrawGuess(state, null, { type: "expire", matchId: state.id, step: 2 });
+  expect(projectDrawGuess(state, "a", null).albums).toEqual([]);
+  state = executeDrawGuess(state, "a", { type: "reveal", matchId: state.id, expectedCursor: 0 }, "a");
+  const first = projectDrawGuess(state, "b", null);
+  expect(first.albums).toHaveLength(1); expect(first.albums[0]!.pages).toHaveLength(1);
+  expect(JSON.stringify(first)).toContain("SECRET_a"); expect(JSON.stringify(first)).not.toContain("SECRET_b"); expect(first.task).toBeNull();
+  expect(() => projectDrawGuess(state, "outsider", null)).toThrow();
+});

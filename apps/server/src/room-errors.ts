@@ -1,6 +1,10 @@
 import type { GameCommandErrorCode } from "@catan/game-core";
 
 export type RoomErrorCode =
+  | "WRONG_GAME"
+  | "STALE_MATCH"
+  | "MATCH_NOT_FINISHED"
+  | "ACCOUNT_BUSY"
   | "INVALID_REQUEST"
   | "ROOM_NOT_FOUND"
   | "PLAYER_NOT_FOUND"

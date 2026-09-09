@@ -134,6 +134,7 @@ async function openProjectedSeat(
 
 function roomView(state: GameState, viewerId: string, records: readonly GameEventRecord[]): RoomView {
   return {
+    gameId: "catan", matchId: state.id,
     id: roomId,
     revision: state.revision,
     hostPlayerId: "player_1",

@@ -10,12 +10,21 @@
 
 ## Code map
 
-- `apps/web`: React UI, SVG board renderer, DOM HUD and room controls.
+- `apps/web`: React room shell, Catan SVG board/DOM HUD, draw-guess Canvas 2D and game-specific controls.
 - `apps/server`: HTTP/WebSocket transport, room lifecycle and connection management.
-- `packages/game-core`: deterministic board generation, phases, commands, rules and invariants.
+- `packages/game-core`: independent deterministic game modules, phases, commands, rules and invariants; Catan owns board generation.
 - `packages/protocol`: client/server message types and hidden-information redaction.
 - `docs/rules`: executable-rule explanations and unresolved rule interpretations.
 - `docs/adr`: architecture decisions that should not be silently reversed.
+
+## Multi-game ownership
+
+- See ADR-0014 and `docs/multi-game-plan.md`. Product docs, test entries and commit notes distinguish `platform`, `catan` and `draw-guess`.
+- A room's `gameId` is immutable. Each start creates a fresh globally unique `matchId`; completed rooms may return to the same game's lobby.
+- Keep one common room/account/seat directory. Game adapters live under `apps/server/src/games`; game screens under `apps/web/src/games`.
+- `game-core` retains Catan's domain modules and provides independent `draw-guess` and shared `primitives` subpaths. Do not import Catan rules into another game. `protocol` owns the discriminated room views.
+- Draw-guess uses bounded Canvas 2D strokes under ADR-0014. Drafts and unrevealed pages are private; do not broadcast them or persist them to SQLite. Client commands bind to a match and task, not the global revision of simultaneous submissions.
+- Browser regression launches isolated test servers and in-memory SQLite; never reuse a running development server/database for acceptance.
 
 ## Architecture rules
 
@@ -39,9 +48,9 @@
 - Use `cn` from `src/lib/utils.ts` to compose conditional Tailwind classes.
 - Custom global CSS is reserved for theme tokens, base document styles, the SVG board/playfield renderer and behavior Tailwind cannot express clearly. Do not add new page-level business UI as large global selector blocks.
 - UI dependencies remain in `apps/web`; `game-core` and `protocol` must never import Tailwind, shadcn, Radix or React.
-- New shared controls belong in `src/components/ui`; game-specific compositions belong in `src/components`.
-- Reward and state-change motion must consume player-safe projected effects from `GameView.effects`; never infer gameplay events by diffing private hands or replay old effects after reconnect.
-- Keep transient game motion in `src/effects`, target semantic `data-*` anchors, and provide a `prefers-reduced-motion` path without decorative travel.
+- New shared controls belong in `src/components/ui`; new game-specific compositions belong in `src/games/<gameId>`. Existing Catan compositions under `src/components` may be migrated incrementally.
+- Catan reward and state-change motion must consume player-safe projected effects from `GameView.effects`; never infer gameplay events by diffing private hands or replay old effects after reconnect.
+- Keep existing Catan transient motion in `src/effects`, target semantic `data-*` anchors, and provide a `prefers-reduced-motion` path without decorative travel in every game.
 
 See ADR-0005 before changing the frontend stack or introducing another component library. See ADR-0006 before changing how server events drive client effects.
 

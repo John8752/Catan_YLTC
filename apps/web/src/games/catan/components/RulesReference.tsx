@@ -1,4 +1,4 @@
-import { BUILD_COSTS } from "@catan/game-core/catan";
+import { BUILD_COSTS, getRuleProfileDefinition, isPlayableRuleProfile } from "@catan/game-core/catan";
 import type { GameView } from "@catan/protocol/catan";
 import { BookOpen } from "lucide-react";
 import type { ReactNode } from "react";
@@ -60,7 +60,7 @@ export function RulesReference({ ruleProfile, trigger }: {
   readonly ruleProfile: GameView["ruleProfile"];
   readonly trigger?: ReactNode;
 }) {
-  const extended = ruleProfile === "extended-5-6";
+  const extended = isPlayableRuleProfile(ruleProfile) && getRuleProfileDefinition(ruleProfile).pairedPlayerTurns;
   const total = CARD_GUIDE.reduce((sum, card) => sum + (extended ? card.extended : card.base), 0);
 
   return (

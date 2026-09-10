@@ -89,6 +89,18 @@ interface BoardTopology {
 
 const STANDARD_TOPOLOGY = createTopology(STANDARD_COORDINATES);
 const EXTENDED_TOPOLOGY = createTopology(EXTENDED_COORDINATES);
+const LARGE_TOPOLOGY = createTopology(Array.from({ length: 7 }, (_, row) => {
+  const r = row - 3;
+  const firstQ = Math.max(-3, -r - 3);
+  const lastQ = Math.min(3, -r + 3);
+  return Array.from({ length: lastQ - firstQ + 1 }, (_, column) => ({ q: firstQ + column, r }));
+}).flat());
+const LARGE_TERRAIN_DECK: readonly TerrainType[] = [
+  ...RESOURCE_TYPES.flatMap((resource) => Array<TerrainType>(7).fill(resource)),
+  "desert", "desert",
+];
+const LARGE_NUMBER_TOKENS = [...EXTENDED_NUMBER_TOKENS, 2, 3, 4, 5, 9, 10, 11];
+const LARGE_PORT_DECK = [...EXTENDED_PORT_DECK, GENERIC_PORT];
 const MAP_CANDIDATE_COUNT = 48;
 
 export function createStandardMap(seed: number): GameMap {
@@ -97,6 +109,10 @@ export function createStandardMap(seed: number): GameMap {
 
 export function createExtendedMap(seed: number): GameMap {
   return createMap(seed, EXTENDED_TOPOLOGY, EXTENDED_TERRAIN_DECK, EXTENDED_NUMBER_TOKENS, EXTENDED_PORT_DECK);
+}
+
+export function createLargeMap(seed: number): GameMap {
+  return createMap(seed, LARGE_TOPOLOGY, LARGE_TERRAIN_DECK, LARGE_NUMBER_TOKENS, LARGE_PORT_DECK);
 }
 
 function createMap(

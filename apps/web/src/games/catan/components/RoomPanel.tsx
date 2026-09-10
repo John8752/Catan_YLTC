@@ -1,4 +1,5 @@
 import type { PlayerColor } from "@catan/game-core/primitives";
+import { getRuleProfileDefinition } from "@catan/game-core/catan";
 import type { RoomSettingsInput, RoomView } from "@catan/protocol/catan";
 import type { ReactNode } from "react";
 import { Crown, LogOut, Route, Settings2, ShieldCheck, Shuffle, Trophy, Users } from "lucide-react";
@@ -56,7 +57,8 @@ export function RoomPanel({
   historyLoading, historyError, historyHasGap, onLoadEarlierHistory,
 }: RoomPanelProps) {
   const isHost = room.hostPlayerId === playerId;
-  const minimumPlayers = room.settings.ruleProfile === "extended-5-6" ? 5 : 2;
+  const profile = getRuleProfileDefinition(room.settings.ruleProfile);
+  const minimumPlayers = profile.minPlayers;
   const canStart = isHost && room.members.length >= minimumPlayers && room.game === null;
   const settings: RoomSettingsInput = {
     ruleProfile: room.settings.ruleProfile,
@@ -113,15 +115,15 @@ export function RoomPanel({
                         variant="ghost"
                         className={cn(
                           "h-7 rounded-md px-2.5 text-xs",
-                          room.settings.ruleProfile === ruleProfile
+                          profile.maxPlayers === (ruleProfile === "base-3-4" ? 4 : 6)
                             ? "bg-[#37685d] text-white hover:bg-[#315d53] hover:text-white"
                             : "text-[#53665f] hover:bg-white/55",
                         )}
-                        aria-pressed={room.settings.ruleProfile === ruleProfile}
+                        aria-pressed={profile.maxPlayers === (ruleProfile === "base-3-4" ? 4 : 6)}
                         disabled={!isHost || busy || (ruleProfile === "base-3-4" && room.members.length > 4)}
                         onClick={() => onSettingsChange({
                           ...settings,
-                          ruleProfile,
+                          ruleProfile: ruleProfile === "extended-5-6" && profile.maxPlayers === 6 ? settings.ruleProfile : ruleProfile,
                           victoryPointsToWin: room.settings.victoryPointsToWin,
                         })}
                       >
@@ -130,6 +132,23 @@ export function RoomPanel({
                     ))}
                   </div>
                 </SettingRow>
+                {profile.maxPlayers === 6 ? (
+                  <SettingRow label="地图大小">
+                    <select
+                      className="h-8 rounded-lg border border-[#695237]/20 bg-[#fffaf0]/80 px-2 text-sm font-bold text-[#29433d] focus-visible:ring-2 focus-visible:ring-[#37685d]/45 disabled:opacity-65"
+                      aria-label="地图大小"
+                      value={room.settings.ruleProfile}
+                      disabled={!isHost || busy}
+                      onChange={(event) => onSettingsChange({
+                        ...settings,
+                        ruleProfile: event.target.value === "large-5-6" ? "large-5-6" : "extended-5-6",
+                      })}
+                    >
+                      <option value="extended-5-6">标准 · 30 块</option>
+                      <option value="large-5-6">大地图 · 37 块</option>
+                    </select>
+                  </SettingRow>
+                ) : null}
                 <SettingRow label="获胜分数" icon={<Trophy className="size-3.5 text-[#ba8131]" />}>
                   <select
                     className="h-8 rounded-lg border border-[#695237]/20 bg-[#fffaf0]/80 px-2 text-sm font-bold text-[#29433d] outline-none focus-visible:ring-2 focus-visible:ring-[#37685d]/45 disabled:cursor-not-allowed disabled:opacity-65"

@@ -49,7 +49,8 @@ export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
             role="img"
             aria-label={room.previewMap.hexes.length === 19
               ? "由十九块六边形地形组成的开局地图预览"
-              : "由三十块六边形地形组成的开局地图预览"}
+              : room.previewMap.hexes.length === 30 ? "由三十块六边形地形组成的开局地图预览"
+              : `由${room.previewMap.hexes.length}块六边形地形组成的开局地图预览`}
           >
             <defs>
               <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">

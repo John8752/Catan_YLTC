@@ -113,7 +113,8 @@ export function Board({
             role="img"
             aria-label={game.map.hexes.length === 19
               ? "由十九块六边形地形组成的游戏棋盘"
-              : "由三十块六边形地形组成的游戏棋盘"}
+              : game.map.hexes.length === 30 ? "由三十块六边形地形组成的游戏棋盘"
+              : `由${game.map.hexes.length}块六边形地形组成的游戏棋盘`}
           >
           <defs>
             <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">

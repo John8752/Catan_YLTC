@@ -11,7 +11,7 @@ import {
 import type { GameCommand, GameCommandErrorCode, GameCommandResult, GameEvent } from "./commands.js";
 import { assertGameInvariant } from "./create-game.js";
 import type { GameState, PlayerState } from "./state.js";
-import { getRuleProfileDefinition } from "../rulesets/index.js";
+import { getRuleProfileDefinition, type PlayableRuleProfile } from "../rulesets/index.js";
 
 type DevelopmentCommand = Extract<
   GameCommand,
@@ -310,7 +310,7 @@ function isAction(state: GameState, actorId: PlayerId): boolean {
     state.phase.activePlayerId === actorId;
 }
 
-function requirePlayableProfile(state: GameState): "base-3-4" | "extended-5-6" {
+function requirePlayableProfile(state: GameState): PlayableRuleProfile {
   if (state.ruleProfile === "two-player") throw new Error("The two-player profile is not playable");
   return state.ruleProfile;
 }

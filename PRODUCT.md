@@ -41,6 +41,7 @@ Primary verbs:
 - `base-3-4`: first complete rules target; seats two to four, all playing the same game.
 - `two-player`: planned *variant* with its own setup and turn policy. Not what a two-seat match uses today.
 - `extended-5-6`: playable larger-board profile with expanded supplies and its own paired-turn policy.
+- `large-5-6`: optional custom 37-hex island for five to six players, using the extension's supplies and paired-turn policy.
 
 Player count is never used as a substitute for a named rule profile.
 

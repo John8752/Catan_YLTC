@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { PLAYABLE_RULE_PROFILES } from "@catan/game-core/catan";
 import { AI_COMMENTARY_MODES } from "@catan/protocol/catan";
 
 export const roomSettingsSchema = z.object({
   gameId: z.never().optional(),
   seatToken: z.string().min(1),
   expectedRevision: z.number().int().positive(),
-  ruleProfile: z.enum(["base-3-4", "extended-5-6"]),
+  ruleProfile: z.enum(PLAYABLE_RULE_PROFILES),
   victoryPointsToWin: z.number().int().min(5).max(15),
   bankCountsPublic: z.boolean().optional(),
 });

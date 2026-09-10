@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createExtendedMap, createStandardMap } from "./standard-map.js";
+import { createExtendedMap, createLargeMap, createStandardMap } from "./standard-map.js";
 
 describe("standard map topology", () => {
   it("exposes the complete canonical land graph", () => {
@@ -77,5 +77,46 @@ describe("extended 5–6 player map topology", () => {
     }
     expect(map.ports.filter((port) => port.kind === "generic")).toHaveLength(5);
     expect(map.ports.filter((port) => port.kind === "resource" && port.resource === "wool")).toHaveLength(2);
+  });
+});
+
+describe("large 5–6 player map topology", () => {
+  it("generates a deterministic 37-hex connected island with valid coastal ports", () => {
+    for (const seed of [0, 1, 42, 77, 93357307, 0xffffffff]) {
+      const map = createLargeMap(seed);
+      expect(createLargeMap(seed)).toEqual(map);
+      expect(map.hexes).toHaveLength(37);
+      expect(map.vertices).toHaveLength(96);
+      expect(map.edges).toHaveLength(132);
+      expect(map.edges.filter((edge) => edge.adjacentHexIds.length === 1)).toHaveLength(42);
+      for (const terrain of ["brick", "lumber", "wool", "grain", "ore"]) {
+        expect(map.hexes.filter((hex) => hex.terrain === terrain)).toHaveLength(7);
+      }
+      expect(map.hexes.filter((hex) => hex.terrain === "desert")).toHaveLength(2);
+      expect(map.hexes.filter((hex) => hex.numberToken !== null)).toHaveLength(35);
+      expect(map.hexes.find((hex) => hex.id === map.robberHexId)?.terrain).toBe("desert");
+      const visited = new Set<string>();
+      const pending = [map.hexes[0]!.id];
+      while (pending.length) {
+        const id = pending.pop()!;
+        if (visited.has(id)) continue;
+        visited.add(id);
+        pending.push(...map.hexes.find((hex) => hex.id === id)!.adjacentHexIds);
+      }
+      expect(visited.size).toBe(37);
+      const hot = map.hexes.filter((hex) => hex.numberToken === 6 || hex.numberToken === 8);
+      expect(hot).toHaveLength(6);
+      for (const hex of hot) {
+        expect(hot.some((other) => hex.adjacentHexIds.includes(other.id))).toBe(false);
+      }
+      expect(map.ports).toHaveLength(12);
+      expect(map.ports.filter((port) => port.kind === "generic")).toHaveLength(6);
+      expect(new Set(map.ports.flatMap((port) => port.vertexIds)).size).toBe(24);
+      for (const port of map.ports) {
+        const edge = map.edges.find((edge) => edge.id === port.edgeId)!;
+        expect(edge.adjacentHexIds).toHaveLength(1);
+        expect(port.vertexIds).toEqual(edge.vertexIds);
+      }
+    }
   });
 });

@@ -1,13 +1,13 @@
-import { createGame, PLAYER_COLORS, resourceAmounts } from "@catan/game-core/catan";
+import { createGame, PLAYER_COLORS, resourceAmounts, type PlayableRuleProfile } from "@catan/game-core/catan";
 import { expect, it } from "vitest";
 import { createRoomStreamDecoder, createRoomStreamEncoder, createRoomEventEncoder, MissingRoomMapError, MissingRoomEventsError } from "./room-stream.js";
 import { projectGameForPlayer, type RoomView } from "./views.js";
 
-function room(count: 4 | 6, seed = 42): RoomView {
+function room(count: 4 | 6, seed = 42, ruleProfile: PlayableRuleProfile = count === 4 ? "base-3-4" : "extended-5-6"): RoomView {
   const players = Array.from({ length: count }, (_, i) => ({ id: `p${i}`, name: `玩家${i}`, color: PLAYER_COLORS[i]! }));
-  const state = createGame({ id: "GAME", seed, players, ruleProfile: count === 4 ? "base-3-4" : "extended-5-6" });
+  const state = createGame({ id: "GAME", seed, players, ruleProfile });
   return { id: "ROOM", gameId: "catan", matchId: "GAME", revision: 1, hostPlayerId: "p0", members: players.map((p, i) => ({ ...p, isHost: i === 0 })),
-    settings: { ruleProfile: count === 4 ? "base-3-4" : "extended-5-6", playerLimit: count, mapSeed: seed, victoryPointsToWin: 10, bankCountsPublic: true },
+    settings: { ruleProfile, playerLimit: count, mapSeed: seed, victoryPointsToWin: 10, bankCountsPublic: true },
     previewMap: null, game: projectGameForPlayer(state, "p0"), setupAnalysis: null };
 }
 function wire<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
@@ -48,7 +48,7 @@ for (const count of [4, 6] as const) it(`round-trips all player-safe data, cache
 
 it("invalidates on reroll, profile or room changes and requires geometry on a new connection", () => {
   const encode = createRoomStreamEncoder(), decode = createRoomStreamDecoder();
-  for (const next of [room(4), room(4, 43), room(6, 43), { ...room(6, 43), id: "OTHER" }]) {
+  for (const next of [room(4), room(4, 43), room(6, 43), room(6, 43, "large-5-6"), { ...room(6, 43), id: "OTHER" }]) {
     expect(encode(next).room.game?.map.geometry).not.toBeNull();
     const repeated = encode(next);
     expect(() => decode(repeated)).toThrow(MissingRoomMapError);

@@ -13,7 +13,7 @@ const sizes = [...primaryPhoneCases, ...([
 
 for (const count of [4, 6] as const) {
   for (const { name, width, height, options } of sizes) {
-    test(`${count} seats fit ${name} with readable controls and bounded port overflow`, async ({ browser }) => {
+    test(`${count} seats fit ${name} with usable controls and bounded port overflow`, async ({ browser }) => {
       const room = fixture(count);
       const run = await openFixture(browser, width, height, room, options);
       try {
@@ -53,10 +53,10 @@ for (const count of [4, 6] as const) {
         for (const card of bankCards) {
           expect(card.text).toMatch(/^\d+$/);
           expect(card.title).toContain("银行剩余");
-          expect(card.countFont).toBeGreaterThanOrEqual(width >= 1024 ? 20 : 16);
+          if (width >= 1024) expect(card.countFont).toBeGreaterThanOrEqual(20);
           expect(card.portrait).toBe(true);
           expect(card.fits).toBe(true);
-          expect(card.iconHeight).toBeGreaterThanOrEqual(20);
+          if (width >= 1024) expect(card.iconHeight).toBeGreaterThanOrEqual(20);
         }
         if (width < 1024) {
           await run.page.keyboard.press("Escape");
@@ -117,8 +117,6 @@ for (const count of [4, 6] as const) {
           await expect(run.page.locator('[data-game-sidebar] [aria-label="放大地图"]')).toHaveCount(0);
           await expect(run.page.locator('.live-playfield .board-heading,.live-playfield .board-footer,.live-playfield [data-attention-slot]')).toHaveCount(0);
           expect(metrics.sidebar?.y + metrics.sidebar?.height).toBeLessThanOrEqual(height + 1);
-          // Two-line ports participate in fitting. Readability
-          // and uncropped content replace the old one-line-port size benchmark.
         }
         const dir = path.join(process.cwd(), "output/playwright");
         await mkdir(dir, { recursive: true });

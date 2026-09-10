@@ -96,6 +96,32 @@ describe("lobby setup", () => {
     expect(onPlayerColorChange).toHaveBeenCalledWith("coral");
   });
 
+  it("selects the large map without changing other settings and locks guests and busy hosts", () => {
+    const onSettingsChange = vi.fn();
+    const room: RoomView = { ...lobbyRoom(), settings: {
+      ...lobbyRoom().settings, ruleProfile: "extended-5-6", playerLimit: 6,
+      victoryPointsToWin: 12, bankCountsPublic: false,
+    } };
+    const props = { room, playerId: "player_1", connectionState: "live" as const, busy: false,
+      onStart: vi.fn(), onSettingsChange, onPlayerColorChange: vi.fn(), onShufflePlayers: vi.fn(),
+      onLeave: vi.fn(), onDisband: vi.fn() };
+    const view = render(<RoomPanel {...props} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "地图大小" }), { target: { value: "large-5-6" } });
+    expect(onSettingsChange).toHaveBeenLastCalledWith({ ruleProfile: "large-5-6", victoryPointsToWin: 12, bankCountsPublic: false });
+    const large: RoomView = { ...room, settings: { ...room.settings, ruleProfile: "large-5-6" } };
+    view.rerender(<RoomPanel {...props} room={large} />);
+    expect(screen.getByRole("button", { name: "最多 6 人" }).getAttribute("aria-pressed")).toBe("true");
+    expect((screen.getByRole("button", { name: "等待至少 5 人" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "最多 6 人" }));
+    expect(onSettingsChange).toHaveBeenLastCalledWith({ ruleProfile: "large-5-6", victoryPointsToWin: 12, bankCountsPublic: false });
+    fireEvent.change(screen.getByRole("combobox", { name: "地图大小" }), { target: { value: "extended-5-6" } });
+    expect(onSettingsChange).toHaveBeenLastCalledWith({ ruleProfile: "extended-5-6", victoryPointsToWin: 12, bankCountsPublic: false });
+    view.rerender(<RoomPanel {...props} room={large} playerId="player_2" />);
+    expect((screen.getByRole("combobox", { name: "地图大小" }) as HTMLSelectElement).disabled).toBe(true);
+    view.rerender(<RoomPanel {...props} room={large} busy />);
+    expect((screen.getByRole("combobox", { name: "地图大小" }) as HTMLSelectElement).disabled).toBe(true);
+  });
+
   it("does not duplicate the relocated disband control in the running-room panel", () => {
     const base = createBaseGame({ id: "disband", seed: 42, players: [
       { id: "player_1", name: "林", color: "terracotta" },

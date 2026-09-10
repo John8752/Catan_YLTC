@@ -19,7 +19,26 @@ The implementation follows the current official 5–6 player extension rules pub
 
 Resource cards are finite. Production and resource-choice effects cannot take cards that the bank does not hold. If the bank cannot satisfy every claim for one resource type after a roll, nobody receives that resource type for that production event; other resource types still resolve normally.
 
-## Setup
+## Optional large island
+
+`large-5-6` is a custom five-to-six-player profile selected by the host using
+the lobby's map-size control. `extended-5-6` remains the standard/default
+six-seat choice. Switching profiles updates every seat's server-generated
+preview; starting uses that same profile and seed. Rerolling retains the size.
+
+- The large island is a radius-three hexagon, with rows of 4/5/6/7/6/5/4 tiles
+  (37 total), seven of each producing terrain and two deserts.
+- Its 35 number tokens use the standard extension's 28 tokens plus
+  2, 3, 4, 5, 9, 10 and 11. Sixes/eights remain nonadjacent; generation uses the
+  same deterministic fairness scoring. The robber starts on a seeded desert.
+- Twelve coastal ports use the extension's eleven ports plus one generic port.
+- Bank supply (24 of each resource), development deck (34 cards), piece limits,
+  costs, setup, paired turns and victory target are unchanged. The default target
+  remains 10 and the host's chosen target survives map-size changes.
+- This is a house variant that provides more expansion space; its balance is
+  not claimed to match the standard extension.
+
+## Initial placement
 
 Players place two settlements and two roads in the same forward-then-reverse snake order used by the base profile. The second settlement grants one available resource from every adjacent producing hex.
 

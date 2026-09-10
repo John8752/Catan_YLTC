@@ -4,7 +4,7 @@ import {
   FIVE_SIX_PLAYER_ADDITIONAL_DEVELOPMENT_CARDS,
   type DevelopmentCardType,
 } from "../development/index.js";
-import { createExtendedMap, createStandardMap, type GameMap, type TerrainType } from "../map/index.js";
+import { createExtendedMap, createLargeMap, createStandardMap, type GameMap, type TerrainType } from "../map/index.js";
 import { createResourceBank, type ResourceHand } from "../resources/index.js";
 import type { RuleProfile } from "./types.js";
 
@@ -56,6 +56,18 @@ const PROFILE_DEFINITIONS: Readonly<Record<PlayableRuleProfile, RuleProfileDefin
     pairedPlayerTurns: true,
     terrainCounts: { brick: 5, lumber: 6, wool: 6, grain: 6, ore: 5, desert: 2 },
     createMap: createExtendedMap,
+    createBank: () => createResourceBank(EXTENDED_RESOURCE_CARDS_PER_TYPE),
+    createDevelopmentDeck: (seed) => createDevelopmentDeck(seed, EXTENDED_DEVELOPMENT_CARDS),
+  },
+  "large-5-6": {
+    id: "large-5-6",
+    minPlayers: 5,
+    maxPlayers: 6,
+    resourceCardsPerType: EXTENDED_RESOURCE_CARDS_PER_TYPE,
+    developmentDeckSize: EXTENDED_DEVELOPMENT_CARDS.length,
+    pairedPlayerTurns: true,
+    terrainCounts: { brick: 7, lumber: 7, wool: 7, grain: 7, ore: 7, desert: 2 },
+    createMap: createLargeMap,
     createBank: () => createResourceBank(EXTENDED_RESOURCE_CARDS_PER_TYPE),
     createDevelopmentDeck: (seed) => createDevelopmentDeck(seed, EXTENDED_DEVELOPMENT_CARDS),
   },

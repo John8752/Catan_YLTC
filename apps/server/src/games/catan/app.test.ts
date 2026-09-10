@@ -393,7 +393,9 @@ describe("catan room API", () => {
     expect(retried.game?.revision).toBe(afterRoad.game?.revision);
   });
 
-  it("creates and starts a five-player extended room on the 30-hex map", async () => {
+  it.each([
+    ["extended-5-6", 30], ["large-5-6", 37],
+  ] as const)("creates and starts a five-player %s room on the %i-hex map", async (ruleProfile, hexCount) => {
     const app = await buildApp();
     apps.push(app);
     const host = (await app.inject({
@@ -408,15 +410,20 @@ describe("catan room API", () => {
       payload: {
         seatToken: host.seatToken,
         expectedRevision: host.room.revision,
-        ruleProfile: "extended-5-6",
+        ruleProfile,
         playerLimit: 6,
         victoryPointsToWin: 10,
       },
     });
     const configured = settingsResponse.json<RoomView>();
     expect(settingsResponse.statusCode).toBe(200);
-    expect(configured.settings.ruleProfile).toBe("extended-5-6");
-    expect(configured.previewMap?.hexes).toHaveLength(30);
+    expect(configured.settings.ruleProfile).toBe(ruleProfile);
+    expect(configured.settings.playerLimit).toBe(6);
+    expect(configured.previewMap?.hexes).toHaveLength(hexCount);
+
+    const tooEarly = await app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/start`, payload: { seatToken: host.seatToken } });
+    expect(tooEarly.statusCode).toBe(400);
+    expect(tooEarly.json().error.code).toBe("NOT_ENOUGH_PLAYERS");
 
     for (const playerName of ["二", "三", "四", "五"]) {
       const response = await app.inject({
@@ -434,8 +441,9 @@ describe("catan room API", () => {
     });
     const started = startResponse.json<RoomView>();
     expect(startResponse.statusCode).toBe(200);
-    expect(started.game?.ruleProfile).toBe("extended-5-6");
-    expect(started.game?.map.hexes).toHaveLength(30);
+    expect(started.game?.ruleProfile).toBe(ruleProfile);
+    expect(started.game?.map).toEqual(configured.previewMap);
+    expect(started.game?.map.hexes).toHaveLength(hexCount);
     expect(started.game?.developmentDeckCount).toBe(34);
   });
 

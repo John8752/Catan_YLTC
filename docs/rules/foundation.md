@@ -4,7 +4,7 @@
 
 M0 implements a deterministic board and an explicit state shell, not a complete game. Its purpose is to make later rules executable without coupling them to React or networking.
 
-Two rule profiles are playable: `base-3-4` accepts two to four players, and `extended-5-6` accepts five or six players with a larger board, expanded supplies and paired-player turns. A two-seat match is `base-3-4` with one opponent -- the board, supplies, setup order and turn policy are unchanged. The separate `two-player` profile, with its own neutral-player rules, remains planned and unsupported.
+Three rule profiles are playable: `base-3-4` accepts two to four players; `extended-5-6` accepts five or six players with a 30-hex board, expanded supplies and paired-player turns; `large-5-6` offers a custom 37-hex island with the same extended supplies and turn policy. A two-seat match is `base-3-4` with one opponent -- the board, supplies, setup order and turn policy are unchanged. The separate `two-player` profile, with its own neutral-player rules, remains planned and unsupported.
 
 ## State phases
 

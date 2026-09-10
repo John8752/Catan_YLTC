@@ -57,43 +57,74 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
     } finally { await context.close(); }
   });
 
-  test(`@draw-guess reveal follows the current speaker and resets for a new album ${device.name}`, async ({ browser }, testInfo) => {
+  test(`@draw-guess reveal appends each speaker and album without shifting previous pages ${device.name}`, async ({ browser }, testInfo) => {
     const context = await browser.newContext(device.options);
     await context.addInitScript(() => localStorage.setItem("catan-yltc-seat", JSON.stringify({ roomId: "GALLERY", playerId: "p0", seatToken: "test" })));
     const page = await context.newPage();
-    let room = finishedRoom(1);
+    let room = finishedRoom(0);
     let publish: (next: DrawGuessRoomView) => void = () => { throw new Error("Socket not connected"); };
     await page.route(/\/api\/rooms\/GALLERY\?/, (route) => route.fulfill({ json: room }));
     await page.routeWebSocket(/\/ws\?/, (socket) => {
-      publish = (next) => { room = next; socket.send(JSON.stringify({ type: "room_state", room })); };
+      publish = (next) => { room = { ...next, revision: Math.max(room.revision + 1, next.revision) }; socket.send(JSON.stringify({ type: "room_state", room })); };
       publish(room);
     });
+    const positions = () => page.getByRole("article").evaluateAll((entries) => entries.map((entry) => {
+      const bounds = entry.getBoundingClientRect(); return { top: Math.round(bounds.top + scrollY), height: Math.round(bounds.height) };
+    }));
+    const latestIsFollowed = async () => {
+      const latest = page.getByRole("article").last();
+      await expect(latest).toBeFocused();
+      await expect.poll(async () => latest.evaluate((entry) => {
+        const box = entry.getBoundingClientRect();
+        return box.height > innerHeight - 24 ? Math.abs(box.top - 12) <= 2 : box.top >= 0 && box.bottom <= innerHeight;
+      })).toBe(true);
+    };
     try {
       await page.goto("/");
-      const heading = page.getByRole("heading", { name: "准备好了？一起揭晓！" });
-      await expect(heading).toBeFocused();
-      await page.getByRole("region", { name: "系统主持人串词" }).scrollIntoViewIfNeeded();
-      publish(finishedRoom(2));
-      const current = page.getByRole("article", { name: "第 2 页", exact: true });
-      await expect(current).toBeFocused();
-      await expect.poll(async () => (await current.boundingBox())!.y).toBeLessThanOrEqual(16);
-      expect((await current.boundingBox())!.y).toBeGreaterThanOrEqual(0);
-      await page.screenshot({ path: testInfo.outputPath("current-speaker.png"), scale: "css" });
-      await page.evaluate(() => scrollTo(0, 100));
-      const previousY = await page.evaluate(() => scrollY);
-      publish({ ...room, revision: room.revision + 1 });
-      await expect(page.getByRole("article")).toHaveCount(2);
-      expect(await page.evaluate(() => scrollY)).toBe(previousY);
-      publish(finishedRoom(7));
-      await expect(page.getByLabel("选择画册").getByRole("button").last()).toHaveAttribute("aria-pressed", "true");
-      await expect(heading).toBeFocused();
-      await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
-      await page.screenshot({ path: testInfo.outputPath("new-album.png"), scale: "css" });
+      await expect(page.getByRole("heading", { name: "准备好了？一起揭晓！" })).toBeFocused();
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page.getByRole("article")).toHaveCount(0);
+      let previousPositions: Awaited<ReturnType<typeof positions>> = [];
+      for (let cursor = 1; cursor <= 8; cursor++) {
+        publish(finishedRoom(cursor));
+        await expect(page.getByRole("article")).toHaveCount(cursor);
+        await expect(page.getByLabel("选择画册")).toHaveCount(0);
+        await latestIsFollowed();
+        const nextPositions = await positions();
+        expect(nextPositions.slice(0, -1)).toEqual(previousPositions);
+        previousPositions = nextPositions;
+        if (cursor === 2 || cursor === 7) await page.screenshot({ path: testInfo.outputPath(`reveal-${cursor}.png`), scale: "css" });
+        if (cursor === 2) {
+          await page.evaluate(() => scrollTo({ top: 100, behavior: "instant" }));
+          const previousY = await page.evaluate(() => scrollY);
+          publish({ ...room, game: { ...room.game!, albums: room.game!.albums.map((album) => ({ ...album, pages: album.pages.map((entry) => ({ ...entry, reactions: { up: 1, down: 0 } })) })) } });
+          await expect(page.getByRole("button", { name: "点赞，1 次", exact: true })).toHaveCount(2);
+          expect(await page.evaluate(() => scrollY)).toBe(previousY);
+        }
+        if (cursor === 7) {
+          await page.reload();
+          await expect(page.getByRole("article")).toHaveCount(7);
+          await latestIsFollowed();
+        }
+      }
+      // Reduced motion follows the next server cursor without an animation.
+      await page.emulateMedia({ reducedMotion: "reduce" });
       publish(finishedRoom(36));
-      await expect(page.getByLabel("选择画册").getByRole("button").last()).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByRole("article")).toHaveCount(36);
+      await latestIsFollowed();
+      const beforeFinish = await positions();
       publish(finishedRoom());
-      await expect(page.getByRole("heading", { name: "本场画册已全部揭晓" })).toBeFocused();
-      await expect(page.getByLabel("选择画册").getByRole("button").last()).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByRole("region", { name: "系统主持人串词" })).toBeFocused();
+      await expect(page.getByRole("article")).toHaveCount(36);
+      expect(await positions()).toEqual(beforeFinish);
+      await expect(page.getByRole("button", { name: "全部画册", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await page.getByLabel("选择画册").getByRole("button").first().click();
+      await expect(page.getByRole("article")).toHaveCount(6);
+      await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+      await page.getByRole("button", { name: "全部画册", exact: true }).click();
+      await expect(page.getByRole("article")).toHaveCount(36);
+      await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     } finally { await context.close(); }
   });
 }

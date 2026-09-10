@@ -19,7 +19,6 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
   const current = useRef(draft); current.current = draft;
   const saved = useRef(task.draft?.sequence ?? 0);
   const roomCallback = useRef(onRoom); roomCallback.current = onRoom;
-  const [saveStatus, setSaveStatus] = useState("草稿只对你可见");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const pending = useRef<{ readonly id: string; readonly command: DrawGuessPlayerCommand } | null>(null);
@@ -37,7 +36,7 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
   }, [task.draft]);
   useEffect(() => {
     if (task.submitted || draft.sequence === 0) return;
-    const timer = setTimeout(() => { if (!writeDraft(window.localStorage, key, draft)) setSaveStatus("设备存储不可用，仍会保存到服务器"); }, 200);
+    const timer = setTimeout(() => { writeDraft(window.localStorage, key, draft); }, 200);
     return () => clearTimeout(timer);
   }, [draft, key, task.submitted]);
   useEffect(() => {
@@ -46,13 +45,12 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
     const checkpoint = async () => {
       const copy = current.current;
       if (!active || inFlight || finished.current || pending.current || copy.sequence <= saved.current) return;
-      inFlight = true; setSaveStatus("正在保存草稿…");
+      inFlight = true;
       try {
         const room: DrawGuessRoomView = await sendDrawCommand(session, randomId(), { type: "draft", matchId: game.id, taskId: task.id, sequence: copy.sequence, page: copy.page });
-        if (active) { saved.current = Math.max(saved.current, copy.sequence); setSaveStatus("草稿已保存，仅你可见"); roomCallback.current(room); }
+        if (active) { saved.current = Math.max(saved.current, copy.sequence); roomCallback.current(room); }
       } catch (error) {
         if (active) {
-          setSaveStatus("草稿保留在本机，联网后自动重试");
           if (error instanceof ApiError && ["STALE_TASK", "STALE_MATCH"].includes(error.code)) {
             try { const room = await getRoom(session); if (active) roomCallback.current(room); } catch { /* Reconnect also recovers. */ }
           }
@@ -65,7 +63,7 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
   }, [session, game.id, task.id, key]);
   function change(page: EditablePage) {
     if (task.submitted || pending.current) return;
-    const next = { sequence: current.current.sequence + 1, page }; current.current = next; setDraft(next); setSaveStatus("草稿待保存");
+    const next = { sequence: current.current.sequence + 1, page }; current.current = next; setDraft(next);
   }
   async function submit() {
     if (submitting || task.submitted) return;
@@ -81,5 +79,5 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
       setSubmitError(error instanceof Error ? error.message : "提交未确认，请重试；内容仍在这里");
     } finally { setSubmitting(false); }
   }
-  return { page: draft.page, change, saveStatus, submit, submitting, submitError, locked };
+  return { page: draft.page, change, submit, submitting, submitError, locked };
 }

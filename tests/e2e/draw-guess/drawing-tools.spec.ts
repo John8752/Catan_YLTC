@@ -48,6 +48,7 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
       await page.goto("/"); await page.getByRole("button", { name: "开始传画猜词" }).click();
       await expect(page.getByLabel("六个候选词")).toBeVisible();
       await drawingFits(page);
+      await expect(page.getByText(/草稿/)).toHaveCount(0);
       await page.screenshot({ path: testInfo.outputPath("opening-choices.png"), fullPage: true, scale: "css" });
       await page.getByLabel("六个候选词").getByRole("button").first().click();
       const button = (name: string) => page.getByRole("button", { name, exact: true });
@@ -77,7 +78,9 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
       }
       await button("选择颜色").click(); await button("红色画笔").click();
       await button("画笔").click(); await button("16 像素").click();
+      const submitBounds = await button("完成并提交").boundingBox();
       await stroke(page, device.name !== "desktop", [200, 300], [600, 300]);
+      expect(await button("完成并提交").boundingBox()).toEqual(submitBounds);
       const red = await pixel(canvas); expect(red).not.toEqual([255, 255, 255, 255]);
       await button("橡皮擦").click(); await button("32 像素").click();
       await stroke(page, device.name !== "desktop", [400, 200], [400, 400]);
@@ -92,7 +95,9 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
       await expect(button("完成并提交")).toBeDisabled();
       await button("撤销").click(); expect(await pixel(canvas, 300, 300)).toEqual(red);
       await button("重做").click(); await button("撤销").click();
-      await expect(page.getByText("草稿已保存，仅你可见", { exact: true })).toBeVisible();
+      await expect.poll(async () => (await snapshot(host)).game?.task?.draft?.page).toMatchObject({ background: "#fff3bf", strokes: [{ tool: "pen", width: 16 }, { tool: "eraser", width: 32 }] });
+      await expect(page.getByText(/草稿/)).toHaveCount(0);
+      expect(await button("完成并提交").boundingBox()).toEqual(submitBounds);
       await page.reload(); await expect(canvas).toBeVisible();
       expect(await pixel(canvas)).toEqual([255, 243, 191, 255]); expect(await pixel(canvas, 300, 300)).toEqual(red);
       await expect(button("撤销")).toBeDisabled();

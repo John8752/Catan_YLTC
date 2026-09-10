@@ -56,7 +56,10 @@ test.describe("@draw-guess", () => {
           }
         }));
         if (step === 0) {
-          await expect(host.getByText("草稿已保存，仅你可见", { exact: true })).toBeVisible();
+          await expect.poll(async () => {
+            const draft = (await snapshot(host.request, hostSeat)).game?.task?.draft?.page;
+            return draft && draft.kind !== "text" ? draft.strokes[0]?.points.length ?? 0 : 0;
+          }).toBeGreaterThan(10);
           const chosen = await host.getByLabel("本轮题目", { exact: true }).textContent();
           const before = await ink(host); await host.reload();
           await expect(host.getByLabel("本轮题目", { exact: true })).toHaveText(chosen!); await expect(host.getByRole("img", { name: "画布", exact: true })).toBeVisible(); expect(await ink(host)).toBe(before);
@@ -136,7 +139,10 @@ test.describe("@draw-guess", () => {
       for (let i = 1; i <= 12; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: box.x + 40 + i * 10, y: box.y + 40 + i * 6 }] });
       await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
       expect(await ink(page)).toBeGreaterThan(100); expect(await page.evaluate(() => scrollY)).toBe(scroll);
-      await expect(page.getByText("草稿已保存，仅你可见", { exact: true })).toBeVisible();
+      await expect.poll(async () => {
+        const draft = (await snapshot(request, host)).game?.task?.draft?.page;
+        return draft && draft.kind !== "text" ? draft.strokes[0]?.points.length ?? 0 : 0;
+      }).toBeGreaterThan(10);
       await page.reload(); await expect(canvas).toBeVisible(); expect(await ink(page)).toBeGreaterThan(100);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
       await page.screenshot({ path: `output/playwright/draw-guess-${slug}-canvas.png`, fullPage: true });

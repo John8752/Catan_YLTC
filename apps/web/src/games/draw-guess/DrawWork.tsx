@@ -50,8 +50,8 @@ export function DrawWork({ game, session, onRoom }: { readonly game: DrawGuessVi
       <p id="guess-length" aria-live="polite" className={wrongLength ? "text-sm text-amber-800" : "text-sm text-slate-600"}>{task.hintLength === null ? `已输入 ${length} 个字，字数不限（最多 80 字）` : `已输入 ${length} / ${task.hintLength} 个字，字数相同才能交稿。`}{" 空白不计，标点计字。"}{wrongLength && "超时仍不符会记为缺页。"}</p>
     </>}
     {page.kind === "opening" && !page.word && <div className="shrink-0">{choices}</div>}
-    <div className="flex shrink-0 items-center justify-between gap-3"><p className="text-xs text-slate-500" role="status">{draft.saveStatus}</p>
-      <Button className="min-h-11 flex-1 sm:flex-none" disabled={empty || wrongLength || draft.submitting} onClick={() => void draft.submit()}>{draft.submitting ? "正在交稿…" : draft.locked ? "重试提交" : "完成并提交"}</Button>
+    <div className="shrink-0">
+      <Button className="h-11 w-full" disabled={empty || wrongLength || draft.submitting} onClick={() => void draft.submit()}>{draft.submitting ? "正在交稿…" : draft.locked ? "重试提交" : "完成并提交"}</Button>
     </div>
     {draft.submitError && <p role="alert" className="break-words text-sm text-red-700">{draft.submitError}</p>}
   </section>;

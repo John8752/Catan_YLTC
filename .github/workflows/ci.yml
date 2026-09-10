@@ -3,28 +3,85 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  plan:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      scopes: ${{ steps.scope.outputs.scopes }}
+      base: ${{ steps.scope.outputs.base }}
+      head: ${{ steps.scope.outputs.head }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Determine changed modules and audit test ownership
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          base="$BASE_SHA"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then base=EMPTY; fi
+          node scripts/testing/run.mjs plan --base "$base" --head "$HEAD_SHA" --json > /tmp/test-plan.json
+          cat /tmp/test-plan.json
+          node -e 'const fs=require("node:fs");const p=JSON.parse(fs.readFileSync("/tmp/test-plan.json","utf8"));fs.appendFileSync(process.env.GITHUB_OUTPUT,"scopes="+JSON.stringify(p.scopes)+"\n")'
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "head=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
   validate:
+    needs: plan
+    if: needs.plan.outputs.scopes != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        scope: ${{ fromJSON(needs.plan.outputs.scopes) }}
+    name: Validate ${{ matrix.scope }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate the affected layers of this module
+        env:
+          TEST_SCOPE: ${{ matrix.scope }}
+          BASE_SHA: ${{ needs.plan.outputs.base }}
+          HEAD_SHA: ${{ needs.plan.outputs.head }}
+        run: pnpm validate --scope "$TEST_SCOPE" --base "$BASE_SHA" --head "$HEAD_SHA"
+      - name: Verify this game's browser suite can be collected
+        if: matrix.scope != 'tooling'
+        env:
+          TEST_SCOPE: ${{ matrix.scope }}
+        run: pnpm test:e2e --scope "$TEST_SCOPE" --list
+      - name: Audit all browser project wiring after tooling changes (collection only)
+        if: matrix.scope == 'tooling'
+        run: pnpm test:e2e:all --list
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Validate workspace
-        run: pnpm validate
+  full:
+    if: github.event_name == 'workflow_dispatch'
+    name: Explicit full integration run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm validate:full

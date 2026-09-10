@@ -1,5 +1,7 @@
 # Draw-guess: opening drawings and automatic reveal
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 ## Behavior
 
 - Each player selects one of six seeded bank phrases and draws their own opening. There is no custom prompt input. Opening selection and ink share a private draft and submit atomically.
@@ -13,7 +15,7 @@
 - Red test first: `pnpm --filter @catan/game-core exec vitest run src/draw-guess/opening.test.ts` failed against the old opening rules, then passed after implementation.
 - `pnpm test:draw-guess`: passed 30 focused tests across core, protocol, server and web.
 - `pnpm validate`: passed type checks, all 350 unit/integration tests (core 75, protocol 53, server 68, web 154), and production builds. Architecture boundary checks are included in the core tests.
-- `pnpm test:e2e`: 119 passed / 1 failed in Chromium. All nine draw-guess cases passed, including the complete six-browser match and eight phone cases. The existing Catan three-seat flow timed out clicking a color option; `pnpm exec playwright test tests/e2e/first-playable.spec.ts --grep 'three isolated seats' --workers=1` then passed unchanged (37.5 seconds). The initial full run was not all green.
+- `pnpm test:e2e`: 119 passed / 1 failed in Chromium. All nine draw-guess cases passed, including the complete six-browser match and eight phone cases. The existing Catan three-seat flow timed out clicking a color option; `pnpm exec playwright test tests/e2e/catan/first-playable.spec.ts --grep 'three isolated seats' --workers=1` then passed unchanged (37.5 seconds). The initial full run was not all green.
 - Visual review caught the floating narrator overlapping drawings. After moving it into normal document flow, `pnpm exec playwright test tests/e2e/draw-guess --grep 'opening, touch|finished gallery' --workers=2` passed all 10 cases (eight phone flows plus desktop/phone finished-gallery checks), including explicit non-overlap assertions. `pnpm validate` was rerun and passed on this final implementation.
 
 ## Browser matrix and visual review

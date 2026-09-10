@@ -1,5 +1,7 @@
 # Platform / Catan / draw-guess boundary refactor
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 Date: 2026-09-09. This is a structural refactor under ADR-0014. Gameplay, private projections, HTTP paths and final-result payloads remain unchanged. Package-root exports and duplicate compatibility types are removed; consumers use explicit game/platform subpaths.
 
 ## Ownership

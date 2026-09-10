@@ -12,7 +12,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run src"
+    "test": "node ../../scripts/testing/run.mjs unit --layer protocol",
+    "test:all": "node ../../scripts/testing/run.mjs unit --scope all --layer protocol"
   },
   "dependencies": {
     "@catan/game-core": "workspace:*"

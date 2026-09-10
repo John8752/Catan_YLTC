@@ -38,13 +38,15 @@
 - 为新游戏验证真实 iOS Safari 触控、浏览器栏和安全区域。Chromium 模拟不等于真机通过。
 - HTTPS 与内置语音独立立项；当前 HTTP 约束不变。
 
-## 测试入口
+## 分块开发与测试
 
-- `pnpm test:platform`：公共协议、房间生命周期、账号/数据库、入口与座位恢复。
-- `pnpm test:catan`：卡坦规则、投影、服务端与界面回归，不运行传画猜词测试。
-- `pnpm test:draw-guess`：传画猜词规则、隐私投影、服务端与草稿测试。
-- `pnpm test:e2e:platform`、`pnpm test:e2e:catan`、`pnpm test:e2e:draw-guess`：可分别运行的浏览器回归。
-- `pnpm validate`：类型、全部单元/集成测试、构建。`pnpm validate:full` 额外执行边界、完整卡坦重放与所有浏览器回归。
-- 手机主验收仍使用 `tests/e2e/viewport-cases.ts`，包括两款主机型的 full-canvas 与 browser-area。
+当前规则见 [按模块开发与回归](testing.md) 和 ADR-0015。`scripts/testing/scopes.mjs` 统一测试归属，浏览器目录与 Playwright 项目按 platform、catan、draw-guess 分开；`tests/architecture` 与 `scripts/testing` 属于 tooling。
 
-交付证据记录于 [多游戏验证](validation/multi-game.md)。
+- `pnpm test:plan` 先说明 Git 改动影响的模块和层；`pnpm validate` 默认只执行该计划。
+- `pnpm validate:draw-guess --layer web` 只验证传画猜词网页层；Catan 和 platform 提供同名模块入口。
+- `pnpm test:<scope>` 可加 `--layer`、`-t`；`pnpm test:e2e:<scope>` 可加 `--grep` 或文件过滤。
+- 手机测试先选游戏，使用 `test:e2e:catan:mobile` 或 `test:e2e:draw-guess:mobile`。桌面局部控件不默认展开手机矩阵。
+- 公共原语、传输和共享 UI 的改动按消费者扩展；单游戏业务改动不会自动选择另一个游戏。
+- `validate:all` / `validate:full` 仅供明确的集成或发布需要，不能当作每次提交门槛。
+
+早期交付证据见 [多游戏验证](validation/multi-game.md)，它记录历史执行范围，不定义当前要求。

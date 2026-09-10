@@ -1,5 +1,7 @@
 # Compact controls and negotiation
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 Validated locally on 2026-09-09.
 
 ## Behavior
@@ -13,7 +15,7 @@ Validated locally on 2026-09-09.
 
 - `pnpm validate`: passed check, 306 unit tests (core 60, protocol 46, server 53, web 147), and production builds. Vite reports the existing main-chunk size advisory (approximately 522 kB uncompressed).
 - `pnpm test:e2e:mobile`: 37 passed.
-- `pnpm exec playwright test tests/e2e/adaptive-layout.spec.ts tests/e2e/action-attention.spec.ts tests/e2e/three-column-layout.spec.ts tests/e2e/compact-organization.spec.ts tests/e2e/game-sounds.spec.ts tests/e2e/ai-commentary.spec.ts tests/e2e/trade-counteroffer.spec.ts tests/e2e/first-playable.spec.ts tests/e2e/incremental-history.spec.ts --grep-invert @primary-phone --workers=3`: 43 passed.
+- `pnpm exec playwright test tests/e2e/catan/adaptive-layout.spec.ts tests/e2e/catan/action-attention.spec.ts tests/e2e/catan/three-column-layout.spec.ts tests/e2e/catan/compact-organization.spec.ts tests/e2e/catan/game-sounds.spec.ts tests/e2e/catan/ai-commentary.spec.ts tests/e2e/catan/trade-counteroffer.spec.ts tests/e2e/catan/first-playable.spec.ts tests/e2e/catan/incremental-history.spec.ts --grep-invert @primary-phone --workers=3`: 43 passed.
 - The new negotiation regression covers six players, long names, five multi-resource counteroffers, internal scrolling, reachable completion, live public-stat updates, no unsolicited opening, cancellation via projected state, and keyboard focus restoration. A desktop case checks the shared interaction.
 - Existing coverage checks bank disclosures, unique anchors, four/six-player map/port proportions and number-token overlap, browser-area resizing with simulated safe-area padding, required actions, real-server trade completion, history and sound behavior.
 - An initial simultaneous run exhausted browser capacity; that supplementary run was stopped. Three 5-second unit-test timeouts under concurrent load passed in focused reruns, and the final `pnpm validate` passed with no timeout/configuration changes. The complete supplementary browser suite passed with three workers.

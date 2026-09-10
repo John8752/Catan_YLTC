@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { fixture } from "../layout-fixture.js";
+import { fixture } from "../catan/fixtures.js";
 import { iPhone16BrowserAreaCases } from "../viewport-cases.js";
 
 for (const device of [{ name: "desktop", options: { viewport: { width: 1280, height: 800 } } }, ...iPhone16BrowserAreaCases]) {

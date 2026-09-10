@@ -65,7 +65,7 @@ sudo systemctl restart catan
 
 > **别把 `TRUST_PROXY` 关掉。** 关掉之后所有请求在服务端看来都来自 `127.0.0.1`（Caddy
 > 的地址），每分钟的建房配额就从"每人 10 个"变成"全站 10 个"，一个人手快就把其他人全
-> 挡在门外。`apps/server/src/app.test.ts` 里有一条回归测试盯着这个行为。
+> 挡在门外。`apps/server/src/platform/app.test.ts` 里有一条回归测试盯着这个行为。
 
 ## 首次部署
 
@@ -247,7 +247,7 @@ curl -s http://127.0.0.1:8787/health
 不了任何一条游戏命令，摆放定居点直接卡死；桌面开发全程无感。
 
 约束与执行方式写在 `AGENTS.md` 的「Insecure-context constraint」一节，并由
-`apps/web/src/lib/secure-context.test.ts` 在构建时拦截（`pnpm --filter @catan/web test`）。
+`apps/web/src/lib/secure-context.test.ts` 在网页层 `validate` 中拦截。可单独执行 `pnpm --filter @catan/web exec vitest run src/lib/secure-context.test.ts`；构建本身不代替该检查。
 要点：
 
 - 禁止无保护地调用 secure-context-only API（`crypto.subtle`、`navigator.clipboard`、

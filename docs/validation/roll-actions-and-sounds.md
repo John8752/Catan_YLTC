@@ -1,5 +1,7 @@
 # Roll controls and game sounds — 2026-09-08
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 Compact controls now open when the authoritative interaction enters regular or paired actions. This fixes the forced-open roll panel being reset to closed immediately after the roll. Manual collapse survives unrelated snapshots; selecting a build still makes room for map placement. Returning from seven's mandatory resolution opens the action controls again.
 
 Two original synthesized cues distinguish confirmed rolls (0.65 seconds of tumbling clicks, heard by all seats) from the viewer's setup/turn/paired-action opportunity (0.85-second rising chime). The table's sound button remembers its mute preference locally. Audio follows player-safe protocol effects, independently of the visual queue; seven and rolls with no production still produce a cue. Initial/reconnect snapshots, duplicates and stale revisions stay quiet. Locked or muted cues are consumed, never saved for later playback.
@@ -10,7 +12,7 @@ AudioContext is created/resumed during a user gesture and feature-detected; unav
 
 - `pnpm validate` passed: `pnpm check`, `pnpm test` (306 tests), and `pnpm build`. Vite reports its non-fatal bundle-size advisory.
 - `pnpm test:e2e:mobile` passed: 33 Chromium primary-phone regressions, including eight deterministic real-engine roll → directly click End Turn flows with real AudioContext source playback, distinct cue durations, duplicate delivery and mute/unmute checks.
-- `pnpm exec playwright test tests/e2e/game-sounds.spec.ts tests/e2e/development-confirmation.spec.ts tests/e2e/room-transport.spec.ts tests/e2e/trade-counteroffer.spec.ts tests/e2e/adaptive-layout.spec.ts --grep-invert @primary-phone` passed: 40 regressions covering desktop audio, compatibility layouts, trade, development confirmation and transport recovery.
+- `pnpm exec playwright test tests/e2e/catan/game-sounds.spec.ts tests/e2e/catan/development-confirmation.spec.ts tests/e2e/catan/room-transport.spec.ts tests/e2e/catan/trade-counteroffer.spec.ts tests/e2e/catan/adaptive-layout.spec.ts --grep-invert @primary-phone` passed: 40 regressions covering desktop audio, compatibility layouts, trade, development confirmation and transport recovery.
 - Unit coverage checks dice projection for seven/no production, turn-only chime projection, repeated opportunities, initial/reconnect/stale suppression, setup/paired action, gesture listeners, muted/suspended/unsupported audio, cleanup and bounded synthesized samples. Dice audio is excluded from the visual queue.
 
 ## Viewports and visual review

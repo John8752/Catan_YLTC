@@ -11,10 +11,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run src"
+    "test": "node ../../scripts/testing/run.mjs unit --layer core",
+    "test:all": "node ../../scripts/testing/run.mjs unit --scope all --layer core"
   },
   "devDependencies": {
-    "@babel/parser": "7.29.8",
     "@types/node": "^22.18.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"

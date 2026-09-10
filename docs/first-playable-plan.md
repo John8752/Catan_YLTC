@@ -1,5 +1,7 @@
 # First playable implementation plan
 
+> Historical Catan milestone plan. Current development and regression scope is defined by [testing.md](testing.md); the original all-game gates are superseded by ADR-0015.
+
 Scope: **Catan**. This historical plan describes Catan only. The current platform and independent games are tracked in [multi-game-plan.md](./multi-game-plan.md).
 
 ## Outcome
@@ -10,7 +12,7 @@ The authoritative behavior contract is [base-3-4-playable.md](./rules/base-3-4-p
 
 ## Delivery status
 
-S0–S10 are implemented at `f03eef4`. The release gate includes a reviewed full-match replay digest, dependency-boundary checks, two consecutive full validation passes, a three-context browser flow, reconnect/per-tab seat coverage and a 390×844 responsive check. Exact evidence lives in [validation/first-playable.md](./validation/first-playable.md).
+S0–S10 are implemented at `f03eef4`. The historical release recorded a reviewed full-match replay digest, dependency-boundary checks, two consecutive validation passes, a three-context browser flow, reconnect/per-tab seat coverage and a 390×844 responsive check. Current changes follow the scoped policy in testing.md; that historical run is not a recurring gate. Exact evidence lives in [validation/first-playable.md](./validation/first-playable.md).
 
 ## Definition of done
 
@@ -23,7 +25,7 @@ The version is done only when all of the following are evidenced:
 - refreshing a tab recovers the same seat and latest state without revealing another player's private data;
 - one deterministic full-match replay and the required automated suites pass;
 - a real three-player browser playtest finishes a match on desktop, plus focused mobile interaction checks pass at 390×844;
-- `pnpm validate` and the new end-to-end quality gate pass from a clean checkout.
+- scoped Catan validation and the affected Catan end-to-end scenarios pass from a clean checkout.
 
 ## Architecture stance
 
@@ -246,7 +248,7 @@ Every slice follows the same loop:
 4. add rejection, boundary and invariant cases;
 5. refactor with the narrow suite green;
 6. update protocol/server/web only when that rule becomes player-visible;
-7. run the slice tests, then `pnpm validate` before the coherent commit.
+7. run the affected Catan slice tests and scoped validation before the coherent commit; see `docs/testing.md`.
 
 ### S0 — Behavior-preserving modular refactor
 
@@ -387,30 +389,18 @@ Tests should assert stable IDs, outcomes, invariants and error codes—not incid
 
 ## Validation commands and gates
 
-The implementation should introduce these root commands as their tools land:
+The current command and scope table is [testing.md](testing.md). For this Catan milestone use `pnpm validate:catan`, adding `--layer` for local changes, and select relevant cases with `pnpm test:e2e:catan --grep ...`. Use `pnpm test:catan:replay` when the full-match rule sequence is affected. Production packaging checks are explicit (`--build`).
 
-```text
-pnpm test:core        game-core unit, property and scenario tests
-pnpm test:protocol    schemas and projection/redaction tests
-pnpm test:server      API, WebSocket and concurrency tests
-pnpm test:web         component interaction tests
-pnpm test:e2e         multi-context Playwright tests
-pnpm test:replay      canonical complete-match replay
-pnpm test:boundaries  dependency-direction enforcement
-pnpm validate         check + all non-browser tests + build
-pnpm validate:full    validate + replay + E2E
-```
-
-Per-commit gate: narrow RED/GREEN suite, relevant package check, then `pnpm validate` before commit.
+Per-commit gate: the affected Catan tests and type checks plus the visible scenarios changed. Do not run draw-guess gameplay or repeat an overlapping whole-suite gate.
 
 Playable release gate:
 
 1. clean install from the committed lockfile;
-2. `pnpm validate:full` passes twice to detect order/flakiness;
+2. `pnpm validate:catan --build --browser` passes once; rerun a failing or suspected flaky case by name instead of repeating the entire gate;
 3. deterministic replay digest matches its reviewed fixture;
 4. three desktop contexts complete create/join/setup/main verbs/win;
 5. reconnect and private-data checks pass for every seat;
-6. 390×844 screenshots cover setup, action, trade, discard and winner states;
+6. the affected Catan primary-phone cases from `tests/e2e/viewport-cases.ts` cover setup, action, trade, discard and winner states;
 7. one real three-player full match completes with no blocker or private-data leak;
 8. `docs/validation/first-playable.md` records commit, commands, browser versions, seed, replay digest, screenshots and any accepted non-blocking issues.
 

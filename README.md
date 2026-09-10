@@ -14,17 +14,21 @@ Platform: optional accounts, anonymous entry, browser-persistent seats, reconnec
 
 ## Commands
 
+Choose the changed module/layer before running regression. [Testing policy](docs/testing.md) is authoritative; historical full-suite records are not per-change requirements.
+
 ```text
-pnpm dev       start the web and API development servers
-pnpm check     type-check every workspace package
-pnpm test      run deterministic and application tests
-pnpm test:platform     lobby/account/transport shell regression
-pnpm test:catan        Catan regression without drawing-telephone cases
-pnpm test:draw-guess   independent drawing-telephone regression
-pnpm test:e2e:draw-guess   six-browser and primary-phone drawing tests
-pnpm build     produce application and package builds
-pnpm validate  run the complete local quality gate
-pnpm validate:full  run validation plus replay and browser E2E
+pnpm dev                               start local servers
+pnpm test:plan                         show affected modules/layers from Git changes
+pnpm validate                          validate affected layers, not every game
+pnpm validate:draw-guess --layer web   drawing UI checks only
+pnpm validate:catan                     Catan module checks
+pnpm validate:platform                  account/room/platform checks
+pnpm validate:tooling                   test selection and architecture checks
+pnpm test:e2e:draw-guess --grep "finished gallery.*desktop"
+pnpm test:e2e:catan:mobile             Catan primary-phone cases
+pnpm test:e2e:draw-guess:mobile         drawing primary-phone cases
+pnpm build                             explicit deployment build
+pnpm validate:full                      explicit full integration run
 ```
 
 Deployment is documented in [docs/deployment.md](./docs/deployment.md); server

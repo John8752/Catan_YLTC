@@ -1,5 +1,7 @@
 # First playable validation
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 ## Release candidate
 
 - Profile: `base-3-4`

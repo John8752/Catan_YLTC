@@ -289,7 +289,7 @@ Exit: desktop and primary portrait phone tests cover guest play, first login, in
 - Add administrator password-reset and database-backup commands.
 - Update deployment, environment, backup, restore and rollback documentation.
 - Exercise a restart that preserves accounts but deliberately loses the active room.
-- Run the full validation gate and a real computer-to-phone takeover playtest.
+- Run the affected platform validation and account takeover browser cases under [testing.md](testing.md), plus a real computer-to-phone takeover playtest for session changes.
 
 Exit: the release has a restorable database backup and evidence that exactly one device retains control after takeover.
 
@@ -324,7 +324,7 @@ Use two isolated browser contexts representing a computer and a phone:
 5. Computer's stored old seat token cannot read the room, submit a command or open a socket.
 6. A third guest browser remains connected and sees no account identifier or private data.
 
-Run `pnpm validate`, focused server/auth tests, the takeover E2E, `pnpm test:e2e:mobile`, the remaining E2E suite and a production-shape restart/backup smoke test before release.
+Use `pnpm validate:platform` (or its affected layer), plus the account takeover/history cases in `pnpm test:e2e:platform`. A local account panel uses desktop and iPhone 16 browser-area cases; shared transport/UI changes expand to the affected games under `docs/testing.md`. Run the production-shape restart/backup smoke test when persistence or release behavior changes. Do not require every game or the global phone matrix for an account-only edit.
 
 ## Documentation updates by slice
 

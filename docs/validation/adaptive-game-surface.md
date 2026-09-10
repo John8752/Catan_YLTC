@@ -1,5 +1,7 @@
 # Adaptive game surface validation
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 Date: 2026-08-31
 
 The later [three-column layout validation](./three-column-layout.md) supersedes the desktop placement described below. The mobile matrix, uniform map scaling and earlier feature validation remain applicable.
@@ -21,7 +23,7 @@ The later [three-column layout validation](./three-column-layout.md) supersedes 
 
 ## Viewport matrix
 
-The primary mobile acceptance devices are **iPhone 16** and **iPhone 16 Pro Max**. `tests/e2e/viewport-cases.ts` owns their shared matrix; `pnpm test:e2e:mobile` selects the `@primary-phone` cases. Layout, bank/map/action disclosure, action notices and near-victory tests all consume this matrix with DPR 3, mobile viewport behavior and touch capability enabled.
+The primary mobile acceptance devices are **iPhone 16** and **iPhone 16 Pro Max**. `tests/e2e/viewport-cases.ts` owns their shared matrix; `pnpm test:e2e:catan:mobile` selects this game's `@primary-phone` cases. Layout, bank/map/action disclosure, action notices and near-victory tests all consume this matrix with DPR 3, mobile viewport behavior and touch capability enabled.
 
 | Primary device | Full canvas, portrait (CSS px) | Browser area, portrait (CSS px) |
 | --- | --- | --- |

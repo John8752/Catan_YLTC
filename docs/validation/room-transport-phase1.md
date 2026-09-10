@@ -1,5 +1,7 @@
 # 第一阶段传输优化验收
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 日期：2026-09-05。设计见 [ADR-0012](../adr/adr-0012-cached-map-room-transport.md)。
 
 ## 实现范围

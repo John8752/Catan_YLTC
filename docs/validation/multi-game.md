@@ -1,5 +1,7 @@
 # 多游戏验证记录
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 日期：2026-09-09。范围：`platform` / `catan` / `draw-guess`。实现及下列本地自动验证已完成；未覆盖的真机与既有可读性问题见下文。
 
 ## 必须保持的边界

@@ -19,7 +19,7 @@ The product now hosts Catan and an original drawing-telephone game for 3–6 pla
 
 ## Consequences
 
-Documentation, test entry points and commit scopes distinguish `platform`, `catan` and `draw-guess`. Existing Catan rules, account takeover ordering and transport regression coverage remain required. New-game work must include headless rule tests, projection privacy tests and separate multiplayer/browser tests.
+Documentation, test entry points and commit scopes distinguish `platform`, `catan` and `draw-guess`. Preserve existing Catan, account takeover and transport coverage; execute only the modules and layers affected by a change under ADR-0015. New-game rule/protocol/flow work includes the corresponding headless, privacy and multiplayer/browser tests; a local UI edit does not trigger another game's regression.
 
 ## Boundary implementation
 

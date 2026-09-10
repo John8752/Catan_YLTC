@@ -1,5 +1,7 @@
 # Accounts and game-scoped final settlements
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 Validated locally on 2026-09-05, Windows, Node 22.22.3, pnpm 9.15.4. This is implementation validation, not a production deployment or physical-device certification.
 
 ## Delivered behavior
@@ -17,7 +19,7 @@ Validated locally on 2026-09-05, Windows, Node 22.22.3, pnpm 9.15.4. This is imp
 | `pnpm validate` (final run) | Passed: check, 260 tests across 72 files, production build |
 | `pnpm test:e2e:mobile` | Passed: 25 Chromium primary-phone cases |
 | `pnpm exec playwright test --grep-invert '@primary-phone'` | Passed: 49 remaining Chromium cases, including the original three account cases |
-| `pnpm exec playwright test tests/e2e/accounts.spec.ts` (final run) | Passed: 4 account cases, including the added expired-menu regression and simulated HTTP warning |
+| `pnpm exec playwright test tests/e2e/platform/accounts.spec.ts` (final run) | Passed: 4 account cases, including the added expired-menu regression and simulated HTTP warning |
 | `node scripts/account-runtime-smoke.mjs` (final build) | Passed: production bundle startup, restart, online backup, active-runtime reset rejection, offline reset, restored identity and session revocation |
 | `bash -n deploy/release.sh` (Git Bash) | Passed syntax check; release script was not deployed/executed |
 | `git diff --check` | Passed |
@@ -59,4 +61,4 @@ Account history now renders the existing Catan victory panel directly, with its 
 
 Usernames, account display names and passwords have no product character-count range; nonempty validation remains. Registration, login, profile edit, password change and offline password reset follow this policy. Room name validation also accepts long account display names. API coverage exercises single-character and long credentials (including a 600-character replacement password), profile editing and room creation. The browser flow registers and logs in with a username over 32 characters and a one-character password. Ordinary request-size limits remain in place.
 
-Validation for this change: `pnpm validate` passed (268 tests, type checking and builds); `pnpm exec playwright test tests/e2e/accounts.spec.ts` passed all four tests. Visually inspected six-player long-name history screenshots in Chromium at desktop 1280 × 800 and iPhone 16 portrait browser area 393 × 659, DPR 3. Verified all five tabs, scrolling, dialog containment, Escape and trigger focus restoration. This was an isolated account dialog/result panel change; no map, HUD, viewport or shared breakpoint changes were made. No physical iPhone or Safari validation was performed.
+Validation for this change: `pnpm validate` passed (268 tests, type checking and builds); `pnpm exec playwright test tests/e2e/platform/accounts.spec.ts` passed all four tests. Visually inspected six-player long-name history screenshots in Chromium at desktop 1280 × 800 and iPhone 16 portrait browser area 393 × 659, DPR 3. Verified all five tabs, scrolling, dialog containment, Escape and trigger focus restoration. This was an isolated account dialog/result panel change; no map, HUD, viewport or shared breakpoint changes were made. No physical iPhone or Safari validation was performed.

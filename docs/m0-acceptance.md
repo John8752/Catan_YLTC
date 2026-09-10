@@ -1,5 +1,7 @@
 # M0 acceptance
 
+> Historical single-game milestone. For current work use [testing.md](testing.md); the historical `pnpm validate` gate below is not a per-change requirement.
+
 M0 is complete when:
 
 - the workspace installs from the committed lockfile;

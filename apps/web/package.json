@@ -7,7 +7,8 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run src"
+    "test": "node ../../scripts/testing/run.mjs unit --layer web",
+    "test:all": "node ../../scripts/testing/run.mjs unit --scope all --layer web"
   },
   "dependencies": {
     "@catan/game-core": "workspace:*",

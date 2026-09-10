@@ -7,7 +7,8 @@ This repository uses small, evidence-backed commits so a future human or agent c
 1. Read `PRODUCT.md`, `AGENTS.md` and the relevant rule or ADR documents.
 2. Define the visible result and explicit non-goals.
 3. Check the worktree and preserve unrelated user changes.
-4. For a rule change, write the failing deterministic test before the implementation.
+4. Read [testing.md](testing.md), run `pnpm test:plan`, and identify the affected module and layer.
+5. For a rule change, write the failing deterministic test before the implementation.
 
 ## Commit shape
 
@@ -31,7 +32,7 @@ Changes:
 - The important behavior and boundaries that changed.
 
 Validation:
-- pnpm validate
+- pnpm validate:draw-guess --layer web (example; name the actual module/layer)
 - Browser playtest: exact flow checked
 ```
 
@@ -40,7 +41,7 @@ The body records decisions and evidence, not a file-by-file inventory that Git a
 ## Before commit
 
 1. Run the narrowest relevant tests while iterating.
-2. Run `pnpm validate` at the delivery point.
+2. Run the scoped validation from [testing.md](testing.md), then relevant browser cases for visible changes. `pnpm validate` now uses Git changes; it is not a whole-workspace gate. Build only when packaging/dependency/deployment changes require it. Full/all commands need an explicit cross-module or release reason.
 3. Inspect `git status --short` for accidental files.
 4. Stage only the coherent change.
 5. Inspect `git diff --cached --stat` and the staged diff.

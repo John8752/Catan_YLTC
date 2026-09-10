@@ -1,5 +1,9 @@
 # Documentation index
 
+Current development/testing policy: [Scoped regression](./testing.md) and [ADR-0015](./adr/0015-scoped-regression.md). Read this before selecting checks. Historical milestone/validation records do not require full regression for current changes.
+
+Test ownership/runner migration evidence: [Scoped infrastructure verification](./validation/scoped-testing.md).
+
 Current product areas:
 
 - **Platform**: [Multi-game roadmap and ownership](./multi-game-plan.md), [ADR-0014](./adr/0014-multi-game-rooms.md), [Accounts](./account-system-plan.md), [Deployment](./deployment.md).
@@ -10,7 +14,9 @@ Draw-guess opening drawings, hints and automatic system-host reveal: [Rules upda
 
 Platform/game isolation refactor: [Ownership and validation](./validation/game-isolation.md).
 
-Read documents in this order:
+For current work, read product direction, [development workflow](./development-workflow.md), [scoped testing](./testing.md), then the affected game's rule notes and relevant ADRs. Draw-guess work does not require reading historical Catan milestones.
+
+Reference catalog (select by module):
 
 1. [Product direction](../PRODUCT.md)
 2. [M0 acceptance](./m0-acceptance.md)

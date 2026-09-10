@@ -1,5 +1,7 @@
 # Compact trade editor and queue disclosure
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 Local validation, 2026-09-09. This change only affects presentation and input composition; `game-core` rules and protocol projections are unchanged.
 
 ## Behavior
@@ -12,7 +14,7 @@ Local validation, 2026-09-09. This change only affects presentation and input co
 
 - `pnpm validate`: passed type checks, all 306 unit tests and production builds. Vite retains the main-chunk size advisory (about 525 kB uncompressed).
 - `pnpm test:e2e:mobile --workers=3`: 41 passed.
-- `pnpm exec playwright test tests/e2e/adaptive-layout.spec.ts tests/e2e/action-attention.spec.ts tests/e2e/three-column-layout.spec.ts tests/e2e/trade-editor-queue.spec.ts tests/e2e/trade-counteroffer.spec.ts tests/e2e/first-playable.spec.ts --grep-invert @primary-phone --workers=3`: 38 passed.
+- `pnpm exec playwright test tests/e2e/catan/adaptive-layout.spec.ts tests/e2e/catan/action-attention.spec.ts tests/e2e/catan/three-column-layout.spec.ts tests/e2e/catan/trade-editor-queue.spec.ts tests/e2e/catan/trade-counteroffer.spec.ts tests/e2e/catan/first-playable.spec.ts --grep-invert @primary-phone --workers=3`: 38 passed.
 - New deterministic browser coverage checks long names, projected queue order/live updates, disclosure focus, add/remove bounds, overlap rejection, legal one-way gifts and requests, five-resource mixed offers, draft preservation, live hand changes, and command payloads accepted by the real game engine. Existing real-server coverage verifies publication, counteroffers, completion and subsequent discard.
 - Two existing jsdom suites now explicitly select the desktop media-query branch. jsdom has no native `matchMedia`; compact interaction is covered in the real Chromium tests rather than inferred from jsdom layout.
 

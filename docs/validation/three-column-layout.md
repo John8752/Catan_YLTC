@@ -1,5 +1,7 @@
 # Three-column game layout validation
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 Date: 2026-08-31
 
 ## Layout contract
@@ -50,7 +52,7 @@ Focused regressions verify:
 - notice separation from the map in its new location;
 - resizing between each primary phone's portrait full canvas and browser area while reserving additional notch/home-indicator padding (59px top and 34px bottom).
 
-Screenshots and measured JSON are ignored artifacts under `output/playwright/`. Main review images are `three-column-4-1428x779.png` and `three-column-6-1428x779.png`. Shared layout helpers live in `tests/e2e/layout-fixture.ts` rather than further enlarging the original spec.
+Screenshots and measured JSON are ignored artifacts under `output/playwright/`. Main review images are `three-column-4-1428x779.png` and `three-column-6-1428x779.png`. Shared layout helpers live in `tests/e2e/catan/fixtures.ts` rather than further enlarging the original spec.
 
 ## Limits
 
@@ -63,7 +65,7 @@ Phone landscape is outside the supported acceptance matrix. At very short deskto
 - `pnpm validate` — passed: TypeScript checks, 188 unit tests and production builds.
 - `pnpm test:e2e:mobile` — passed: 40 primary-phone cases; the final full E2E gate repeats this matrix.
 - `pnpm test:e2e` — passed: all 90 Chromium cases, including the primary phone matrix and real multiplayer flows.
-- `pnpm exec playwright test tests/e2e/three-column-layout.spec.ts` — passed: all three focused cases after adding a final post-command map-fit assertion and waiting out screenshot animations. Four-/six-player 1428×779 screenshots were reviewed again.
+- `pnpm exec playwright test tests/e2e/catan/three-column-layout.spec.ts` — passed: all three focused cases after adding a final post-command map-fit assertion and waiting out screenshot animations. Four-/six-player 1428×779 screenshots were reviewed again.
 
 The unified-background follow-up reran `pnpm validate` (188 unit tests and builds), `pnpm test:e2e:mobile` (40 passed), and `pnpm test:e2e --grep-invert @primary-phone` (50 passed). The four-/six-player desktop previews and all sixteen primary-phone layout screenshots were inspected again. Geometry, required-action access and mobile styling remain unchanged. The current six-player preview is also saved as `output/playwright/unified-sidebars-6-1428x779.png`. The Chromium/physical-device and small landscape-detail limits above still apply.
 
@@ -72,7 +74,7 @@ The subdued-background follow-up replaced the pale desktop rails with dark gray-
 Validation for this follow-up:
 
 - `pnpm validate` — passed: TypeScript checks, 188 unit tests and production builds.
-- `pnpm exec playwright test tests/e2e/three-column-layout.spec.ts --grep 'desktop resizing'` — 2 passed.
+- `pnpm exec playwright test tests/e2e/catan/three-column-layout.spec.ts --grep 'desktop resizing'` — 2 passed.
 - `pnpm test:e2e:mobile` — 40 passed, using the complete shared primary-phone matrix above.
 - `pnpm test:e2e --grep-invert @primary-phone` — 50 passed, including desktop/compatibility, safe-area resizing and multiplayer flows.
 - `git diff --check` — passed.

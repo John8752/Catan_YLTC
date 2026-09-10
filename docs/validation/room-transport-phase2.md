@@ -1,5 +1,7 @@
 # 第二阶段传输优化验收
 
+> Historical execution evidence, not a current regression requirement. Use [the scoped testing policy](../testing.md) for new changes. Commands/counts below describe their original runs; some paths have since moved.
+
 日期：2026-09-05。设计见 [ADR-0013](../adr/adr-0013-incremental-room-events.md)，比较基线为[第一阶段地图缓存与命令 ACK](./room-transport-phase1.md)。
 
 ## 实现范围

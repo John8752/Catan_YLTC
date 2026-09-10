@@ -1,5 +1,7 @@
-import { taskFor, type AlbumPage, type Draft, type DrawGuessState, type DrawGuessPlayerCommand, type PageContent } from "@catan/game-core/draw-guess";
+import { taskFor, type AlbumPage, type Draft, type DrawGuessState, type DrawGuessPlayerCommand, type PageContent, type EditablePage } from "@catan/game-core/draw-guess";
 import type { RoomBaseView } from "../platform/room-base.js";
+import { narrateReveal } from "./narration.js";
+export { REVEAL_INTERVAL_MS } from "./narration.js";
 
 export interface DrawGuessSettings {
   readonly textSeconds: 30 | 60 | 90;
@@ -15,8 +17,9 @@ export interface DrawGuessView {
   readonly phase: DrawGuessState["phase"];
   readonly deadline: DrawDeadline | null;
   readonly totalSteps: number;
+  readonly narration: string | null;
   readonly progress: readonly { readonly playerId: string; readonly submitted: boolean }[];
-  readonly task: { readonly id: string; readonly step: number; readonly kind: "text" | "drawing"; readonly submitted: boolean;
+  readonly task: { readonly id: string; readonly step: number; readonly kind: EditablePage["kind"]; readonly submitted: boolean; readonly hintLength: number | null;
     readonly input: PageContent | null; readonly suggestions: readonly string[]; readonly draft: Draft | null } | null;
   readonly albums: readonly { readonly ownerId: string; readonly pages: readonly AlbumPage[] }[];
 }
@@ -40,14 +43,22 @@ export function projectDrawGuess(state: DrawGuessState, viewerId: string, deadli
   if (!state.players.some((p) => p.id === viewerId)) throw new Error("Unknown drawing-telephone viewer");
   const task = taskFor(state, viewerId);
   const cursor = state.phase.kind === "finished" ? state.players.length ** 2 : state.phase.kind === "reveal" ? state.phase.cursor : 0;
+  const albums = cursor === 0 ? [] : state.albums.flatMap((album, i) => {
+    const count = Math.max(0, Math.min(state.players.length, cursor - i * state.players.length));
+    return count === 0 ? [] : [{ ownerId: album.ownerId, pages: album.pages.slice(0, count) }];
+  });
+  const preceding = task && task.step > 0 ? state.albums[task.albumIndex]!.pages[task.step - 1]!.content : null;
+  // Opening words never accompany the drawing sent to its first guesser.
+  const input: PageContent | null = preceding?.kind === "opening" ? { kind: "drawing", strokes: preceding.strokes } : preceding;
+  const source = task?.kind === "text" ? (task.step === 1 ? preceding : state.albums[task.albumIndex]!.pages[task.step - 2]?.content) : null;
+  const phrase = source?.kind === "opening" ? source.word : source?.kind === "text" ? source.text : null;
+  const hintLength = phrase === null ? null : [...phrase.replace(/\s/gu, "")].length;
   return { id: state.id, revision: state.revision, players: state.players.map(({ id, name }) => ({ id, name })), you: { id: viewerId }, phase: { ...state.phase }, deadline, totalSteps: state.players.length,
+    narration: state.phase.kind === "work" ? null : narrateReveal(albums, state.players, state.players.length, state.phase.kind === "finished"),
     progress: state.players.map((p) => ({ playerId: p.id, submitted: taskFor(state, p.id)?.submitted ?? true })),
     task: task ? { id: task.id, step: task.step, kind: task.kind, submitted: task.submitted,
-      input: task.step === 0 ? null : state.albums[task.albumIndex]!.pages[task.step - 1]!.content,
+      input, hintLength,
       suggestions: task.step === 0 ? state.suggestions[viewerId]! : [], draft: state.drafts[viewerId] ?? null } : null,
-    albums: cursor === 0 ? [] : state.albums.flatMap((album, i) => {
-      const count = Math.max(0, Math.min(state.players.length, cursor - i * state.players.length));
-      return count === 0 ? [] : [{ ownerId: album.ownerId, pages: album.pages.slice(0, count) }];
-    }),
+    albums,
   };
 }

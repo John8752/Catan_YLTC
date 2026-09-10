@@ -14,7 +14,7 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
   const key = draftKey(session, game.id, task.id);
   const [draft, setDraft] = useState<Draft>(() => {
     const local = readDraft(window.localStorage, key, task.kind); const remote = task.draft;
-    return (local && local.sequence > (remote?.sequence ?? 0) ? local : remote) ?? { sequence: 0, page: task.kind === "text" ? { kind: "text", text: "" } : { kind: "drawing", strokes: [] } };
+    return (local && local.sequence > (remote?.sequence ?? 0) ? local : remote) ?? { sequence: 0, page: task.kind === "text" ? { kind: "text", text: "" } : task.kind === "opening" ? { kind: "opening", word: "", strokes: [] } : { kind: "drawing", strokes: [] } };
   });
   const current = useRef(draft); current.current = draft;
   const saved = useRef(task.draft?.sequence ?? 0);

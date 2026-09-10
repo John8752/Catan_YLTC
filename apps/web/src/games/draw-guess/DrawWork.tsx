@@ -16,28 +16,30 @@ export function Deadline({ game }: { readonly game: DrawGuessView }) {
     tick(); const timer = setInterval(tick, 250); return () => clearInterval(timer);
   }, [game.deadline]);
   if (!game.deadline) return null;
-  return <span className="rounded-full bg-amber-100 px-3 py-1 font-mono text-sm font-bold text-amber-900" role="timer" aria-label="本轮剩余时间">{remaining > 0 ? `${remaining} 秒` : "正在收稿…"}</span>;
+  return <span className="rounded-full bg-amber-100 px-3 py-1 font-mono text-sm font-bold text-amber-900" role="timer" aria-label={game.phase.kind === "reveal" ? "下次自动揭晓" : "本轮剩余时间"}>{remaining > 0 ? `${remaining} 秒` : game.phase.kind === "reveal" ? "正在翻页…" : "正在收稿…"}</span>;
 }
 export function PageDisplay({ content }: { readonly content: PageContent }) {
-  return content.kind === "drawing" ? <DrawingPreview strokes={content.strokes} />
+  return content.kind === "opening" ? <><p className="break-words rounded-xl bg-amber-50 p-4 text-center text-xl font-bold text-slate-900">原词：{content.word}</p><DrawingPreview strokes={content.strokes} /></> : content.kind === "drawing" ? <DrawingPreview strokes={content.strokes} />
     : content.kind === "text" ? <p className="break-words rounded-xl bg-amber-50 p-4 text-center text-xl font-bold text-slate-900">{content.text}</p>
       : <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center text-slate-600">这一页没赶上交稿，凭想象继续吧。</div>;
 }
 export function DrawWork({ game, session, onRoom }: { readonly game: DrawGuessView; readonly session: PlayerSession; readonly onRoom: (room: AnyRoomView) => void }) {
   const task = game.task!;
   const draft = useDraft(session, game, task, onRoom);
-  const empty = draft.page.kind === "text" ? draft.page.text.trim().length === 0 : draft.page.strokes.length === 0;
+  const page = draft.page;
+  const empty = page.kind === "text" ? page.text.trim().length === 0 : page.strokes.length === 0 || (page.kind === "opening" && !page.word);
   if (task.submitted) return <section className="grid min-h-64 place-content-center gap-3 rounded-2xl border bg-white p-6 text-center" aria-label="等待其他玩家">
     <span className="text-4xl" aria-hidden="true">✓</span><h2 className="text-2xl font-bold">交稿成功！</h2>
     <p>还有 {game.progress.filter((p) => !p.submitted).length} 位朋友正在创作。</p><p className="text-sm text-slate-500">先别剧透，等会儿一起揭晓。</p>
   </section>;
   return <section className="grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6" aria-label="本轮任务">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-bold">{task.step === 0 ? "写一句让朋友画的话" : task.kind === "drawing" ? "把这句话画出来" : "这幅画在说什么？"}</h2><Deadline game={game} /></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-bold">{task.kind === "opening" ? "六选一，亲自画出第一棒" : task.kind === "drawing" ? "把这句话画出来" : "这幅画在说什么？"}</h2><Deadline game={game} /></div>
     {task.input && <PageDisplay content={task.input} />}
-    {task.kind === "drawing" && draft.page.kind === "drawing" ? <DrawingCanvas strokes={draft.page.strokes} onChange={(strokes) => draft.change({ kind: "drawing", strokes })} disabled={draft.locked} /> : <>
-      {task.suggestions.length > 0 && <div className="flex flex-wrap gap-2" aria-label="灵感词语">{task.suggestions.map((text) => <Button key={text} variant="outline" className="h-auto min-h-10 whitespace-normal text-left" disabled={draft.locked} onClick={() => draft.change({ kind: "text", text })}>{text}</Button>)}</div>}
-      <label className="grid gap-2 text-sm font-medium">{task.step === 0 ? "你的词语" : "你的猜测"}
-        <textarea aria-label={task.step === 0 ? "你的词语" : "你的猜测"} className="min-h-24 w-full resize-y rounded-xl border border-slate-300 bg-white p-3 text-base leading-relaxed text-slate-900 outline-offset-2 focus-visible:outline-2" maxLength={80} value={draft.page.kind === "text" ? draft.page.text : ""} disabled={draft.locked} onChange={(event) => draft.change({ kind: "text", text: event.target.value })} placeholder={task.step === 0 ? "选个灵感，或者自己编一句（最多 80 字）" : "大胆猜，猜歪了更有意思"} />
+    {page.kind === "opening" && <fieldset className="grid gap-2" disabled={draft.locked}><legend className="mb-2 text-sm font-medium">从词库选一个，下一位只会看到你的画</legend><div className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="六个候选词">{task.suggestions.map((word) => <Button key={word} variant={page.word === word ? "default" : "outline"} aria-pressed={page.word === word} className="h-auto min-h-11 whitespace-normal break-words px-2" onClick={() => draft.change({ ...page, word })}>{word}</Button>)}</div><p className="text-sm text-slate-600">{page.word ? `你要画：${page.word}` : "先选词，再动笔。交稿前可以换词。"}</p></fieldset>}
+    {page.kind !== "text" ? <DrawingCanvas strokes={page.strokes} onChange={(strokes) => draft.change({ ...page, strokes })} disabled={draft.locked || (page.kind === "opening" && !page.word)} /> : <>
+      <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900" aria-label="字数提示">{task.hintLength === null ? "上一棒没有留下词语，凭想象猜吧" : `提示：${task.hintLength} 个字`}</p>
+      <label className="grid gap-2 text-sm font-medium">你的猜测
+        <textarea aria-label="你的猜测" className="min-h-24 w-full resize-y rounded-xl border border-slate-300 bg-white p-3 text-base leading-relaxed text-slate-900 outline-offset-2 focus-visible:outline-2" maxLength={80} value={page.text} disabled={draft.locked} onChange={(event) => draft.change({ kind: "text", text: event.target.value })} placeholder="大胆猜，猜歪了更有意思" />
       </label>
     </>}
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500" role="status">{draft.saveStatus}</p>

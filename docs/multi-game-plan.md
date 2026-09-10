@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 大厅框架 / platform | 创建时选择游戏，类型锁定；通用成员、房主、连接、账号接管；结束后回房间重开；新的 matchId | `apps/server/src/rooms.ts`、`apps/web/src/App.tsx`、`packages/protocol/src/platform` |
 | 卡坦 / catan | 保留现有规则与增量同步；规则适配器和桌面组件从公共入口中拆出；重开隔离旧命令、计时器与 AI 回调 | `apps/server/src/games/catan`、`apps/web/src/games/catan`、core 的既有领域模块 |
-| 传画猜词 / draw-guess | 3–6 人同时出题、传画、猜词；原创词库；画笔/橡皮/撤销/重做；私密草稿双端恢复；超时收稿；逐页揭晓、完整画册和再来一局 | 规则、协议、服务端与网页各自的 `draw-guess` 目录 |
+| 传画猜词 / draw-guess | 3–6 人首轮从六个词中选词并亲自作画，随后传画、猜词；猜词字数提示；画笔/橡皮/撤销/重做；私密草稿双端恢复；超时收稿；系统主持人自动逐页揭晓并串词、完整画册和再来一局 | 规则、协议、服务端与网页各自的 `draw-guess` 目录 |
 
 ## 为什么保持这个规模
 

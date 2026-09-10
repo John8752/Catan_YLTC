@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { DrawGuessError, createDrawGuess, executeDrawGuess, type DrawGuessPlayerCommand, type DrawGuessState } from "@catan/game-core/draw-guess";
-import { DEFAULT_DRAW_GUESS_SETTINGS, projectDrawGuess, type DrawGuessRoomView, type DrawGuessSettings, type DrawGuessSettlementV1 } from "@catan/protocol/draw-guess";
+import { DEFAULT_DRAW_GUESS_SETTINGS, REVEAL_INTERVAL_MS, projectDrawGuess, type DrawGuessRoomView, type DrawGuessSettings, type DrawGuessSettlementV1 } from "@catan/protocol/draw-guess";
 import type { RoomBase } from "../../room-base.js";
 import type { DrawGuessRoomRecord } from "./room-types.js";
 import type { MatchRepository } from "../../database/match-repository.js";
 import { RoomError } from "../../room-errors.js";
 
-interface Deadline { readonly matchId: string; readonly step: number; readonly deadlineAt: number; readonly durationMs: number; readonly handle: ReturnType<typeof setTimeout> }
+interface Deadline { readonly matchId: string; readonly phaseKey: string; readonly deadlineAt: number; readonly durationMs: number; readonly handle: ReturnType<typeof setTimeout> }
+function phaseKey(game: DrawGuessState) { return game.phase.kind === "work" ? `work:${game.phase.step}` : game.phase.kind === "reveal" ? `reveal:${game.phase.cursor}` : "finished"; }
 export class DrawGuessRoomGame {
   private readonly timers = new Map<string, Deadline>();
   repository: MatchRepository | null = null;
@@ -35,7 +36,7 @@ export class DrawGuessRoomGame {
     const key = `${playerId}:${commandId}`;
     if (command.type !== "draft" && room.appliedCommands.has(key)) return this.project(room, playerId);
     let next: DrawGuessState;
-    try { next = executeDrawGuess(room.game, playerId, command, room.hostPlayerId); }
+    try { next = executeDrawGuess(room.game, playerId, command); }
     catch (error) {
       if (error instanceof DrawGuessError) throw new RoomError(error.code, error.message);
       throw error;
@@ -59,22 +60,29 @@ export class DrawGuessRoomGame {
   }
   private sync(room: DrawGuessRoomRecord) {
     const game = room.game;
-    if (!game || game.phase.kind !== "work") { this.cancel(room.id); return; }
-    const { step } = game.phase;
+    if (!game || game.phase.kind === "finished") { this.cancel(room.id); return; }
+    const phase = game.phase, key = phaseKey(game);
     const current = this.timers.get(room.id);
-    if (current?.matchId === game.id && current.step === step) return;
+    if (current?.matchId === game.id && current.phaseKey === key) return;
     this.cancel(room.id);
-    const durationMs = (step % 2 ? room.settings.drawingSeconds : room.settings.textSeconds) * 1000;
+    const durationMs = phase.kind === "reveal" ? REVEAL_INTERVAL_MS : (phase.step % 2 ? room.settings.textSeconds : room.settings.drawingSeconds) * 1000;
     const deadlineAt = this.now() + durationMs;
     const matchId = game.id;
     const handle = setTimeout(() => {
       const live = this.findRoom(room.id); const timer = this.timers.get(room.id);
-      if (!live || !live.game || live.game.id !== matchId || live.game.phase.kind !== "work" || live.game.phase.step !== step || timer?.handle !== handle) return;
+      if (!live || !live.game || live.game.id !== matchId || phaseKey(live.game) !== key || timer?.handle !== handle) return;
       this.timers.delete(room.id);
-      live.game = executeDrawGuess(live.game, null, { type: "expire", matchId, step }); live.revision++;
+      const next = executeDrawGuess(live.game, null, phase.kind === "work" ? { type: "expire", matchId, step: phase.step } : { type: "reveal", matchId, expectedCursor: phase.cursor });
+      try { this.settle(live, next); }
+      catch {
+        // Keep the final cursor retryable without throwing out of a timer callback.
+        console.error("Draw-guess settlement failed; retrying on the next reveal tick.");
+        this.sync(live); return;
+      }
+      live.game = next; live.revision++;
       this.sync(live); this.notify(live);
     }, durationMs);
-    handle.unref?.(); this.timers.set(room.id, { matchId, step, deadlineAt, durationMs, handle });
+    handle.unref?.(); this.timers.set(room.id, { matchId, phaseKey: key, deadlineAt, durationMs, handle });
   }
   cancel(roomId: string) { const timer = this.timers.get(roomId); if (timer) clearTimeout(timer.handle); this.timers.delete(roomId); }
   dispose() { for (const id of this.timers.keys()) this.cancel(id); }

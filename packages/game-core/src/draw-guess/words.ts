@@ -7,5 +7,5 @@ export function wordSuggestions(seed: number, count: number): readonly (readonly
   let value = seed >>> 0;
   const next = () => { value = (Math.imul(value, 1664525) + 1013904223) >>> 0; return value; };
   const words = shuffledByIndex(subjects.flatMap((subject) => actions.map((action) => subject + action)), (upperExclusive) => next() % upperExclusive);
-  return Array.from({ length: count }, (_, i) => words.slice(i * 3, i * 3 + 3));
+  return Array.from({ length: count }, (_, i) => words.slice(i * 6, i * 6 + 6));
 }

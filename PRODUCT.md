@@ -8,7 +8,7 @@ YLTC is a synchronous browser tabletop hub for private groups. A player opens th
 
 - **Platform**: optional accounts, anonymous entry, one authoritative room directory, membership/host succession, seat recovery, safe per-player transport and game-scoped final settlements. A room selects `gameId` at creation and cannot switch it. Finished rooms may return to their own lobby; every subsequent start gets a new `matchId`.
 - **Catan (`catan`)**: 2–6 players, its existing rule profiles, island renderer, trade, hidden cards, history and victory summaries. The historical milestones below describe this game only.
-- **Drawing telephone (`draw-guess`, 传画猜词)**: 3–6 players, simultaneous prompts/drawing/guessing, private checkpointed drafts, authoritative deadlines, shared sequential reveal and a finished gallery. Original prompts and rules inspired by the genre; no licensed assets or rulebook text.
+- **Drawing telephone (`draw-guess`, 传画猜词)**: 3–6 players, each choosing one of six word-bank prompts and drawing their own opening, then alternating guesses (with character-count hints) and drawings. Private checkpointed drafts, authoritative deadlines, automatic shared reveal with a text system host and a finished gallery. Original prompts and rules inspired by the genre; no licensed assets or rulebook text.
 - Voice chat remains external. HTTPS, microphone capture, public matchmaking, spectators, AI drawing and durable live-game recovery are not part of this milestone.
 
 Current cross-game plan and ownership: [Platform and game roadmap](docs/multi-game-plan.md). Drawing rules: [Draw-guess](docs/rules/draw-guess.md).

@@ -9,7 +9,7 @@ function narration(contents: PageContent[], total = 4) {
   const pages: AlbumPage[] = contents.map((content, step) => ({ content, step, authorId: players[step]!.id, timedOut: false }));
   return narrateReveal([{ ownerId: "a", pages }], players, total, false);
 }
-it("explains reveal before any page is exposed", () => expect(narrateReveal([], players, 4, false)).toContain("每六秒"));
+it("introduces reveal briefly before any page is exposed", () => { const intro = narrateReveal([], players, 4, false); expect(intro).toContain("系统主持人"); expect(intro.length).toBeLessThan(35); });
 it("uses the first detour line only when the earlier chain was intact", () => {
   expect(narration([opening, guess("熊猫跳舞")])).toContain("到你这楼歪了");
   expect(narration([opening, guess("熊猫跳舞"), drawing, guess("企鹅滑冰")])).not.toContain("前面都对了");

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { DrawGuessError, createDrawGuess, executeDrawGuess, type DrawGuessPlayerCommand, type DrawGuessState } from "@catan/game-core/draw-guess";
-import { DEFAULT_DRAW_GUESS_SETTINGS, REVEAL_INTERVAL_MS, projectDrawGuess, type DrawGuessRoomView, type DrawGuessSettings, type DrawGuessSettlementV1 } from "@catan/protocol/draw-guess";
+import { DEFAULT_DRAW_GUESS_SETTINGS, REVEAL_INTERVAL_MS, REVEAL_INTRO_MS, projectDrawGuess, type DrawGuessRoomView, type DrawGuessSettings, type DrawGuessSettlementV1 } from "@catan/protocol/draw-guess";
 import type { RoomBase } from "../../room-base.js";
 import type { DrawGuessRoomRecord } from "./room-types.js";
 import type { MatchRepository } from "../../database/match-repository.js";
@@ -65,7 +65,7 @@ export class DrawGuessRoomGame {
     const current = this.timers.get(room.id);
     if (current?.matchId === game.id && current.phaseKey === key) return;
     this.cancel(room.id);
-    const durationMs = phase.kind === "reveal" ? REVEAL_INTERVAL_MS : (phase.step % 2 ? room.settings.textSeconds : room.settings.drawingSeconds) * 1000;
+    const durationMs = phase.kind === "reveal" ? (phase.cursor === 0 ? REVEAL_INTRO_MS : REVEAL_INTERVAL_MS) : (phase.step % 2 ? room.settings.textSeconds : room.settings.drawingSeconds) * 1000;
     const deadlineAt = this.now() + durationMs;
     const matchId = game.id;
     const handle = setTimeout(() => {

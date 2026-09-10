@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AnyRoomView, RoomSession, MatchRecord } from "@catan/protocol/platform";
-import { REVEAL_INTERVAL_MS, type DrawGuessRoomView } from "@catan/protocol/draw-guess";
+import { REVEAL_INTERVAL_MS, REVEAL_INTRO_MS, type DrawGuessRoomView } from "@catan/protocol/draw-guess";
 import { RoomRegistry } from "../../rooms.js";
 import { buildApp } from "../../app.js";
 
@@ -22,10 +22,60 @@ function finishWork(registry: RoomRegistry, sessions: RoomSession[]) {
     const views = sessions.map((session) => view(registry, session));
     sessions.forEach((session, i) => { const game = views[i]!.game!, task = game.task!;
       registry.executeDrawCommand(session.roomId, session.seatToken, `submit-${step}-${i}`, { type: "submit", matchId: game.id, taskId: task.id,
-        page: task.kind === "opening" ? { kind: "opening", word: task.suggestions[0]!, strokes: [{ color: "#222222", width: 8, points: [[5, 5], [50, 50]] }] } : task.kind === "drawing" ? { kind: "drawing", strokes: [{ color: "#222222", width: 8, points: [[5, 5], [50, 50]] }] } : { kind: "text", text: `PRIVATE_${step}_${i}` } }); });
+        page: task.kind === "opening" ? { kind: "opening", word: task.suggestions[0]!, strokes: [{ color: "#222222", width: 8, points: [[5, 5], [50, 50]] }] } : task.kind === "drawing" ? { kind: "drawing", strokes: [{ color: "#222222", width: 8, points: [[5, 5], [50, 50]] }] } : { kind: "text", text: "秘".repeat(task.hintLength ?? 3) } }); });
   }
 }
 describe("draw-guess server", () => {
+  it("uses a two-second intro and four-second pages while deduplicating and broadcasting reactions", () => {
+    vi.useFakeTimers();
+    const { registry, host, sessions } = setup(3);
+    finishWork(registry, sessions);
+    expect(view(registry, host).game?.deadline?.durationMs).toBe(2_000);
+    vi.advanceTimersByTime(1_999);
+    expect(view(registry, host).game?.albums).toEqual([]);
+    vi.advanceTimersByTime(1);
+    const first = view(registry, host).game!;
+    expect(first.phase).toEqual({ kind: "reveal", cursor: 1 });
+    expect(first.deadline?.durationMs).toBe(4_000);
+    const updates: DrawGuessRoomView[] = [];
+    registry.subscribe(host.roomId, sessions[1]!.seatToken, (room) => updates.push(room as DrawGuessRoomView));
+    const command = { type: "react" as const, matchId: first.id, albumOwnerId: first.albums[0]!.ownerId, step: 0, reaction: "up" as const };
+    registry.executeDrawCommand(host.roomId, host.seatToken, "click-1", command);
+    registry.executeDrawCommand(host.roomId, host.seatToken, "click-1", command);
+    registry.executeDrawCommand(host.roomId, host.seatToken, "click-2", command);
+    registry.executeDrawCommand(host.roomId, sessions[1]!.seatToken, "click-1", { ...command, reaction: "down" });
+    expect(updates).toHaveLength(4); // initial snapshot plus three distinct clicks
+    expect(updates.at(-1)?.game?.albums[0]?.pages[0]?.reactions).toEqual({ up: 2, down: 1 });
+    expect(view(registry, host).game?.deadline?.deadlineAt).toBe(first.deadline?.deadlineAt);
+    vi.advanceTimersByTime(3_999);
+    expect(view(registry, host).game?.phase).toEqual({ kind: "reveal", cursor: 1 });
+    vi.advanceTimersByTime(1);
+    expect(view(registry, host).game?.phase).toEqual({ kind: "reveal", cursor: 2 });
+    vi.advanceTimersByTime(4_000 * 8);
+    expect(view(registry, host).game?.phase.kind).toBe("finished");
+    registry.executeDrawCommand(host.roomId, host.seatToken, "after-finish", command);
+    expect(view(registry, sessions[2]!).game?.albums[0]?.pages[0]?.reactions.up).toBe(3);
+    registry.returnToLobby(host.roomId, host.seatToken, first.id);
+    const next = registry.startRoom(host.roomId, host.seatToken);
+    expect(() => registry.executeDrawCommand(host.roomId, host.seatToken, "old", command)).toThrow();
+    expect((next as DrawGuessRoomView).game?.albums).toEqual([]);
+  });
+  it("rejects wrong-length HTTP submissions but accepts a corrected retry", async () => {
+    const { registry, host, sessions } = setup(3, null);
+    for (const session of sessions) {
+      const game = view(registry, session).game!;
+      registry.executeDrawCommand(host.roomId, session.seatToken, "opening", { type: "submit", matchId: game.id, taskId: game.task!.id, page: { kind: "opening", word: game.task!.suggestions[0]!, strokes: [{ color: "#222222", width: 8, points: [[1, 2]] }] } });
+    }
+    const app = await buildApp(registry);
+    try {
+      const game = view(registry, host).game!, task = game.task!;
+      const post = (text: string) => app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/draw-guess/commands`, payload: { seatToken: host.seatToken, commandId: "guess", command: { type: "submit", matchId: game.id, taskId: task.id, page: { kind: "text", text } } } });
+      expect((await post("猜".repeat(task.hintLength! + 1))).json()).toMatchObject({ error: { code: "GUESS_LENGTH_MISMATCH" } });
+      expect(view(registry, host).game?.task?.submitted).toBe(false);
+      expect((await post("猜".repeat(task.hintLength!))).statusCode).toBe(200);
+      expect(view(registry, host).game?.task?.submitted).toBe(true);
+    } finally { await app.close(); }
+  });
   it.each([3, 4, 5, 6])("accepts all %i same-snapshot submissions, reveals in order, settles and replays in-place", (count) => {
     vi.useFakeTimers();
     const { registry, sessions, host } = setup(count);
@@ -36,7 +86,7 @@ describe("draw-guess server", () => {
     expect(view(registry, host).game?.phase).toEqual({ kind: "reveal", cursor: 0 });
     expect(() => registry.returnToLobby(host.roomId, host.seatToken, before.id)).toThrow();
     for (let cursor = 0; cursor < count ** 2; cursor++) {
-      vi.advanceTimersByTime(REVEAL_INTERVAL_MS);
+      vi.advanceTimersByTime(cursor === 0 ? REVEAL_INTRO_MS : REVEAL_INTERVAL_MS);
       expect(view(registry, host).game?.albums.flatMap((album) => album.pages)).toHaveLength(cursor + 1);
       expect(view(registry, sessions[1]!).game?.phase).toEqual({ kind: "reveal", cursor: cursor + 1 });
     }
@@ -44,7 +94,7 @@ describe("draw-guess server", () => {
     vi.advanceTimersByTime(REVEAL_INTERVAL_MS);
     expect(view(registry, host).game?.phase.kind).toBe("finished");
     expect(records).toHaveLength(1); expect(records[0]).toMatchObject({ gameId: "draw-guess", matchId: before.id, dataVersion: 1 });
-    expect(JSON.stringify(records)).not.toContain("PRIVATE_"); expect(JSON.stringify(records)).not.toContain("strokes");
+    expect(JSON.stringify(records)).not.toContain("秘"); expect(JSON.stringify(records)).not.toContain("strokes");
     const lobby = registry.returnToLobby(host.roomId, host.seatToken, before.id);
     expect(lobby.gameId).toBe("draw-guess"); expect(lobby.game).toBeNull(); expect(lobby.matchId).toBeNull(); expect(lobby.members).toHaveLength(count);
     const newMatch = registry.startRoom(host.roomId, host.seatToken);
@@ -75,7 +125,7 @@ describe("draw-guess server", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       const { registry, host, sessions } = setup(3); finishWork(registry, sessions);
-      vi.advanceTimersByTime(REVEAL_INTERVAL_MS * 9);
+      vi.advanceTimersByTime(REVEAL_INTRO_MS + REVEAL_INTERVAL_MS * 8);
       const save = vi.fn().mockImplementationOnce(() => { throw Error("disk full"); });
       registry.configureMatchRepository({ save, history: () => ({ matches: [], nextOffset: null }) });
       vi.advanceTimersByTime(REVEAL_INTERVAL_MS);
@@ -91,7 +141,7 @@ describe("draw-guess server", () => {
     const { registry, host, sessions } = setup(3);
     const disconnect = registry.subscribe(host.roomId, host.seatToken, () => {});
     finishWork(registry, sessions); disconnect();
-    vi.advanceTimersByTime(REVEAL_INTERVAL_MS * 2);
+    vi.advanceTimersByTime(REVEAL_INTRO_MS + REVEAL_INTERVAL_MS);
     expect(view(registry, sessions[1]!).game?.phase).toEqual({ kind: "reveal", cursor: 2 });
     registry.disbandRoom(host.roomId, host.seatToken);
     vi.advanceTimersByTime(REVEAL_INTERVAL_MS * 20);

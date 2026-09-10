@@ -48,7 +48,11 @@ test.describe("@draw-guess", () => {
           if (step % 2 === 0) { await expect(page.getByRole("img", { name: "画布", exact: true })).toBeVisible(); await draw(page); }
           else {
             await expect(page.getByLabel("字数提示", { exact: true })).toContainText(/提示：\d+ 个字/);
-            await page.getByRole("textbox", { name: "你的猜测", exact: true }).fill(`第${step}轮朋友${i}独有的脑洞`);
+            const required = (await snapshot(page.request, await seat(page))).game!.task!.hintLength!;
+            const input = page.getByRole("textbox", { name: "你的猜测", exact: true });
+            await input.fill("猜".repeat(required + 1));
+            await expect(page.getByRole("button", { name: "完成并提交", exact: true })).toBeDisabled();
+            await input.fill("猜".repeat(required));
           }
         }));
         if (step === 0) {
@@ -65,6 +69,13 @@ test.describe("@draw-guess", () => {
       expect((await snapshot(host.request, hostSeat)).game?.albums).toEqual([]);
       await expect(pages[1]!.getByRole("timer", { name: "下次自动揭晓" })).toBeVisible();
       await expect(host.getByRole("button", { name: /揭晓.*页/ })).toHaveCount(0);
+      await Promise.all(pages.map(async (page) => {
+        const firstPage = page.getByRole("article").first();
+        await firstPage.getByRole("button", { name: /^点赞/ }).click();
+        await firstPage.getByRole("button", { name: /^点赞/ }).click();
+        await firstPage.getByRole("button", { name: /^喝倒彩/ }).click();
+      }));
+      await expect.poll(async () => (await snapshot(host.request, hostSeat)).game?.albums[0]?.pages[0]?.reactions).toEqual({ up: 12, down: 6 });
       // Revealing continues with the host offline; reconnect joins the server cursor.
       await host.goto("about:blank");
       await expect.poll(async () => (await snapshot(pages[1]!.request, hostSeat)).game?.albums.flatMap((album) => album.pages).length, { timeout: 20_000 }).toBeGreaterThanOrEqual(2);
@@ -74,6 +85,29 @@ test.describe("@draw-guess", () => {
       await Promise.all(pages.map((page) => expect(page.getByRole("heading", { name: "本场画册已全部揭晓" })).toBeVisible()));
       const final = await snapshot(host.request, hostSeat); expect(final.game?.albums.flatMap((album) => album.pages)).toHaveLength(36);
       await host.getByRole("button", { name: "画册房主 的画册", exact: true }).click(); await expect(host.getByRole("article")).toHaveCount(6);
+      await Promise.all(pages.map(async (page) => {
+        await page.getByRole("button", { name: "画册房主 的画册", exact: true }).click();
+        await page.getByRole("article").first().getByRole("button", { name: /^喝倒彩/ }).click();
+      }));
+      await Promise.all(pages.map((page) => expect(page.getByRole("article").first().getByRole("button", { name: "喝倒彩，12 次", exact: true })).toBeVisible()));
+      // Server accepts a text-page reaction, but the HTTP response is lost. Retry must not add a second vote.
+      let dropResponse = true;
+      const reactionUrl = `**/api/rooms/${hostSeat.roomId}/draw-guess/commands`;
+      await host.route(reactionUrl, async (route) => {
+        if (dropResponse && route.request().postDataJSON().command.type === "react") {
+          dropResponse = false; await route.fetch(); await route.abort("failed");
+        } else await route.continue();
+      });
+      const textPage = host.getByRole("article").nth(1);
+      await textPage.getByRole("button", { name: /^点赞/ }).click();
+      await expect(host.getByRole("alert")).toContainText("表态尚未确认");
+      await host.getByRole("button", { name: "重试表态", exact: true }).click();
+      await expect(host.getByRole("alert")).toHaveCount(0);
+      await expect(textPage.getByRole("button", { name: "点赞，1 次", exact: true })).toBeVisible();
+      await host.unroute(reactionUrl);
+      await pages[1]!.reload();
+      await pages[1]!.getByRole("button", { name: "画册房主 的画册", exact: true }).click();
+      await expect(pages[1]!.getByRole("article").nth(1).getByRole("button", { name: "点赞，1 次", exact: true })).toBeVisible();
       await host.screenshot({ path: "output/playwright/draw-guess-six-player-gallery.png", fullPage: true });
       await host.getByRole("button", { name: "回到房间，再来一局" }).click(); await expect(host.getByRole("button", { name: "开始传画猜词" })).toBeVisible();
       await host.getByRole("button", { name: "开始传画猜词" }).click(); await expect(host.getByLabel("六个候选词").getByRole("button")).toHaveCount(6); await expect(host.getByLabel("六个候选词").getByRole("button", { pressed: true })).toHaveCount(0);
@@ -111,15 +145,26 @@ test.describe("@draw-guess", () => {
         const game = (await snapshot(request, session)).game!, task = game.task!;
         if (task.submitted) return;
         const strokes = [{ color: "#222222", width: 8, points: [[5, 5], [50, 50]] }];
-        const content = task.kind === "opening" ? { kind: "opening", word: task.suggestions[0]!, strokes } : task.kind === "drawing" ? { kind: "drawing", strokes } : { kind: "text", text: "企鹅骑自行车" };
+        const content = task.kind === "opening" ? { kind: "opening", word: task.suggestions[0]!, strokes } : task.kind === "drawing" ? { kind: "drawing", strokes } : { kind: "text", text: "猜".repeat(task.hintLength ?? 3) };
         expect((await request.post(`/api/rooms/${host.roomId}/draw-guess/commands`, { data: { seatToken: session.seatToken, commandId: `submit-${task.id}`, command: { type: "submit", matchId: game.id, taskId: task.id, page: content } } })).ok()).toBe(true);
       };
       for (const session of sessions.slice(1)) await submitApi(session);
       await expect(page.getByLabel("字数提示", { exact: true })).toContainText(/提示：\d+ 个字/);
+      const required = (await snapshot(request, host)).game!.task!.hintLength!;
+      await page.getByRole("textbox", { name: "你的猜测", exact: true }).fill("猜".repeat(required + 1));
+      await expect(page.getByRole("button", { name: "完成并提交", exact: true })).toBeDisabled();
+      await expect(page.getByText(/超时仍不符会记为缺页/)).toBeVisible();
+      await page.getByRole("textbox", { name: "你的猜测", exact: true }).fill("猜".repeat(required));
+      await expect(page.getByRole("button", { name: "完成并提交", exact: true })).toBeEnabled();
       await page.screenshot({ path: `output/playwright/draw-guess-${slug}-hint.png`, fullPage: true });
       for (let step = 1; step < count; step++) for (const session of sessions) await submitApi(session);
       await expect(page.getByRole("article")).toHaveCount(1, { timeout: 10_000 });
       await expect(page.getByRole("status").filter({ hasText: "亲自画了第一张" })).toBeVisible();
+      await page.getByRole("article").first().getByRole("button", { name: /^点赞/ }).click();
+      await page.getByRole("article").first().getByRole("button", { name: /^点赞/ }).click();
+      await page.getByRole("article").first().getByRole("button", { name: /^喝倒彩/ }).click();
+      await expect(page.getByRole("article").first().getByRole("button", { name: "点赞，2 次", exact: true })).toBeVisible();
+      await expect(page.getByRole("article").first().getByRole("button", { name: "喝倒彩，1 次", exact: true })).toBeVisible();
       const narrator = (await page.getByRole("region", { name: "系统主持人串词" }).boundingBox())!;
       const entry = (await page.getByRole("article").last().boundingBox())!;
       expect(narrator.y).toBeGreaterThanOrEqual(entry.y + entry.height);

@@ -1,6 +1,7 @@
 import type { Album, DrawPlayer } from "@catan/game-core/draw-guess";
 
-export const REVEAL_INTERVAL_MS = 6_000;
+export const REVEAL_INTRO_MS = 2_000;
+export const REVEAL_INTERVAL_MS = 4_000;
 const normalize = (text: string) => text.replace(/[\s\p{P}]/gu, "").toLocaleLowerCase("zh-CN");
 const detours = ["这条接力开始自由发挥了，脑洞请系好安全带！", "画风越来越自由，想象力已经拦不住了。", "词语拐了个弯，快乐倒是一点没少。"];
 const matches = ["稳稳接住！这次猜词和前面的词对上了。", "默契在线，这一棒传得漂亮！", "对上暗号了，下一位继续接！"];
@@ -9,7 +10,7 @@ const matches = ["稳稳接住！这次猜词和前面的词对上了。", "默�
 export function narrateReveal(albums: readonly Album[], players: readonly DrawPlayer[], totalSteps: number, finished: boolean): string {
   if (finished) return "本场脑洞接力圆满收工！画册已经全部打开，挑一本回味名场面吧。";
   const album = albums.at(-1), page = album?.pages.at(-1);
-  if (!album || !page) return "我是本场系统主持人！接下来每六秒翻一页，从原词和第一幅画开始，看看脑洞在哪一棒拐弯。";
+  if (!album || !page) return "系统主持人：画册来了，看看谁的脑洞最离谱！";
   const name = players.find((player) => player.id === page.authorId)?.name ?? "朋友";
   if (page.content.kind === "missing") return `${name} 这一页没赶上，留白也是一种神秘的艺术。`;
   const original = album.pages[0]?.content;

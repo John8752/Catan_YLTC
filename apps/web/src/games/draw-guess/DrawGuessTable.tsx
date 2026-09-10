@@ -39,7 +39,7 @@ export function DrawGuessTable({ room, session, busy, error, connectionState, ac
         </div>
         <p className="text-sm text-slate-500">房间固定为传画猜词，需要 3–6 人。超时自动收稿；语音聊天请使用你们已有的软件。</p>
         {isHost ? <div className="flex flex-wrap gap-2"><Button className="min-h-11 flex-1" disabled={busy || room.members.length < 3} onClick={() => void handleStart()}>开始传画猜词</Button><Button className="min-h-11" variant="outline" disabled={busy || room.members.length < 2} onClick={() => void runBusy(async () => setRoom(await shuffleRoomMembers(session, room.revision)))}>打乱座位</Button></div> : <p role="status" className="text-center">等待房主开始…</p>}
-      </section> : game.phase.kind === "work" && game.task ? <DrawWork key={game.task.id} game={game} session={session} onRoom={setRoom} /> : <Gallery room={room} isHost={isHost} busy={busy} onReplay={() => void onReturnToLobby()} />}
+      </section> : game.phase.kind === "work" && game.task ? <DrawWork key={game.task.id} game={game} session={session} onRoom={setRoom} /> : <Gallery key={game.id} room={room} session={session} onRoom={setRoom} isHost={isHost} busy={busy} onReplay={() => void onReturnToLobby()} />}
       {error && <p role="alert" className="break-words rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 pt-4">
         {accountControl}<div className="flex flex-wrap gap-2">{!game || game.phase.kind === "finished" ? <Button variant="outline" disabled={busy} onClick={() => void handleLeave()}>离开房间</Button> : null}

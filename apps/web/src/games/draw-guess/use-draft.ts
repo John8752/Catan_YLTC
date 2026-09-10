@@ -75,7 +75,7 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
     catch (error) {
       if (error instanceof ApiError) {
         // Definite rejection means this content was not accepted; permit editing after validation errors.
-        if (error.code === "INVALID_PAGE" || error.code === "INVALID_REQUEST") { pending.current = null; setLocked(false); }
+        if (["INVALID_PAGE", "INVALID_REQUEST", "GUESS_LENGTH_MISMATCH"].includes(error.code)) { pending.current = null; setLocked(false); }
         if (["STALE_TASK", "STALE_MATCH"].includes(error.code)) { try { roomCallback.current(await getRoom(session)); } catch { /* Retry keeps the exact receipt. */ } }
       }
       setSubmitError(error instanceof Error ? error.message : "提交未确认，请重试；内容仍在这里");

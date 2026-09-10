@@ -1,16 +1,18 @@
 import { z } from "zod";
-import { DRAW_COLORS, DRAW_LIMITS, DRAW_WIDTHS } from "@catan/game-core/draw-guess";
+import { DRAW_COLORS, DRAW_BACKGROUNDS, DRAW_TOOLS, DRAW_LIMITS, DRAW_WIDTHS } from "@catan/game-core/draw-guess";
 
 const point = z.tuple([z.number().int().min(0).max(DRAW_LIMITS.width), z.number().int().min(0).max(DRAW_LIMITS.height)]);
-const stroke = z.object({ color: z.enum(DRAW_COLORS), width: z.union(DRAW_WIDTHS.map((width) => z.literal(width))), points: z.array(point).min(1).max(DRAW_LIMITS.points) }).strict();
+const stroke = z.object({ color: z.enum(DRAW_COLORS), width: z.union(DRAW_WIDTHS.map((width) => z.literal(width))), tool: z.enum(DRAW_TOOLS).optional(), points: z.array(point).min(1).max(DRAW_LIMITS.points) }).strict();
+const drawing = { strokes: z.array(stroke).max(DRAW_LIMITS.strokes), background: z.enum(DRAW_BACKGROUNDS).optional() };
 const page = z.discriminatedUnion("kind", [z.object({ kind: z.literal("text"), text: z.string().max(DRAW_LIMITS.text) }).strict(),
-  z.object({ kind: z.literal("drawing"), strokes: z.array(stroke).max(DRAW_LIMITS.strokes) }).strict(),
-  z.object({ kind: z.literal("opening"), word: z.string().max(DRAW_LIMITS.text), strokes: z.array(stroke).max(DRAW_LIMITS.strokes) }).strict()]);
+  z.object({ kind: z.literal("drawing"), ...drawing }).strict(),
+  z.object({ kind: z.literal("opening"), word: z.string().max(DRAW_LIMITS.text), ...drawing }).strict()]);
 const scope = { matchId: z.string().min(1).max(100), taskId: z.string().min(1).max(220) };
 export const drawCommandSchema = z.object({ seatToken: z.string().min(1).max(100), commandId: z.string().min(1).max(100),
   command: z.discriminatedUnion("type", [
     z.object({ type: z.literal("draft"), ...scope, sequence: z.number().int().positive().safe(), page }).strict(),
     z.object({ type: z.literal("submit"), ...scope, page }).strict(),
+    z.object({ type: z.literal("react"), matchId: scope.matchId, albumOwnerId: z.string().min(1).max(100), step: z.number().int().min(0).max(5), reaction: z.enum(["up", "down"]) }).strict(),
   ]),
 }).strict();
 export const drawSettingsSchema = z.object({ seatToken: z.string().min(1), expectedRevision: z.number().int().positive(),

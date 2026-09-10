@@ -12,6 +12,8 @@ Current product areas:
 
 Draw-guess opening drawings, hints and automatic system-host reveal: [Rules update verification](./validation/draw-guess-opening-reveal.md).
 
+Draw-guess regional/birthday/everyday nouns: [Word-bank research and sources](./draw-guess-word-sources.md). Exact-length guesses and repeatable page reactions follow the current [Draw-guess rules](./rules/draw-guess.md).
+
 Platform/game isolation refactor: [Ownership and validation](./validation/game-isolation.md).
 
 For current work, read product direction, [development workflow](./development-workflow.md), [scoped testing](./testing.md), then the affected game's rule notes and relevant ADRs. Draw-guess work does not require reading historical Catan milestones.

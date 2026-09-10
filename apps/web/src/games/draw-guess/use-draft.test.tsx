@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { createDrawGuess } from "@catan/game-core/draw-guess";
+import { createDrawGuess, executeDrawGuess, taskFor } from "@catan/game-core/draw-guess";
 import { projectDrawGuess } from "@catan/protocol/draw-guess";
 import { useDraft } from "./use-draft.js";
 import { sendDrawCommand } from "./api.js";
+import { ApiError } from "../../http.js";
 vi.mock("./api.js", () => ({ sendDrawCommand: vi.fn() }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); localStorage.clear(); });
 it("retries an uncertain submission with the exact same id and content", async () => {
@@ -21,4 +22,21 @@ it("retries an uncertain submission with the exact same id and content", async (
   expect(calls).toHaveLength(2); expect(calls[1]).toEqual(calls[0]);
   expect(calls[0]![2]).toMatchObject({ type: "submit", matchId: "match", taskId: game.task!.id, page: { kind: "opening", word: state.suggestions.a![0]!, strokes: [{ color: "#222222", width: 8, points: [[1, 2]] }] } });
   expect(onRoom).toHaveBeenCalledOnce();
+});
+
+it("unlocks a server-rejected guess so the player can correct its length and resubmit", async () => {
+  let state = createDrawGuess("length", ["a", "b", "c"].map((id) => ({ id, name: id })), 40);
+  for (const player of state.players) state = executeDrawGuess(state, player.id, { type: "submit", matchId: state.id, taskId: taskFor(state, player.id)!.id,
+    page: { kind: "opening", word: state.suggestions[player.id]![0]!, strokes: [{ color: "#222222", width: 8, points: [[1, 2]] }] } });
+  const game = projectDrawGuess(state, "a", null), length = game.task!.hintLength!;
+  const { result } = renderHook(() => useDraft({ roomId: "ROOM", playerId: "a", seatToken: "token" }, game, game.task!, vi.fn()));
+  vi.mocked(sendDrawCommand).mockRejectedValueOnce(new ApiError("GUESS_LENGTH_MISMATCH", `本轮需要 ${length} 个字`)).mockResolvedValueOnce({} as Awaited<ReturnType<typeof sendDrawCommand>>);
+  act(() => result.current.change({ kind: "text", text: "猜".repeat(length + 1) }));
+  await act(() => result.current.submit());
+  expect(result.current.locked).toBe(false); expect(result.current.submitError).toContain("个字");
+  act(() => result.current.change({ kind: "text", text: "猜".repeat(length) }));
+  await act(() => result.current.submit());
+  const calls = vi.mocked(sendDrawCommand).mock.calls;
+  expect(calls[1]![1]).not.toBe(calls[0]![1]);
+  expect(calls[1]![2]).toMatchObject({ page: { kind: "text", text: "猜".repeat(length) } });
 });

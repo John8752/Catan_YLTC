@@ -8,6 +8,7 @@ function submit(state: DrawGuessState, id: string, page: EditablePage) {
 }
 it("keeps choices, opening words and drafts private while exposing only a drawing and length", () => {
   let state = createDrawGuess("match", players, 71);
+  state = { ...state, suggestions: { a: ["西湖绸伞"], b: ["生日蛋糕"], c: ["数字蜡烛"], d: ["长江索道"] } };
   const word = state.suggestions.a![0]!;
   state = executeDrawGuess(state, "a", { type: "draft", matchId: state.id, taskId: taskFor(state, "a")!.id, sequence: 1, page: { kind: "opening", word, strokes } });
   expect(JSON.stringify(projectDrawGuess(state, "b", null))).not.toContain(word);
@@ -32,6 +33,11 @@ it("keeps choices, opening words and drafts private while exposing only a drawin
   expect(JSON.stringify(first)).not.toContain(state.suggestions.b![0]!);
   expect(JSON.stringify(first)).not.toContain("猫 🐈 上 天");
   expect(first.task).toBeNull();
+  state = executeDrawGuess(state, "b", { type: "react", matchId: state.id, albumOwnerId: "a", step: 0, reaction: "up" });
+  const reacted = projectDrawGuess(state, "c", null);
+  expect(reacted.albums[0]?.pages[0]?.reactions).toEqual({ up: 1, down: 0 });
+  expect(reacted.albums.flatMap((album) => album.pages)).toHaveLength(1);
+  expect(JSON.stringify(reacted)).not.toContain("猫 🐈 上 天");
   expect(() => projectDrawGuess(state, "outsider", null)).toThrow();
 });
 

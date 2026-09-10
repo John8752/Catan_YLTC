@@ -1,12 +1,14 @@
 import { DrawGuessError, type DrawGuessCommand, type DrawGuessState, type DrawPlayer, type DrawTask, type PageContent } from "./types.js";
 import { pageIsEmpty, validatePage } from "./validation.js";
 import { wordSuggestions } from "./words.js";
+import { guessCharacterCount, requiredGuessLength } from "./guess-length.js";
+import { reactToPage } from "./reactions.js";
 
 export function createDrawGuess(id: string, players: readonly DrawPlayer[], seed: number): DrawGuessState {
   if (!id || players.length < 3 || players.length > 6 || new Set(players.map((p) => p.id)).size !== players.length || players.some((p) => !p.id || !p.name) || !Number.isInteger(seed)) throw new DrawGuessError("INVALID_PLAYERS", "传画猜词需要 3–6 位不同玩家");
   const suggestions = wordSuggestions(seed, players.length);
   return { id, revision: 0, players: players.map((p) => ({ ...p })), suggestions: Object.fromEntries(players.map((p, i) => [p.id, suggestions[i]!])),
-    phase: { kind: "work", step: 0 }, albums: players.map((p) => ({ ownerId: p.id, pages: [] })), drafts: {} };
+    phase: { kind: "work", step: 0 }, albums: players.map((p) => ({ ownerId: p.id, pages: [] })), drafts: {}, reactions: {} };
 }
 export function taskFor(state: DrawGuessState, playerId: string): DrawTask | null {
   const index = state.players.findIndex((p) => p.id === playerId);
@@ -23,7 +25,7 @@ function commit(state: DrawGuessState, task: DrawTask, authorId: string, content
     phase: complete ? (task.step + 1 === state.players.length ? { kind: "reveal", cursor: 0 } : { kind: "work", step: task.step + 1 }) : state.phase };
 }
 export function executeDrawGuess(state: DrawGuessState, actorId: string | null, command: DrawGuessCommand): DrawGuessState {
-  if (!["draft", "submit", "expire", "reveal"].includes(command.type)) throw new DrawGuessError("INVALID_COMMAND", "未知操作");
+  if (!["draft", "submit", "expire", "reveal", "react"].includes(command.type)) throw new DrawGuessError("INVALID_COMMAND", "未知操作");
   if (command.matchId !== state.id) throw new DrawGuessError("STALE_MATCH", "这条操作属于上一局，请刷新当前对局");
   if (command.type === "expire") {
     if (actorId !== null || state.phase.kind !== "work" || state.phase.step !== command.step) throw new DrawGuessError("STALE_TASK", "这个阶段已结束");
@@ -32,7 +34,9 @@ export function executeDrawGuess(state: DrawGuessState, actorId: string | null, 
       const task = taskFor(next, player.id);
       if (!task || task.submitted) continue;
       const draft = next.drafts[player.id]?.page;
-      next = commit(next, task, player.id, draft && !pageIsEmpty(draft) ? draft : { kind: "missing", expected: task.kind }, true);
+      const required = requiredGuessLength(next, task);
+      const validLength = draft?.kind !== "text" || required === null || guessCharacterCount(draft.text) === required;
+      next = commit(next, task, player.id, draft && !pageIsEmpty(draft) && validLength ? draft : { kind: "missing", expected: task.kind }, true);
     }
     return { ...next, revision: state.revision + 1 };
   }
@@ -43,6 +47,7 @@ export function executeDrawGuess(state: DrawGuessState, actorId: string | null, 
     return { ...state, revision: state.revision + 1, phase: cursor > state.players.length ** 2 ? { kind: "finished" } : { kind: "reveal", cursor } };
   }
   if (!actorId || !state.players.some((p) => p.id === actorId)) throw new DrawGuessError("INVALID_PLAYER", "你不在本局玩家名单中");
+  if (command.type === "react") return reactToPage(state, command);
   const task = taskFor(state, actorId);
   if (!task || task.id !== command.taskId || task.submitted) throw new DrawGuessError("STALE_TASK", "任务已提交或已进入下一轮");
   const page = validatePage(command.page, task.kind, command.type === "draft");
@@ -52,5 +57,7 @@ export function executeDrawGuess(state: DrawGuessState, actorId: string | null, 
     if (command.sequence <= (state.drafts[actorId]?.sequence ?? 0)) return state;
     return { ...state, revision: state.revision + 1, drafts: { ...state.drafts, [actorId]: { sequence: command.sequence, page } } };
   }
+  const required = requiredGuessLength(state, task);
+  if (page.kind === "text" && required !== null && guessCharacterCount(page.text) !== required) throw new DrawGuessError("GUESS_LENGTH_MISMATCH", `本轮需要 ${required} 个字，当前 ${guessCharacterCount(page.text)} 个字（空白不计）`);
   return { ...commit(state, task, actorId, page, false), revision: state.revision + 1 };
 }

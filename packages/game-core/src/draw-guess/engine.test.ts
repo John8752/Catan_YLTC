@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDrawGuess, executeDrawGuess, taskFor, type DrawGuessState } from "./index.js";
+import { createDrawGuess, executeDrawGuess, taskFor, requiredGuessLength, type DrawGuessState } from "./index.js";
 
 const drawing = { kind: "drawing" as const, strokes: [{ color: "#222222", width: 8, points: [[10, 20], [50, 60]] as readonly (readonly [number, number])[] }] };
 function opening(state: DrawGuessState, id: string) { return { ...drawing, kind: "opening" as const, word: state.suggestions[id]![0]! }; }
@@ -9,7 +9,7 @@ function finishWork(state: DrawGuessState) {
     for (const player of state.players) {
       const task = taskFor(state, player.id)!;
       state = executeDrawGuess(state, player.id, { type: "submit", matchId: state.id, taskId: task.id,
-        page: task.kind === "opening" ? opening(state, player.id) : task.kind === "drawing" ? drawing : { kind: "text", text: `词语${task.id}` } });
+        page: task.kind === "opening" ? opening(state, player.id) : task.kind === "drawing" ? drawing : { kind: "text", text: "猜".repeat(requiredGuessLength(state, task) ?? 3) } });
     }
   }
   return state;

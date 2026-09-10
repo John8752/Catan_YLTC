@@ -45,7 +45,8 @@ export function DrawWork({ game, session, onRoom }: { readonly game: DrawGuessVi
     {page.kind !== "text" ? <DrawingCanvas data={page} onChange={(drawing) => draft.change({ ...page, ...drawing })} disabled={draft.locked || (page.kind === "opening" && !page.word)} /> : <>
       <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900" aria-label="字数提示">{task.hintLength === null ? "上一棒没有留下词语，凭想象猜吧" : `提示：${task.hintLength} 个字`}</p>
       <label className="grid gap-2 text-sm font-medium">你的猜测
-        <textarea aria-label="你的猜测" aria-describedby="guess-length" aria-invalid={wrongLength && length > 0} className="min-h-24 w-full resize-y rounded-xl border border-slate-300 bg-white p-3 text-base leading-relaxed text-slate-900 outline-offset-2 focus-visible:outline-2" maxLength={80} value={page.text} disabled={draft.locked} onChange={(event) => draft.change({ kind: "text", text: event.target.value })} placeholder="大胆猜，猜歪了更有意思" />
+        {/* Override the unlayered legacy font reset; sub-16px fields trigger iOS focus zoom. */}
+        <textarea aria-label="你的猜测" aria-describedby="guess-length" aria-invalid={wrongLength && length > 0} className="min-h-24 w-full resize-y rounded-xl border border-slate-300 bg-white p-3 text-[max(16px,1rem)]! leading-relaxed text-slate-900 outline-offset-2 focus-visible:outline-2" maxLength={80} value={page.text} disabled={draft.locked} onChange={(event) => draft.change({ kind: "text", text: event.target.value })} placeholder="大胆猜，猜歪了更有意思" />
       </label>
       <p id="guess-length" aria-live="polite" className={wrongLength ? "text-sm text-amber-800" : "text-sm text-slate-600"}>{task.hintLength === null ? `已输入 ${length} 个字，字数不限（最多 80 字）` : `已输入 ${length} / ${task.hintLength} 个字，字数相同才能交稿。`}{" 空白不计，标点计字。"}{wrongLength && "超时仍不符会记为缺页。"}</p>
     </>}

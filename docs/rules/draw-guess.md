@@ -36,6 +36,8 @@ Drawing tasks fit the current viewport, including phone browser bars and safe-ar
 
 Draft checkpoints and local recovery run silently. Routine saving/saved/retry statuses are not displayed or announced, and the full-width submit button keeps the same bounds while saving. Actual submission failures still show an actionable error and allow retry.
 
+The guess field's computed font size is at least 16 CSS pixels, including beneath the legacy global form font reset, to avoid iOS focus zoom. It still follows larger user font settings. Browser magnification remains available; viewport scale restrictions are not used as a substitute for readable form text.
+
 ## Reveal presentation
 
 Live reveal is one continuous feed of the server-projected prefix: each contribution is appended below previous contributions, and each newly opened album is appended below previous albums. Earlier entries retain their natural height and position; no temporary viewport-sized spacer is attached to the current entry. Album filtering is available only after the shared reveal finishes. Finishing retains the full feed and reveals the completion/browsing controls below it.

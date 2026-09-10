@@ -21,6 +21,33 @@ async function ink(page: Page) {
   });
 }
 test.describe("@draw-guess", () => {
+  test("guess input keeps a readable computed size and respects larger desktop fonts", async ({ browser, request }) => {
+    const host: RoomSession = await (await request.post("/api/rooms", { data: { playerName: "输入检查", gameId: "draw-guess" } })).json();
+    const sessions = [host];
+    for (let i = 1; i < 3; i++) sessions.push(await (await request.post(`/api/rooms/${host.roomId}/join`, { data: { playerName: `朋友${i}` } })).json());
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await context.addInitScript((session) => localStorage.setItem("catan-yltc-seat", JSON.stringify(session)), host);
+    const page = await context.newPage();
+    try {
+      await page.goto("/"); await page.getByRole("button", { name: "开始传画猜词" }).click();
+      for (const session of sessions) {
+        const game = (await snapshot(request, session)).game!, task = game.task!;
+        expect((await request.post(`/api/rooms/${host.roomId}/draw-guess/commands`, { data: { seatToken: session.seatToken, commandId: `font-${task.id}`, command: { type: "submit", matchId: game.id, taskId: task.id, page: { kind: "opening", word: task.suggestions[0]!, strokes: [{ color: "#222222", width: 8, points: [[10, 10], [30, 30]] }] } } } })).ok()).toBe(true);
+      }
+      const input = page.getByRole("textbox", { name: "你的猜测", exact: true });
+      await expect(input).toHaveCSS("font-size", "16px");
+      await page.evaluate(() => { document.documentElement.style.fontSize = "20px"; });
+      await expect(input).toHaveCSS("font-size", "20px");
+      await page.evaluate(() => { document.documentElement.style.fontSize = "12px"; });
+      await expect(input).toHaveCSS("font-size", "16px");
+      await page.evaluate(() => { document.documentElement.style.removeProperty("font-size"); });
+      await input.click(); await expect(input).toBeFocused();
+      await input.fill("猜".repeat((await snapshot(request, host)).game!.task!.hintLength!));
+      await page.getByRole("button", { name: "完成并提交", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "交稿成功！" })).toBeVisible();
+    } finally { await context.close(); await request.post(`/api/rooms/${host.roomId}/disband`, { data: { seatToken: host.seatToken } }); }
+  });
+
   test("six independent browsers complete a round, recover a drawing, reveal together and replay", async ({ browser }) => {
     test.setTimeout(360_000);
     const contexts = await Promise.all(Array.from({ length: 6 }, () => browser.newContext()));
@@ -157,13 +184,32 @@ test.describe("@draw-guess", () => {
       for (const session of sessions.slice(1)) await submitApi(session);
       await expect(page.getByLabel("字数提示", { exact: true })).toContainText(/提示：\d+ 个字/);
       const required = (await snapshot(request, host)).game!.task!.hintLength!;
+      const guessInput = page.getByRole("textbox", { name: "你的猜测", exact: true });
+      // Check computed CSS: a nominal text-base class can lose to the legacy font reset.
+      expect(await guessInput.evaluate((input) => parseFloat(getComputedStyle(input).fontSize))).toBeGreaterThanOrEqual(16);
+      await guessInput.tap();
+      await expect(guessInput).toBeFocused();
+      expect(await page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(1);
       await page.getByRole("textbox", { name: "你的猜测", exact: true }).fill("猜".repeat(required + 1));
       await expect(page.getByRole("button", { name: "完成并提交", exact: true })).toBeDisabled();
       await expect(page.getByText(/超时仍不符会记为缺页/)).toBeVisible();
       await page.getByRole("textbox", { name: "你的猜测", exact: true }).fill("猜".repeat(required));
       await expect(page.getByRole("button", { name: "完成并提交", exact: true })).toBeEnabled();
       await page.screenshot({ path: `output/playwright/draw-guess-${slug}-hint.png`, fullPage: true });
-      for (let step = 1; step < count; step++) for (const session of sessions) await submitApi(session);
+      await page.getByRole("button", { name: "完成并提交", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "交稿成功！" })).toBeVisible();
+      for (let step = 1; step < count; step++) {
+        if (step === 2) {
+          await expect(page.getByRole("heading", { name: "把这句话画出来" })).toBeVisible();
+          await expect(canvas).toBeVisible();
+          expect(await page.evaluate(() => window.visualViewport?.scale ?? 1)).toBe(1);
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+          const bounds = (await canvas.boundingBox())!;
+          expect(bounds.x).toBeGreaterThanOrEqual(0);
+          expect(bounds.x + bounds.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+        }
+        for (const session of sessions) await submitApi(session);
+      }
       await expect(page.getByRole("article")).toHaveCount(1, { timeout: 10_000 });
       await expect(page.getByRole("status").filter({ hasText: "亲自画了第一张" })).toBeVisible();
       await page.getByRole("article").first().getByRole("button", { name: /^点赞/ }).click();

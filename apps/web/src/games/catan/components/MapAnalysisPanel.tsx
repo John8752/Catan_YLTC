@@ -75,7 +75,7 @@ function ResourceProduction({
         )}>{strengthLabel(resource.strength)}</span>
       </div>
       <div className="mt-1.5 flex items-end justify-between gap-2">
-        <strong className="font-serif text-base leading-none">{resource.productionPips}</strong>
+        <strong className="font-sans text-base leading-none">{resource.productionPips}</strong>
         <span className="text-[10px] text-white/52">产能点 · {resource.tileCount} 地块</span>
       </div>
       <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-black/20" aria-hidden="true">

@@ -150,7 +150,7 @@ export function BoardPorts({ map, hexSize = BOARD_HEX_SIZE }: BoardMapProps) {
               <g className="port-type-icon" transform={`translate(0 ${portMetrics.iconY})`} aria-hidden="true">
                 <ResourceIcon kind={port.kind === "generic" ? "unknown" : port.resource} context="port" className="port-resource-icon" transform={`scale(${portMetrics.iconSize / 38})`} />
               </g>
-              <text className="port-ratio" y={portMetrics.ratioY} dominantBaseline="middle" textAnchor="middle" style={{ fontSize: portMetrics.ratioFont }}>{label}</text>
+              <text className="port-ratio" y={portMetrics.ratioY} dominantBaseline="central" textAnchor="middle" style={{ fontSize: portMetrics.ratioFont }}>{label}</text>
             </g>
           </g>
         );

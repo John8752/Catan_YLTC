@@ -73,7 +73,7 @@ export function RoomPanel({
           <div className="flex items-start justify-between gap-4">
             <div className={cn("min-w-0", room.game !== null && "flex shrink-0 items-baseline gap-2 whitespace-nowrap")}>
               <p className={cn("mb-1 text-[11px] font-black tracking-[.18em] text-[var(--sidebar-muted,#aa543d)] uppercase", room.game !== null && "mb-0")}>房间码</p>
-              <strong className={cn("room-code font-serif text-2xl tracking-[.16em] text-[var(--sidebar-ink,#163c3a)]", room.game !== null && "text-lg")}>{room.id}</strong>
+              <strong className={cn("room-code font-sans text-2xl tracking-[.16em] text-[var(--sidebar-ink,#163c3a)]", room.game !== null && "text-lg")}>{room.id}</strong>
             </div>
             <div className="flex items-center gap-1">
               {headerAction}

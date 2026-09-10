@@ -163,7 +163,7 @@ function ResponderActions({ game, offer, busy, response, onCommand }: {
           setCounterOpen(false);
           onCommand({ type: "CounterTradeOffer", offerId: offer.offerId, proposerGives, proposerReceives });
         }}>
-          <div><strong className="font-serif text-[#694723]">调整你的条件</strong><p className="m-0 text-[11px] text-[#766956]">点击上方资源增加，点击已选卡片撤回。</p></div>
+          <div><strong className="font-sans text-[#694723]">调整你的条件</strong><p className="m-0 text-[11px] text-[#766956]">点击上方资源增加，点击已选卡片撤回。</p></div>
           <section className="grid gap-1.5"><small className="font-black text-[#8e5d48]">你希望获得</small><TradeResourceBasket label="反报价中你希望获得" value={proposerGives} onChange={setProposerGives} /></section>
           <section className="grid gap-1.5"><small className="font-black text-[#35645d]">你愿意交出</small><TradeResourceBasket label="反报价中你愿意交出" value={proposerReceives} maximums={game.you.resources} onChange={setProposerReceives} /></section>
           <TradeValidationNote problem={counterSubmissionProblem} fallback="提交不会立刻交换资源，由发起者决定。" />

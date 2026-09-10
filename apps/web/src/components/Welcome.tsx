@@ -50,7 +50,7 @@ export function Welcome({ busy, error, onCreate, onJoin, accountControl, default
           <ul className="m-0 grid list-none gap-x-6 gap-y-1.5 p-0 sm:grid-cols-2">
             {TABLE_LEGENDS.map((legend) => (
               <li className="flex min-w-0 items-baseline gap-2 text-sm" key={legend.name}>
-                <strong className="w-8 shrink-0 font-serif tracking-wide text-[#fff4d6]">{legend.name}</strong>
+                <strong className="w-8 shrink-0 font-sans tracking-wide text-[#fff4d6]">{legend.name}</strong>
                 <span className="truncate text-white/62">{legend.story}</span>
               </li>
             ))}

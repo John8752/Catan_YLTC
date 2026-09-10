@@ -1,10 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/noto-sans-sc/wght.css";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant phone-landscape (@media (min-width: 600px) and (max-width: 1023px) and (max-height: 500px));
 
 @theme inline {
+  --font-sans: "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Noto Sans SC Variable", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -31,7 +34,7 @@
 
 :root {
   color-scheme: light;
-  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-family: var(--font-sans);
   color: #203433;
   background: #d8c8a6;
   --ink: #203433;
@@ -96,12 +99,15 @@ body {
     #d8c8a6;
 }
 
-button, input { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .52; }
 
 h1, h2, p { margin-top: 0; }
-h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
+h1, h2 { font-family: var(--font-sans); letter-spacing: -.015em; }
+@layer base {
+  h1, h2 { font-weight: 700; }
+}
 
 .eyebrow {
   margin-bottom: .45rem;
@@ -125,7 +131,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 }
 
 .welcome-copy { color: #fff9e8; max-width: 720px; }
-.welcome-copy h1 { font-size: clamp(3.2rem, 7vw, 6.8rem); line-height: .94; margin-bottom: 1.8rem; }
+.welcome-copy h1 { font-size: clamp(2.5rem, 4vw, 4.5rem); line-height: 1.18; margin-bottom: 1.8rem; }
 .welcome-copy .eyebrow { color: #efbd79; }
 .welcome-lead { max-width: 36rem; color: rgba(255,255,255,.76); font-size: 1.08rem; line-height: 1.8; }
 
@@ -393,7 +399,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .resource-icon-highlight { fill: var(--resource-icon-highlight,currentColor); }
 .resource-icon-highlight-line { fill: none; stroke: var(--resource-icon-highlight,currentColor); stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
 .token > circle { fill: #f6e7c3; stroke: rgba(75,49,26,.3); stroke-width: 1.5; }
-.token-number { fill: #3c3529; font-family: "Segoe UI", sans-serif; font-size: 24px; font-weight: 850; }
+.token-number { fill: #3c3529; font-family: var(--font-sans); font-size: 24px; font-weight: 850; }
 .token-pips circle { fill: #6f5130; stroke: none; }
 .token.hot .token-number,.token.hot .token-pips circle { fill: #9f3227; }.token.hot > circle { stroke: #b5523f; stroke-width: 2.5; }
 .robber-layer { isolation: isolate; }
@@ -493,7 +499,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .game-result-overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: clamp(.5rem,2vw,1.5rem); color: #fff8df; background: rgba(7,28,31,.8); backdrop-filter: blur(5px); }
 .game-result-panel { position: relative; width: min(72rem,100%); max-height: calc(100dvh - 1rem); overflow: hidden; border: 2px solid rgba(255,226,143,.72); border-radius: 1.35rem; background: linear-gradient(155deg,rgba(30,75,67,.98),rgba(12,42,44,.99)); box-shadow: 0 28px 90px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.12); }
 .game-result-header { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.2rem .85rem; border-bottom: 1px solid rgba(255,232,174,.2); background: radial-gradient(circle at 18% 0,rgba(235,190,78,.2),transparent 38%); }
-.game-result-header h2 { margin: .1rem 0 .2rem; font-family: Georgia,"Songti SC",serif; font-size: clamp(1.8rem,4vw,3rem); line-height: 1; color: #ffe797; text-shadow: 0 3px 16px rgba(238,183,52,.26); }
+.game-result-header h2 { margin: .1rem 0 .2rem; font-family: var(--font-sans); font-size: clamp(1.8rem,4vw,3rem); line-height: 1; color: #ffe797; text-shadow: 0 3px 16px rgba(238,183,52,.26); }
 .game-result-header p:last-child { margin: 0; max-width: 52rem; color: #e9dfc6; font-size: .9rem; line-height: 1.55; }
 .game-result-header .eyebrow { margin: 0; color: #f2c760; }
 .winner-medallion { display: grid; flex: 0 0 auto; width: 4.2rem; height: 4.2rem; place-items: center; border: 2px solid #ffe59a; border-radius: 50%; color: #183e38; background: radial-gradient(circle at 35% 28%,#fff6bd,#e7ad35 70%); box-shadow: 0 0 32px rgba(242,194,75,.42); }
@@ -511,7 +517,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
 .result-player-row.is-winner { border-color: rgba(255,220,117,.62); background: linear-gradient(90deg,rgba(225,172,44,.2),rgba(255,255,255,.045)); }
 .result-rank { display: grid; width: 1.8rem; height: 1.8rem; place-items: center; border-radius: 50%; color: #17413b; background: #e7d8ad; font-weight: 950; }
 .result-player-color { display: inline-block; flex: 0 0 auto; width: .75rem; height: .75rem; border: 2px solid rgba(255,255,255,.72); border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
-.result-score { display: inline-flex; align-items: baseline; gap: .25rem; color: #ffe48c; font-family: Georgia,serif; font-size: 1.75rem; font-weight: 900; }
+.result-score { display: inline-flex; align-items: baseline; gap: .25rem; color: #ffe48c; font-family: var(--font-sans); font-size: 1.75rem; font-weight: 900; }
 .result-score small { color: #cfc4a8; font-family: inherit; font-size: .68rem; }
 .result-score-sources { display: flex; align-items: center; justify-content: flex-end; gap: .55rem; color: #e7dcc0; font-size: .76rem; }
 .result-score-sources svg { width: 1.1rem; height: 1.1rem; color: #f2c55a; }
@@ -579,7 +585,7 @@ h1, h2 { font-family: Georgia, "Songti SC", serif; letter-spacing: -.025em; }
   animation: score-effect 1750ms cubic-bezier(.18,.82,.22,1) both;
 }
 .score-effect span { font-size: .8rem; font-weight: 800; color: #e6d7b6; }
-.score-effect strong { font-family: Georgia,"Songti SC",serif; font-size: 2rem; line-height: 1; color: #ffe589; text-shadow: 0 2px 10px rgba(255,203,65,.45); }
+.score-effect strong { font-family: var(--font-sans); font-size: 2rem; line-height: 1; color: #ffe589; text-shadow: 0 2px 10px rgba(255,203,65,.45); }
 .score-effect small { font-weight: 800; }
 .robber-flight {
   position: absolute;

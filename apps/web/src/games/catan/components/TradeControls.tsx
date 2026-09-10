@@ -110,7 +110,7 @@ export function TradeControls({
             <div className="flex items-center gap-2">
               <span className="grid size-9 place-items-center rounded-full bg-[#214d48] text-[#fff8df]"><Handshake className="size-4" /></span>
               <div>
-                <DialogTitle className="font-serif text-lg">交易桌</DialogTitle>
+                <DialogTitle className="font-sans text-lg">交易桌</DialogTitle>
                 <DialogDescription className="text-xs text-[#6b716a]">{compact ? "点资源加 1，下方减 1；核对后发布" : "组合资源后发布，棋盘仍可查看"}</DialogDescription>
               </div>
             </div>

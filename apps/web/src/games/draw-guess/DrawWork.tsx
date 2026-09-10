@@ -6,6 +6,8 @@ import type { PlayerSession } from "../../room-session.js";
 import { Button } from "../../components/ui/button.js";
 import { DrawingCanvas, DrawingPreview } from "./DrawingCanvas.js";
 import { useDraft } from "./use-draft.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover.js";
+import { cn } from "../../lib/utils.js";
 
 export function Deadline({ game }: { readonly game: DrawGuessView }) {
   const [remaining, setRemaining] = useState(0);
@@ -27,6 +29,8 @@ export function DrawWork({ game, session, onRoom }: { readonly game: DrawGuessVi
   const task = game.task!;
   const draft = useDraft(session, game, task, onRoom);
   const page = draft.page;
+  const [choosing, setChoosing] = useState(false);
+  const choices = page.kind === "opening" && <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="六个候选词">{task.suggestions.map((word) => <Button key={word} disabled={draft.locked} variant={page.word === word ? "default" : "outline"} aria-pressed={page.word === word} className="h-auto min-h-11 whitespace-normal break-words px-2" onClick={() => { draft.change({ ...page, word }); setChoosing(false); }}>{word}</Button>)}</div>;
   const length = page.kind === "text" ? guessCharacterCount(page.text) : 0;
   const wrongLength = page.kind === "text" && task.hintLength !== null && length !== task.hintLength;
   const empty = pageIsEmpty(page);
@@ -34,10 +38,10 @@ export function DrawWork({ game, session, onRoom }: { readonly game: DrawGuessVi
     <span className="text-4xl" aria-hidden="true">✓</span><h2 className="text-2xl font-bold">交稿成功！</h2>
     <p>还有 {game.progress.filter((p) => !p.submitted).length} 位朋友正在创作。</p><p className="text-sm text-slate-500">先别剧透，等会儿一起揭晓。</p>
   </section>;
-  return <section className="grid min-w-0 gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6" aria-label="本轮任务">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-bold">{task.kind === "opening" ? "六选一，亲自画出第一棒" : task.kind === "drawing" ? "把这句话画出来" : "这幅画在说什么？"}</h2><Deadline game={game} /></div>
-    {task.input && <PageDisplay content={task.input} />}
-    {page.kind === "opening" && <fieldset className="grid gap-2" disabled={draft.locked}><legend className="mb-2 text-sm font-medium">从词库选一个，下一位只会看到你的画</legend><div className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="六个候选词">{task.suggestions.map((word) => <Button key={word} variant={page.word === word ? "default" : "outline"} aria-pressed={page.word === word} className="h-auto min-h-11 whitespace-normal break-words px-2" onClick={() => draft.change({ ...page, word })}>{word}</Button>)}</div><p className="text-sm text-slate-600">{page.word ? `你要画：${page.word}` : "先选词，再动笔。交稿前可以换词。"}</p></fieldset>}
+  return <section className={cn("flex min-w-0 flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2 sm:p-3", page.kind !== "text" && "min-h-0 flex-1")} aria-label="本轮任务">
+    <div className="flex shrink-0 items-center justify-between gap-2"><h2 className="text-base font-bold">{task.kind === "opening" ? page.kind === "opening" && page.word ? "画出这个词" : "先选一个词，再开始画" : task.kind === "drawing" ? "把这句话画出来" : "这幅画在说什么？"}</h2><Deadline game={game} /></div>
+    {task.input && <div className="shrink-0"><PageDisplay content={task.input} /></div>}
+    {page.kind === "opening" && page.word && <div className="flex shrink-0 items-center justify-between gap-2 rounded-xl bg-amber-50 px-3"><p aria-label="本轮题目" className="min-w-0 break-words text-lg font-bold">{page.word}</p><Popover open={choosing} onOpenChange={setChoosing}><PopoverTrigger asChild><Button variant="ghost" disabled={draft.locked} className="min-h-11 shrink-0">换词</Button></PopoverTrigger><PopoverContent className="w-96 max-w-[calc(100vw-2rem)]" collisionPadding={12}>{choices}</PopoverContent></Popover></div>}
     {page.kind !== "text" ? <DrawingCanvas data={page} onChange={(drawing) => draft.change({ ...page, ...drawing })} disabled={draft.locked || (page.kind === "opening" && !page.word)} /> : <>
       <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900" aria-label="字数提示">{task.hintLength === null ? "上一棒没有留下词语，凭想象猜吧" : `提示：${task.hintLength} 个字`}</p>
       <label className="grid gap-2 text-sm font-medium">你的猜测
@@ -45,10 +49,10 @@ export function DrawWork({ game, session, onRoom }: { readonly game: DrawGuessVi
       </label>
       <p id="guess-length" aria-live="polite" className={wrongLength ? "text-sm text-amber-800" : "text-sm text-slate-600"}>{task.hintLength === null ? `已输入 ${length} 个字，字数不限（最多 80 字）` : `已输入 ${length} / ${task.hintLength} 个字，字数相同才能交稿。`}{" 空白不计，标点计字。"}{wrongLength && "超时仍不符会记为缺页。"}</p>
     </>}
-    <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500" role="status">{draft.saveStatus}</p>
+    {page.kind === "opening" && !page.word && <div className="shrink-0">{choices}</div>}
+    <div className="flex shrink-0 items-center justify-between gap-3"><p className="text-xs text-slate-500" role="status">{draft.saveStatus}</p>
       <Button className="min-h-11 flex-1 sm:flex-none" disabled={empty || wrongLength || draft.submitting} onClick={() => void draft.submit()}>{draft.submitting ? "正在交稿…" : draft.locked ? "重试提交" : "完成并提交"}</Button>
     </div>
     {draft.submitError && <p role="alert" className="break-words text-sm text-red-700">{draft.submitError}</p>}
-    <p className="text-xs leading-relaxed text-slate-500">交稿后不能修改。超时会收取已保存且符合要求的草稿；请不要在语音里说出当前词语。</p>
   </section>;
 }

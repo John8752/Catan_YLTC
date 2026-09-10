@@ -57,9 +57,9 @@ test.describe("@draw-guess", () => {
         }));
         if (step === 0) {
           await expect(host.getByText("草稿已保存，仅你可见", { exact: true })).toBeVisible();
-          const chosen = await host.getByLabel("六个候选词").getByRole("button", { pressed: true }).textContent();
+          const chosen = await host.getByLabel("本轮题目", { exact: true }).textContent();
           const before = await ink(host); await host.reload();
-          await expect(host.getByLabel("六个候选词").getByRole("button", { pressed: true })).toHaveText(chosen!); await expect(host.getByRole("img", { name: "画布", exact: true })).toBeVisible(); expect(await ink(host)).toBe(before);
+          await expect(host.getByLabel("本轮题目", { exact: true })).toHaveText(chosen!); await expect(host.getByRole("img", { name: "画布", exact: true })).toBeVisible(); expect(await ink(host)).toBe(before);
           await mkdir("output/playwright", { recursive: true }); await host.screenshot({ path: "output/playwright/draw-guess-six-player-drawing.png", fullPage: true });
         }
         await Promise.all(pages.map((page) => page.getByRole("button", { name: "完成并提交", exact: true }).click()));

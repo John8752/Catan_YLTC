@@ -30,7 +30,13 @@ The client offers a compact color/pen-size/eraser/background toolbar plus undo a
 
 Drawings are strokes on a fixed logical 800×600 canvas, displayed at any CSS size. Colors and widths are whitelisted; coordinates are finite and bounded. Limit strokes and points per page and request size. No arbitrary SVG, remote image, HTML or uploaded base64 payload. Empty pages require explicit missing-page treatment at timeout, not a falsely successful submission.
 
+## Work presentation
+
+Drawing tasks fit the current viewport, including phone browser bars and safe-area padding. The canvas stays near the top, preserves its 4:3 ratio, and shares one screen with the prompt, toolbar and submit action. Room members/account controls move into a room dialog during play. Selecting an opening prompt collapses the six choices; players can reopen them with “换词” before submitting. Clear joins the same toolbar row as undo/redo.
+
 ## Reveal presentation
+
+Opening a different album resets document scroll to the top and focuses the gallery heading. Within the same live album, each new server reveal moves scroll and focus to the current contribution. Reaction updates do not move the viewport. Finished albums keep the complete conversation and support the same reset when manually switching albums.
 
 Each revealed album is a conversation in contribution order. A player speaks in first person: the opening identifies their chosen subject and shows their drawing; guesses state their answer; later drawings identify the immediately preceding phrase and show how they drew it. Missing pages are described neutrally. Player names and simple generated initials identify speakers; the viewer's own messages align to the right. A host introduction opens the album and a host bubble follows each contribution. These statements and comments are projected exclusively from the revealed prefix, never from unrevealed pages. Historical commentary stays with its page in the finished gallery. The existing shared 2s introduction / 4s page timing and repeated thumbs reactions remain.
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import { DRAW_COLORS, DRAW_BACKGROUNDS, DRAW_LIMITS, type DrawingData, type DrawingTool } from "@catan/game-core/draw-guess";
 import { cn } from "../../lib/utils.js";
 import { DrawingToolbar } from "./DrawingToolbar.js";
@@ -19,6 +19,14 @@ export function DrawingCanvas({ data, onChange, disabled }: { readonly data: Dra
   const [color, setColor] = useState<string>(DRAW_COLORS[0]);
   const [width, setWidth] = useState(8), [eraserWidth, setEraserWidth] = useState(32);
   const [drawing, setDrawing] = useState(false), [limit, setLimit] = useState(false);
+  const space = useRef<HTMLDivElement>(null);
+  const [displayWidth, setDisplayWidth] = useState(0);
+  useLayoutEffect(() => {
+    const element = space.current!;
+    const fit = () => setDisplayWidth(Math.max(0, Math.min(element.clientWidth, (element.clientHeight - 6) * 4 / 3 + 6)));
+    fit(); const observer = new ResizeObserver(fit); observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => { const ctx = ref.current?.getContext("2d"); if (ctx) paint(ctx, history.value.strokes, history.value.background); }, [history.value]);
   const count = () => latest.current.strokes.reduce((total, stroke) => total + stroke.points.length, 0);
   const position = (event: PointerEvent<HTMLCanvasElement>): readonly [number, number] => {
@@ -47,12 +55,14 @@ export function DrawingCanvas({ data, onChange, disabled }: { readonly data: Dra
   }
   function undo() { setLimit(false); history.undo(); }
   function redo() { setLimit(false); history.redo(); }
-  return <div className="grid min-w-0 gap-2">
-    <div className="relative overflow-hidden rounded-2xl border-[3px] border-stone-600 shadow-sm">
+  return <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+    <div ref={space} className="min-h-0 flex-1">
+    <div style={{ width: displayWidth }} className="relative mx-auto overflow-hidden rounded-2xl border-[3px] border-stone-600 shadow-sm">
       <canvas ref={ref} width={800} height={600} aria-label="画布" role="img" tabIndex={disabled ? -1 : 0} className={cn("block aspect-[4/3] w-full touch-none outline-offset-[-4px] focus-visible:outline-2", disabled ? "cursor-default" : "cursor-crosshair")}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={() => { activePointer.current = null; setDrawing(false); }}
         onKeyDown={(event) => { if (disabled || drawing || !(event.ctrlKey || event.metaKey)) return; if (event.key.toLowerCase() === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); } else if (event.key.toLowerCase() === "y") { event.preventDefault(); redo(); } }} />
-      {history.value.strokes.length === 0 && !disabled && <div className="pointer-events-none absolute inset-0 grid place-content-center text-center"><span className="rounded-full bg-stone-800/65 px-4 py-2 text-sm text-white">手指滑动或拖动鼠标开始画画</span></div>}
+      {history.value.strokes.length === 0 && <div className="pointer-events-none absolute inset-0 grid place-content-center text-center"><span className="rounded-full bg-stone-800/65 px-3 py-2 text-xs text-white">{disabled ? "选词后开始画画" : "手指滑动或拖动鼠标开始画画"}</span></div>}
+    </div>
     </div>
     <DrawingToolbar disabled={disabled || drawing} tool={tool} color={color} width={width} eraserWidth={eraserWidth} background={history.value.background ?? DRAW_BACKGROUNDS[0]}
       onTool={setTool} onColor={setColor} onWidth={setWidth} onEraserWidth={setEraserWidth}

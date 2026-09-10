@@ -16,7 +16,7 @@ interface Props {
 }
 export function DrawingToolbar(props: Props) {
   const [open, setOpen] = useState<string | null>(null);
-  const toolButton = "relative h-12 min-w-0 rounded-xl px-1 [&_svg]:size-6";
+  const toolButton = "relative h-11 min-w-0 rounded-xl px-1 [&_svg]:size-5";
   const panel = "w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl border-slate-200 bg-white p-4 text-slate-900 shadow-xl";
   const popover = (id: string) => ({ open: open === id, onOpenChange: (value: boolean) => setOpen(value ? id : null) });
   function widths(eraser: boolean) {
@@ -28,8 +28,8 @@ export function DrawingToolbar(props: Props) {
       </Button>)}</div>
     </div>;
   }
-  return <div className="grid gap-2">
-    <fieldset disabled={props.disabled} className="grid grid-cols-6 gap-1 rounded-2xl border border-slate-200 bg-stone-50 p-1.5" aria-label="画笔工具">
+  return <div className="shrink-0">
+    <fieldset disabled={props.disabled} className="grid grid-cols-7 gap-1 rounded-2xl border border-slate-200 bg-stone-50 p-1" aria-label="画笔工具">
       <Popover {...popover("color")}><PopoverTrigger asChild><Button variant="ghost" className={toolButton} aria-label="选择颜色"><Palette aria-hidden="true" /><span className="absolute bottom-1 right-1 size-3 rounded-full border border-slate-400" style={{ backgroundColor: props.color }} /></Button></PopoverTrigger>
         <PopoverContent side="top" align="start" collisionPadding={12} className={panel}><p className="mb-3 text-sm font-bold">画笔颜色</p><div className="grid grid-cols-4 gap-2">{DRAW_COLORS.map((color, i) => <button key={color} className={cn("size-11 rounded-full border-2 border-slate-300 outline-offset-2 focus-visible:outline-2", props.color === color && "ring-2 ring-slate-700 ring-offset-2")} style={{ backgroundColor: color }} aria-label={`${colorNames[i]}画笔`} aria-pressed={props.color === color} onClick={() => { props.onColor(color); props.onTool("pen"); setOpen(null); }} />)}</div></PopoverContent>
       </Popover>
@@ -40,7 +40,8 @@ export function DrawingToolbar(props: Props) {
       </Popover>
       <Button variant="ghost" className={toolButton} aria-label="撤销" disabled={!props.canUndo} onClick={props.onUndo}><Undo2 aria-hidden="true" /></Button>
       <Button variant="ghost" className={toolButton} aria-label="重做" disabled={!props.canRedo} onClick={props.onRedo}><Redo2 aria-hidden="true" /></Button>
+      <Button variant="ghost" className={toolButton} aria-label="清空画布" disabled={!props.canClear} onClick={props.onClear}><Trash2 aria-hidden="true" /></Button>
     </fieldset>
-    <div className="flex items-center justify-between gap-2"><p className="text-xs text-slate-500" role="status">{props.tool === "eraser" ? `橡皮擦 · ${props.eraserWidth} 像素` : `画笔 · ${props.width} 像素`} · 支持撤销和重做</p><Button variant="ghost" className="h-11 shrink-0 gap-1 px-2 text-xs text-slate-500" disabled={props.disabled || !props.canClear} onClick={props.onClear}><Trash2 aria-hidden="true" />清空画布</Button></div>
+    <p className="sr-only" role="status">{props.tool === "eraser" ? `橡皮擦 · ${props.eraserWidth} 像素` : `画笔 · ${props.width} 像素`} · 支持撤销和重做</p>
   </div>;
 }

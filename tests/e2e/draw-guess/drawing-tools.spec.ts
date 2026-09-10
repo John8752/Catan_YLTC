@@ -6,6 +6,20 @@ import { primaryPhoneCases } from "../viewport-cases.js";
 async function pixel(canvas: Locator, x = 400, y = 300) {
   return canvas.evaluate((node, point) => Array.from((node as HTMLCanvasElement).getContext("2d")!.getImageData(point.x, point.y, 1, 1).data), { x, y });
 }
+async function drawingFits(page: Page, bottomInset = 0) {
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1 && document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  const canvas = (await page.getByRole("img", { name: "画布", exact: true }).boundingBox())!;
+  const height = page.viewportSize()!.height;
+  expect(canvas.y).toBeLessThan(height * .35);
+  expect(canvas.height).toBeGreaterThan(150);
+  expect(canvas.width / canvas.height).toBeCloseTo(4 / 3, 2);
+  for (const control of [page.getByRole("group", { name: "画笔工具" }), page.getByRole("button", { name: "完成并提交", exact: true })]) {
+    const bounds = (await control.boundingBox())!;
+    expect(bounds.y).toBeGreaterThanOrEqual(canvas.y + canvas.height);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(height - bottomInset);
+  }
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+}
 async function stroke(page: Page, touch: boolean, from: [number, number], to: [number, number]) {
   const canvas = page.getByRole("img", { name: "画布", exact: true }); await canvas.scrollIntoViewIfNeeded();
   const box = (await canvas.boundingBox())!;
@@ -25,16 +39,42 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
   test(`@draw-guess drawing tools preserve erasing, history and shared background ${device.name}`, async ({ browser, request }, testInfo) => {
     const host: RoomSession = await (await request.post("/api/rooms", { data: { playerName: "工具画家", gameId: "draw-guess" } })).json();
     const sessions = [host];
-    for (let i = 1; i < 3; i++) sessions.push(await (await request.post(`/api/rooms/${host.roomId}/join`, { data: { playerName: `接力朋友${i}` } })).json());
+    for (let i = 1; i < 6; i++) sessions.push(await (await request.post(`/api/rooms/${host.roomId}/join`, { data: { playerName: `接力朋友${i}很长的名字` } })).json());
     const snapshot = async (seat: RoomSession): Promise<DrawGuessRoomView> => (await request.get(`/api/rooms/${host.roomId}?seatToken=${seat.seatToken}`)).json();
     const context = await browser.newContext(device.options);
     await context.addInitScript((seat) => localStorage.setItem("catan-yltc-seat", JSON.stringify(seat)), host);
     const page = await context.newPage(); const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message));
     try {
       await page.goto("/"); await page.getByRole("button", { name: "开始传画猜词" }).click();
+      await expect(page.getByLabel("六个候选词")).toBeVisible();
+      await drawingFits(page);
+      await page.screenshot({ path: testInfo.outputPath("opening-choices.png"), fullPage: true, scale: "css" });
       await page.getByLabel("六个候选词").getByRole("button").first().click();
       const button = (name: string) => page.getByRole("button", { name, exact: true });
       const canvas = page.getByRole("img", { name: "画布", exact: true });
+      await expect(page.getByLabel("六个候选词")).toHaveCount(0);
+      await button("换词").click();
+      const changedWord = await page.getByLabel("六个候选词").getByRole("button").last().textContent();
+      await page.getByLabel("六个候选词").getByRole("button").last().click();
+      await expect(page.getByLabel("本轮题目", { exact: true })).toHaveText(changedWord!);
+      await drawingFits(page);
+      await page.screenshot({ path: testInfo.outputPath("drawing-viewport.png"), fullPage: true, scale: "css" });
+      await page.getByRole("button", { name: /已交稿 · 房间/ }).click();
+      const details = page.getByRole("dialog", { name: "房间信息", exact: true });
+      await expect(details.getByRole("listitem")).toHaveCount(6);
+      await expect(details.getByRole("button", { name: "解散房间", exact: true })).toBeVisible();
+      await page.keyboard.press("Escape");
+      if (device.name.includes("full-canvas")) {
+        const area = primaryPhoneCases.find((item) => item.name === device.name.replace("full-canvas", "browser-area"))!;
+        const original = page.viewportSize()!;
+        for (const viewport of [{ width: area.width, height: area.height }, original]) {
+          await page.setViewportSize(viewport);
+          // Reserve notch/home-indicator space explicitly; Chromium has no physical iPhone notch.
+          await page.getByRole("main").evaluate((element) => { element.style.padding = "59px 8px 34px"; });
+          await drawingFits(page, 34);
+        }
+        await page.getByRole("main").evaluate((element) => { element.style.removeProperty("padding"); });
+      }
       await button("选择颜色").click(); await button("红色画笔").click();
       await button("画笔").click(); await button("16 像素").click();
       await stroke(page, device.name !== "desktop", [200, 300], [600, 300]);
@@ -72,7 +112,14 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
       const input = (await snapshot(sessions[1]!)).game!.task!.input!;
       expect(input.kind).toBe("drawing"); expect(input).not.toHaveProperty("word");
       expect(input).toMatchObject({ background: "#fff3bf", strokes: [{ tool: "pen", width: 16 }, { tool: "eraser", width: 32 }] });
-      for (let round = 1; round < 3; round++) for (const seat of sessions) await submit(seat);
+      for (let round = 1; round < sessions.length; round++) {
+        if (round % 2 === 0) {
+          await expect(page.getByRole("heading", { name: "把这句话画出来" })).toBeVisible();
+          await drawingFits(page);
+          if (round === 2) await page.screenshot({ path: testInfo.outputPath("later-drawing.png"), fullPage: true, scale: "css" });
+        }
+        for (const seat of sessions) await submit(seat);
+      }
       const preview = page.getByRole("img", { name: "工具画家的画作", exact: true });
       await expect(preview).toBeVisible(); expect(await pixel(preview)).toEqual([255, 243, 191, 255]); expect(await pixel(preview, 300, 300)).toEqual(red);
       await expect(page.getByRole("article").first()).toContainText("我的题目是");

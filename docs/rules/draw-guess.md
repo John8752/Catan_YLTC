@@ -41,3 +41,7 @@ Word suggestions use an injected seed. Core accepts explicit commands for drafts
 ## Word bank
 
 Six choices per player are drawn without replacement from an original noun-focused bank. Each set includes three regional nouns (from different regions), two birthday/everyday nouns and one playful original phrase. Themes cover Hangzhou, Beijing, Chengdu, Dallas, the Philippines, Chongqing and Guiyang; everyday and birthday objects keep the bank approachable. Regional names are researched, not copied from a commercial game's word list. Research sources and editorial choices live in [Word-bank sources](../draw-guess-word-sources.md).
+
+## 超时收稿的轮次边界
+
+一次到期只处理到期前这一轮尚未交稿的任务。即使补上最后一份稿后已经进入下一轮，也必须停止处理这一轮以外的任务。上一轮已交稿的玩家在下一轮仍应获得完整创作时间，不能被旧倒计时记为缺页。

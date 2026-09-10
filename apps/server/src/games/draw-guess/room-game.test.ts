@@ -26,6 +26,28 @@ function finishWork(registry: RoomRegistry, sessions: RoomSession[]) {
   }
 }
 describe("draw-guess server", () => {
+  it("starts a full unsubmitted round when the first seat is the last to time out", () => {
+    vi.useFakeTimers();
+    const { registry, host, sessions } = setup(3);
+    for (const session of sessions) {
+      const game = view(registry, session).game!, task = game.task!;
+      const command = { matchId: game.id, taskId: task.id, page: { kind: "opening" as const, word: task.suggestions[0]!, strokes: [{ color: "#222222", width: 8, points: [[20, 30]] as const }] } };
+      registry.executeDrawCommand(host.roomId, session.seatToken, "opening", session === host ? { ...command, type: "draft", sequence: 1 } : { ...command, type: "submit" });
+    }
+    vi.advanceTimersByTime(90_000);
+    for (const session of sessions) {
+      const game = view(registry, session).game!;
+      expect(game.phase).toEqual({ kind: "work", step: 1 });
+      expect(game.task?.submitted).toBe(false);
+      expect(game.progress.every((player) => !player.submitted)).toBe(true);
+      expect(game.deadline?.deadlineAt).toBe(Date.now() + 60_000);
+    }
+    for (const session of sessions) {
+      const game = view(registry, session).game!;
+      registry.executeDrawCommand(host.roomId, session.seatToken, "guess", { type: "submit", matchId: game.id, taskId: game.task!.id, page: { kind: "text", text: "猜".repeat(game.task!.hintLength!) } });
+    }
+    expect(view(registry, host).game?.phase).toEqual({ kind: "work", step: 2 });
+  });
   it("uses a two-second intro and four-second pages while deduplicating and broadcasting reactions", () => {
     vi.useFakeTimers();
     const { registry, host, sessions } = setup(3);

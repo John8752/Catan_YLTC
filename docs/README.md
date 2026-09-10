@@ -14,6 +14,8 @@ Draw-guess opening drawings, hints and automatic system-host reveal: [Rules upda
 
 Draw-guess regional/birthday/everyday nouns: [Word-bank research and sources](./draw-guess-word-sources.md). Exact-length guesses and repeatable page reactions follow the current [Draw-guess rules](./rules/draw-guess.md).
 
+Draw-guess conversation reveal, drawing tools and next-round expiry fix: [Verification](./validation/draw-guess-conversation-tools-expiry.md).
+
 Platform/game isolation refactor: [Ownership and validation](./validation/game-isolation.md).
 
 For current work, read product direction, [development workflow](./development-workflow.md), [scoped testing](./testing.md), then the affected game's rule notes and relevant ADRs. Draw-guess work does not require reading historical Catan milestones.

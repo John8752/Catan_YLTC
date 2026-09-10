@@ -31,10 +31,11 @@ export function executeDrawGuess(state: DrawGuessState, actorId: string | null, 
     if (actorId !== null || state.phase.kind !== "work" || state.phase.step !== command.step) throw new DrawGuessError("STALE_TASK", "这个阶段已结束");
     let next = state;
     for (const player of state.players) {
-      const task = taskFor(next, player.id);
+      // Freeze the expiring task set: the final commit may already advance next.
+      const task = taskFor(state, player.id);
       if (!task || task.submitted) continue;
-      const draft = next.drafts[player.id]?.page;
-      const required = requiredGuessLength(next, task);
+      const draft = state.drafts[player.id]?.page;
+      const required = requiredGuessLength(state, task);
       const validLength = draft?.kind !== "text" || required === null || guessCharacterCount(draft.text) === required;
       next = commit(next, task, player.id, draft && !pageIsEmpty(draft) && validLength ? draft : { kind: "missing", expected: task.kind }, true);
     }

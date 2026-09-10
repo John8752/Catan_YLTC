@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button.js";
 import { DisbandRoomControl } from "../../components/DisbandRoomControl.js";
 import { saveDrawSettings } from "./api.js";
 import { DrawWork } from "./DrawWork.js";
+import { useGuessViewport } from "./use-guess-viewport.js";
 import { Gallery } from "./Gallery.js";
 import { cn } from "../../lib/utils.js";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../components/ui/dialog.js";
@@ -21,6 +22,8 @@ export function DrawGuessTable({ room, session, busy, error, connectionState, ac
   const isHost = room.hostPlayerId === session.playerId, game = room.game;
   const working = game?.phase.kind === "work";
   const drawing = working && game.task?.kind !== "text";
+  const guessing = working && game.task?.kind === "text" && !game.task.submitted;
+  const guessViewport = useGuessViewport(guessing);
   useLayoutEffect(() => { if (working) window.scrollTo(0, 0); }, [working, game?.task?.id]);
   async function settings(next: DrawGuessSettings) {
     await runBusy(async () => { try { setRoom(await saveDrawSettings(session, room.revision, next)); } catch (error) { setRoom(await getRoom(session)); throw error; } });
@@ -29,9 +32,9 @@ export function DrawGuessTable({ room, session, busy, error, connectionState, ac
     <ul className="grid grid-cols-3 gap-2">{room.members.map((member) => <li key={member.id} className={cn("min-w-0 rounded-lg px-2 py-2 text-center text-sm", member.id === session.playerId ? "bg-amber-100" : "bg-slate-100")}><span className="block truncate font-medium" title={member.name}>{member.name}</span><small className="text-slate-600">{working ? game.progress.find((p) => p.playerId === member.id)?.submitted ? "已交稿 ✓" : "创作中" : member.isHost ? "房主" : "已入座"}</small></li>)}</ul>
   </section>;
   const controls = <div className="flex flex-wrap items-center justify-between gap-3">{accountControl}<div className="flex flex-wrap gap-2">{!game || game.phase.kind === "finished" ? <Button variant="outline" disabled={busy} onClick={() => void handleLeave()}>离开房间</Button> : null}{isHost && <DisbandRoomControl room={room} busy={busy} onDisband={handleDisband} />}</div></div>;
-  return <main className={cn("bg-[#f5f1e9] px-[max(.5rem,env(safe-area-inset-left),env(safe-area-inset-right))] pb-[max(.5rem,env(safe-area-inset-bottom))] pt-[max(.5rem,env(safe-area-inset-top))] text-slate-900", drawing ? "h-dvh" : "min-h-svh")}>
-    <div className={cn("mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-3", drawing && "h-full min-h-0 gap-2")}>
-      {game ? <header className="flex shrink-0 items-center justify-between gap-2">
+  return <main style={guessViewport.style} className={cn("bg-[#f5f1e9] px-[max(.5rem,env(safe-area-inset-left),env(safe-area-inset-right))] pb-[max(.5rem,env(safe-area-inset-bottom))] pt-[max(.5rem,env(safe-area-inset-top))] text-slate-900", drawing || guessing ? "h-dvh" : "min-h-svh", guessing && "overflow-hidden")}>
+    <div className={cn("mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-3", (drawing || guessing) && "h-full min-h-0 gap-2")}>
+      {game ? <header className={cn("flex shrink-0 items-center justify-between gap-2", guessViewport.compact && "hidden")}>
         <div><h1 className="text-sm font-bold">传画猜词{working && <span className="ml-2 font-normal text-slate-600">第 {game.phase.step + 1} / {game.totalSteps} 轮</span>}</h1>{connectionState !== "live" && <p role="status" className="text-xs text-amber-800">{connectionState === "connecting" ? "正在重连…" : "离线 · 草稿仍可编辑"}</p>}</div>
         <Dialog><DialogTrigger asChild><Button variant="ghost" className="min-h-11 px-2 text-xs">{working ? `${game.progress.filter((p) => p.submitted).length}/${room.members.length} 已交稿 · 房间` : "房间信息"}</Button></DialogTrigger>
           <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto"><DialogHeader><DialogTitle>房间信息</DialogTitle><DialogDescription>房间码 {room.id} · {connectionState === "live" ? "已连接" : "连接恢复中"}</DialogDescription></DialogHeader>{players}{controls}</DialogContent>
@@ -52,7 +55,7 @@ export function DrawGuessTable({ room, session, busy, error, connectionState, ac
         </div>
         <p className="text-sm text-slate-500">房间固定为传画猜词，需要 3–6 人。超时自动收稿；语音聊天请使用你们已有的软件。</p>
         {isHost ? <div className="flex flex-wrap gap-2"><Button className="min-h-11 flex-1" disabled={busy || room.members.length < 3} onClick={() => void handleStart()}>开始传画猜词</Button><Button className="min-h-11" variant="outline" disabled={busy || room.members.length < 2} onClick={() => void runBusy(async () => setRoom(await shuffleRoomMembers(session, room.revision)))}>打乱座位</Button></div> : <p role="status" className="text-center">等待房主开始…</p>}
-      </section> : game.phase.kind === "work" && game.task ? <DrawWork key={game.task.id} game={game} session={session} onRoom={setRoom} /> : <Gallery key={game.id} room={room} session={session} onRoom={setRoom} isHost={isHost} busy={busy} onReplay={() => void onReturnToLobby()} />}
+      </section> : game.phase.kind === "work" && game.task ? <DrawWork key={game.task.id} game={game} session={session} onRoom={setRoom} compactGuess={guessViewport.compact} /> : <Gallery key={game.id} room={room} session={session} onRoom={setRoom} isHost={isHost} busy={busy} onReplay={() => void onReturnToLobby()} />}
       {error && <p role="alert" className="break-words rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {!game && <footer className="border-t border-slate-300 pt-4">{controls}</footer>}
     </div>

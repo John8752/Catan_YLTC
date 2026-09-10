@@ -47,7 +47,23 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
     try {
       await page.goto("/"); await page.getByRole("button", { name: "开始传画猜词" }).click();
       await expect(page.getByLabel("六个候选词")).toBeVisible();
-      await drawingFits(page);
+      await expect(page.getByRole("dialog", { name: "选个词，再开画" })).toBeVisible();
+      await expect(page.getByRole("img", { name: "画布", exact: true })).toHaveCount(0);
+      const picker = page.getByRole("dialog", { name: "选个词，再开画" });
+      await expect(picker.getByRole("button", { name: "关闭", exact: true })).toHaveCount(0);
+      await page.keyboard.press("Escape"); await page.mouse.click(4, 4);
+      await expect(picker).toBeVisible();
+      await expect(page.getByRole("button", { name: "完成并提交", exact: true })).toHaveCount(0);
+      const initialWords = await page.getByLabel("六个候选词").getByRole("button").allTextContents();
+      const deadline = (await snapshot(host)).game!.deadline!.deadlineAt;
+      await picker.getByRole("button", { name: "换一批", exact: true }).click();
+      await expect.poll(async () => (await page.getByLabel("六个候选词").getByRole("button").allTextContents()).filter((word) => initialWords.includes(word))).toEqual([]);
+      await expect(picker.getByRole("button", { name: "换一批", exact: true })).toBeEnabled();
+      const refreshedWords = await page.getByLabel("六个候选词").getByRole("button").allTextContents();
+      expect(refreshedWords).toHaveLength(6);
+      expect((await snapshot(host)).game!.deadline!.deadlineAt).toBe(deadline);
+      await page.reload(); await expect(picker).toBeVisible();
+      expect(await page.getByLabel("六个候选词").getByRole("button").allTextContents()).toEqual(refreshedWords);
       await expect(page.getByText(/草稿/)).toHaveCount(0);
       await page.screenshot({ path: testInfo.outputPath("opening-choices.png"), fullPage: true, scale: "css" });
       await page.getByLabel("六个候选词").getByRole("button").first().click();
@@ -98,6 +114,33 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
       await expect.poll(async () => (await snapshot(host)).game?.task?.draft?.page).toMatchObject({ background: "#fff3bf", strokes: [{ tool: "pen", width: 16 }, { tool: "eraser", width: 32 }] });
       await expect(page.getByText(/草稿/)).toHaveCount(0);
       expect(await button("完成并提交").boundingBox()).toEqual(submitBounds);
+      await button("换词").click(); await expect(picker).toBeVisible(); await expect(canvas).toHaveCount(0);
+      const beforeReroll = await page.getByLabel("六个候选词").getByRole("button").allTextContents();
+      const commandUrl = `**/api/rooms/${host.roomId}/draw-guess/commands`;
+      let dropReroll = true; const receipts: string[] = [];
+      await page.route(commandUrl, async (route) => {
+        const body = route.request().postDataJSON();
+        if (body.command.type === "reroll") {
+          receipts.push(body.commandId);
+          if (dropReroll) { dropReroll = false; await route.fetch(); await route.abort("failed"); return; }
+        }
+        await route.continue();
+      });
+      await button("换一批").click();
+      await expect(picker.getByRole("alert")).toContainText("换词尚未确认");
+      await expect(page.getByLabel("六个候选词").getByRole("button").first()).toBeDisabled();
+      const acceptedWords = (await snapshot(host)).game!.task!.suggestions;
+      await button("重试换一批").click();
+      await expect(button("换一批")).toBeEnabled();
+      expect(receipts).toHaveLength(2); expect(receipts[0]).toBe(receipts[1]);
+      const nextWords = await page.getByLabel("六个候选词").getByRole("button").allTextContents();
+      expect(nextWords).toEqual(acceptedWords); expect(nextWords.some((word) => beforeReroll.includes(word))).toBe(false);
+      await page.unroute(commandUrl);
+      await page.reload(); await expect(picker).toBeVisible(); await expect(canvas).toHaveCount(0);
+      expect(await page.getByLabel("六个候选词").getByRole("button").allTextContents()).toEqual(nextWords);
+      await page.getByLabel("六个候选词").getByRole("button").first().click();
+      await expect(picker).toHaveCount(0); await expect(canvas).toBeVisible();
+      expect(await pixel(canvas)).toEqual([255, 243, 191, 255]); expect(await pixel(canvas, 300, 300)).toEqual(red);
       await page.reload(); await expect(canvas).toBeVisible();
       expect(await pixel(canvas)).toEqual([255, 243, 191, 255]); expect(await pixel(canvas, 300, 300)).toEqual(red);
       await expect(button("撤销")).toBeDisabled();

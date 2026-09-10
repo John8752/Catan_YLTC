@@ -20,18 +20,21 @@ export interface DrawGuessState {
   readonly revision: number;
   readonly players: readonly DrawPlayer[];
   readonly suggestions: Readonly<Record<string, readonly string[]>>;
+  readonly wordSeed: number;
+  readonly suggestionRounds: Readonly<Record<string, number>>;
   readonly phase: { readonly kind: "work"; readonly step: number } | { readonly kind: "reveal"; readonly cursor: number } | { readonly kind: "finished" };
   readonly albums: readonly Album[];
   readonly drafts: Readonly<Record<string, Draft>>;
   readonly reactions: Readonly<Record<string, ReactionCounts>>;
 }
 export type DrawGuessCommand =
+  | { readonly type: "reroll"; readonly matchId: string; readonly taskId: string; readonly sequence: number; readonly page: Extract<EditablePage, { kind: "opening" }> }
   | { readonly type: "draft"; readonly matchId: string; readonly taskId: string; readonly sequence: number; readonly page: EditablePage }
   | { readonly type: "submit"; readonly matchId: string; readonly taskId: string; readonly page: EditablePage }
   | { readonly type: "expire"; readonly matchId: string; readonly step: number }
   | { readonly type: "react"; readonly matchId: string; readonly albumOwnerId: string; readonly step: number; readonly reaction: PageReaction }
   | { readonly type: "reveal"; readonly matchId: string; readonly expectedCursor: number };
-export type DrawGuessPlayerCommand = Extract<DrawGuessCommand, { type: "draft" | "submit" | "react" }>;
+export type DrawGuessPlayerCommand = Extract<DrawGuessCommand, { type: "draft" | "submit" | "react" | "reroll" }>;
 export interface DrawTask { readonly id: string; readonly step: number; readonly albumIndex: number; readonly kind: EditablePage["kind"]; readonly submitted: boolean }
 export class DrawGuessError extends Error {
   constructor(readonly code: string, message: string) { super(message); }

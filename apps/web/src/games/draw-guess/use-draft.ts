@@ -22,6 +22,9 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const pending = useRef<{ readonly id: string; readonly command: DrawGuessPlayerCommand } | null>(null);
+  const rerollPending = useRef<{ readonly id: string; readonly command: Extract<DrawGuessPlayerCommand, { type: "reroll" }> } | null>(null);
+  const [rerolling, setRerolling] = useState(false);
+  const [rerollError, setRerollError] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
   const finished = useRef(task.submitted); finished.current = task.submitted;
   useEffect(() => { pruneDrafts(window.localStorage); }, []);
@@ -30,7 +33,7 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
     removeDraft(window.localStorage, key); pending.current = null;
   }, [task.submitted, key]);
   useEffect(() => {
-    if (task.draft && task.draft.sequence > current.current.sequence && !pending.current) {
+    if (task.draft && task.draft.sequence > current.current.sequence && !pending.current && !rerollPending.current) {
       current.current = task.draft; setDraft(task.draft); saved.current = task.draft.sequence;
     }
   }, [task.draft]);
@@ -44,7 +47,7 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
     const saveLocal = () => { if (!finished.current && current.current.sequence > 0) writeDraft(window.localStorage, key, current.current); };
     const checkpoint = async () => {
       const copy = current.current;
-      if (!active || inFlight || finished.current || pending.current || copy.sequence <= saved.current) return;
+      if (!active || inFlight || finished.current || pending.current || rerollPending.current || copy.sequence <= saved.current) return;
       inFlight = true;
       try {
         const room: DrawGuessRoomView = await sendDrawCommand(session, randomId(), { type: "draft", matchId: game.id, taskId: task.id, sequence: copy.sequence, page: copy.page });
@@ -62,11 +65,11 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
     return () => { active = false; clearInterval(timer); window.removeEventListener("pagehide", saveLocal); if (!finished.current) saveLocal(); };
   }, [session, game.id, task.id, key]);
   function change(page: EditablePage) {
-    if (task.submitted || pending.current) return;
+    if (task.submitted || pending.current || rerollPending.current) return;
     const next = { sequence: current.current.sequence + 1, page }; current.current = next; setDraft(next);
   }
   async function submit() {
-    if (submitting || task.submitted) return;
+    if (submitting || task.submitted || rerollPending.current) return;
     pending.current ??= { id: randomId(), command: { type: "submit", matchId: game.id, taskId: task.id, page: current.current.page } };
     const request = pending.current; setLocked(true); setSubmitting(true); setSubmitError(null);
     try { const room = await sendDrawCommand(session, request.id, request.command); finished.current = true; removeDraft(window.localStorage, key); roomCallback.current(room); }
@@ -79,5 +82,26 @@ export function useDraft(session: PlayerSession, game: DrawGuessView, task: NonN
       setSubmitError(error instanceof Error ? error.message : "提交未确认，请重试；内容仍在这里");
     } finally { setSubmitting(false); }
   }
-  return { page: draft.page, change, submit, submitting, submitError, locked };
+  async function reroll() {
+    if (rerolling || task.submitted || pending.current || current.current.page.kind !== "opening") return;
+    rerollPending.current ??= { id: randomId(), command: { type: "reroll", matchId: game.id, taskId: task.id, sequence: current.current.sequence + 1, page: current.current.page } };
+    const request = rerollPending.current; setRerolling(true); setRerollError(null);
+    try {
+      const room = await sendDrawCommand(session, request.id, request.command);
+      const replacement = room.game?.task?.id === task.id ? room.game.task.draft : null;
+      if (replacement) {
+        current.current = replacement; setDraft(replacement); saved.current = replacement.sequence;
+        writeDraft(window.localStorage, key, replacement);
+      }
+      rerollPending.current = null; roomCallback.current(room);
+    } catch (error) {
+      setRerollError("换词尚未确认，点击重试；画作仍保留。");
+      if (error instanceof ApiError && ["STALE_TASK", "STALE_MATCH", "STALE_DRAFT"].includes(error.code)) {
+        try { const room = await getRoom(session); rerollPending.current = null; setRerollError(null); roomCallback.current(room); } catch { /* Keep the receipt for retry. */ }
+      } else if (error instanceof ApiError && ["INVALID_PAGE", "INVALID_REQUEST", "INVALID_DRAFT"].includes(error.code)) {
+        rerollPending.current = null;
+      }
+    } finally { setRerolling(false); }
+  }
+  return { page: draft.page, change, submit, submitting, submitError, reroll, rerolling, rerollError, locked: locked || rerollPending.current !== null };
 }

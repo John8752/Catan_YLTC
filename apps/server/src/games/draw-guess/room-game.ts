@@ -46,8 +46,8 @@ export class DrawGuessRoomGame {
     room.game = next; room.revision++;
     if (command.type !== "draft") room.appliedCommands.add(key);
     this.sync(room);
-    // Draft content stays private. Checkpoints do not trigger noisy table-wide pushes.
-    if (command.type !== "draft") this.notify(room);
+    // Drafts and replacement choices stay private; only the caller needs the response.
+    if (command.type !== "draft" && command.type !== "reroll") this.notify(room);
     return this.project(room, playerId);
   }
   private settle(room: DrawGuessRoomRecord, next: DrawGuessState) {

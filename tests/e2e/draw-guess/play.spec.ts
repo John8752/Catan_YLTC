@@ -69,7 +69,7 @@ test.describe("@draw-guess", () => {
           if (step === 0) {
             await expect(page.getByLabel("六个候选词").getByRole("button")).toHaveCount(6);
             await expect(page.getByRole("textbox")).toHaveCount(0);
-            await expect(page.getByRole("button", { name: "完成并提交", exact: true })).toBeDisabled();
+            await expect(page.getByRole("button", { name: "完成并提交", exact: true })).toHaveCount(0);
             await page.getByLabel("六个候选词").getByRole("button").nth(i % 6).click();
           }
           if (step % 2 === 0) { await expect(page.getByRole("img", { name: "画布", exact: true })).toBeVisible(); await draw(page); }

@@ -8,6 +8,27 @@ import { sendDrawCommand } from "./api.js";
 import { ApiError } from "../../http.js";
 vi.mock("./api.js", () => ({ sendDrawCommand: vi.fn() }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); localStorage.clear(); });
+it("retries a lost reroll response with the same receipt and recovers ink without the old word", async () => {
+  const state = createDrawGuess("reroll", ["a", "b", "c"].map((id) => ({ id, name: id })), 40);
+  const game = projectDrawGuess(state, "a", null), onRoom = vi.fn();
+  const { result } = renderHook(() => useDraft({ roomId: "ROOM", playerId: "a", seatToken: "token" }, game, game.task!, onRoom));
+  const page = { kind: "opening" as const, word: state.suggestions.a![0]!, strokes: [{ color: "#222222", width: 8, points: [[1, 2]] as const }], background: "#fff3bf" };
+  act(() => result.current.change(page));
+  const next = executeDrawGuess(state, "a", { type: "reroll", matchId: state.id, taskId: game.task!.id, sequence: 2, page });
+  vi.mocked(sendDrawCommand).mockRejectedValueOnce(new Error("response lost")).mockResolvedValueOnce({ game: projectDrawGuess(next, "a", null) } as Awaited<ReturnType<typeof sendDrawCommand>>);
+  await act(() => result.current.reroll());
+  expect(result.current.locked).toBe(true); expect(result.current.rerollError).toContain("尚未确认");
+  act(() => result.current.change({ ...page, word: state.suggestions.a![1]! }));
+  await act(() => result.current.submit());
+  expect(vi.mocked(sendDrawCommand).mock.calls).toHaveLength(1);
+  await act(() => result.current.reroll());
+  const calls = vi.mocked(sendDrawCommand).mock.calls;
+  expect(calls[1]).toEqual(calls[0]); expect(calls[0]![2]).toMatchObject({ type: "reroll", sequence: 2 });
+  expect(result.current.locked).toBe(false); expect(result.current.rerollError).toBeNull();
+  expect(result.current.page).toEqual({ ...page, word: "" });
+  expect(JSON.parse(localStorage.getItem(localStorage.key(0)!)!).page).toEqual({ ...page, word: "" });
+});
+
 it("retries an uncertain submission with the exact same id and content", async () => {
   const state = createDrawGuess("match", ["a", "b", "c"].map((id) => ({ id, name: id })), 40);
   const game = projectDrawGuess(state, "a", null);

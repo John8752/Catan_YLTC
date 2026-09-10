@@ -11,6 +11,7 @@ const scope = { matchId: z.string().min(1).max(100), taskId: z.string().min(1).m
 export const drawCommandSchema = z.object({ seatToken: z.string().min(1).max(100), commandId: z.string().min(1).max(100),
   command: z.discriminatedUnion("type", [
     z.object({ type: z.literal("draft"), ...scope, sequence: z.number().int().positive().safe(), page }).strict(),
+    z.object({ type: z.literal("reroll"), ...scope, sequence: z.number().int().positive().safe(), page: z.object({ kind: z.literal("opening"), word: z.string().max(DRAW_LIMITS.text), ...drawing }).strict() }).strict(),
     z.object({ type: z.literal("submit"), ...scope, page }).strict(),
     z.object({ type: z.literal("react"), matchId: scope.matchId, albumOwnerId: z.string().min(1).max(100), step: z.number().int().min(0).max(5), reaction: z.enum(["up", "down"]) }).strict(),
   ]),

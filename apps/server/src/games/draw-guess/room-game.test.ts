@@ -26,6 +26,31 @@ function finishWork(registry: RoomRegistry, sessions: RoomSession[]) {
   }
 }
 describe("draw-guess server", () => {
+  it("rerolls over HTTP privately, deduplicates retries and preserves the opening deadline", async () => {
+    const { registry, host, sessions } = setup(6, null), app = await buildApp(registry);
+    const original = view(registry, host).game!, other = view(registry, sessions[1]!).game!;
+    const updates: AnyRoomView[] = [];
+    const unsubscribe = registry.subscribe(host.roomId, sessions[1]!.seatToken, (room) => updates.push(room));
+    updates.length = 0;
+    try {
+      const payload = { seatToken: host.seatToken, commandId: "reroll-receipt", command: { type: "reroll", matchId: original.id, taskId: original.task!.id, sequence: 1, page: { kind: "opening", word: "", strokes: [] } } };
+      const post = () => app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/draw-guess/commands`, payload });
+      const response = await post(); expect(response.statusCode).toBe(200);
+      const next = response.json<DrawGuessRoomView>().game!;
+      expect(next.task!.suggestions).toHaveLength(6);
+      expect(next.task!.suggestions.every((word) => !original.task!.suggestions.includes(word))).toBe(true);
+      expect(next.deadline?.deadlineAt).toBe(original.deadline?.deadlineAt);
+      expect(next.task!.draft).toMatchObject({ sequence: 1, page: { word: "", strokes: [] } });
+      const retry = (await post()).json<DrawGuessRoomView>().game!;
+      expect(retry.revision).toBe(next.revision); expect(retry.task!.suggestions).toEqual(next.task!.suggestions);
+      expect(updates).toEqual([]);
+      const otherAfter = view(registry, sessions[1]!).game!;
+      expect(otherAfter.task).toEqual(other.task);
+      for (const word of next.task!.suggestions) expect(JSON.stringify(otherAfter)).not.toContain(word);
+      expect(next).not.toHaveProperty("wordSeed"); expect(next).not.toHaveProperty("suggestionRounds");
+    } finally { unsubscribe(); await app.close(); }
+  });
+
   it("starts a full unsubmitted round when the first seat is the last to time out", () => {
     vi.useFakeTimers();
     const { registry, host, sessions } = setup(3);

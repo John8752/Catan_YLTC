@@ -14,14 +14,15 @@ const actions = [
   "扫地", "拖地", "浇花", "看书", "画画", "拍照", "打电话", "唱歌",
   "打鼓", "打篮球", "举哑铃", "跳绳", "荡秋千",
 ];
-export function wordSuggestions(seed: number, count: number): readonly (readonly string[])[] {
+export function wordSuggestions(seed: number, count: number, excluded: readonly string[] = []): readonly (readonly string[])[] {
   const random = createSeededRandom(seed);
   const shuffle = <T>(items: readonly T[]) => shuffledByIndex(items, (upperExclusive) => Math.floor(random.next() * upperExclusive));
-  const regions = shuffle(Object.values(REGIONAL_NOUNS).map((words) => shuffle<string>(words)));
-  const birthday = shuffle(BIRTHDAY_NOUNS), everyday = shuffle(EVERYDAY_NOUNS);
-  const phrases = shuffle(subjects.flatMap((subject) => actions.map((action) => subject + action)));
+  const blocked = new Set(excluded);
+  const available = (items: readonly string[]) => shuffle(items.filter((word) => !blocked.has(word)));
+  const regions = available(Object.values(REGIONAL_NOUNS).flat());
+  const birthday = available(BIRTHDAY_NOUNS), everyday = available(EVERYDAY_NOUNS);
+  const phrases = available(subjects.flatMap((subject) => actions.map((action) => subject + action)));
   return Array.from({ length: count }, (_, i) => shuffle([
-    ...Array.from({ length: 3 }, (_, j) => { const index = i * 3 + j; return regions[index % regions.length]![Math.floor(index / regions.length)]!; }),
-    birthday[i]!, everyday[i]!, phrases[i]!,
+    regions[i]!, birthday[i]!, everyday[i]!, ...phrases.slice(i * 3, i * 3 + 3),
   ]));
 }

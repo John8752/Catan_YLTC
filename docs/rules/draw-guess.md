@@ -42,6 +42,16 @@ Word suggestions use an injected seed. Core accepts explicit commands for drafts
 
 Six choices per player are drawn without replacement from an original noun-focused bank. Each set includes three regional nouns (from different regions), two birthday/everyday nouns and one playful original phrase. Themes cover Hangzhou, Beijing, Chengdu, Dallas, the Philippines, Chongqing and Guiyang; everyday and birthday objects keep the bank approachable. Regional names are researched, not copied from a commercial game's word list. Research sources and editorial choices live in [Word-bank sources](../draw-guess-word-sources.md).
 
+The simplified bank contains 96 nouns and 990 subject/action combinations (30 subjects × 33 actions). Prefer familiar silhouettes and a single visible action. Remove exact landmarks, obscure food names and near-identical party supplies that require written labels to distinguish. Regional pools are loose editorial associations, not a requirement to identify a city or a specific local specialty. Six-choice distribution and deterministic dealing remain unchanged.
+
+Personalized phrase subjects include the user-provided names 祥子、静雯、大鹏、大靖、丁丁、踢踢 alongside the eight existing characters. 潜水、做饭、抠脚、偷看、大笑 join the eight existing actions. Any subject may combine with any action; these are playful prompts, not claims about what a named person actually did, and are not bound to the submitting player's identity.
+
+The additional 20 actions use recognizable poses or familiar props: 刷牙、洗脸、洗澡、喝水、吃面、吃冰淇淋、吃棒棒糖、扫地、拖地、浇花、看书、画画、拍照、打电话、唱歌、打鼓、打篮球、举哑铃、跳绳、荡秋千. All previously supported actions remain available.
+
+Sixteen childhood-animation subjects join the same phrase pool: 哆啦A梦、皮卡丘、蜡笔小新、龙猫、海绵宝宝、派大星、章鱼哥、米老鼠、唐老鸭、史迪奇、孙悟空、哪吒、葫芦娃、黑猫警长、喜羊羊、灰太狼. These are editorial choices for this group's requested nostalgic theme, prioritizing distinct silhouettes or iconic props. 孙悟空 refers here to the Journey to the West character. Each combines with all 33 actions; no separate standalone-character slot or additional hint is introduced.
+
+The everyday pool also includes 24 simple emoji-inspired nouns: 虾、螃蟹、章鱼、鱼、葡萄、梨、桃子、樱桃、柠檬、橙子、胡萝卜、茄子、黄瓜、蘑菇、汉堡、披萨、薯条、热狗、甜甜圈、饼干、糖果、棒棒糖、冰淇淋、鸡腿. 煎蛋 was already present and is not duplicated. Emoji shapes guide editorial selection; prompts remain plain Chinese text and do not display an emoji answer hint.
+
 ## 超时收稿的轮次边界
 
 一次到期只处理到期前这一轮尚未交稿的任务。即使补上最后一份稿后已经进入下一轮，也必须停止处理这一轮以外的任务。上一轮已交稿的玩家在下一轮仍应获得完整创作时间，不能被旧倒计时记为缺页。

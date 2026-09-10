@@ -1,8 +1,22 @@
 # Draw-guess word-bank research
 
-Researched 2026-09-10. The bank contains 128 curated nouns (56 regional, 24 birthday, 48 everyday) plus the existing 144 original subject/action combinations. Six choices are dealt without replacement: three nouns from distinct regions, one birthday noun, one everyday noun, one playful phrase. Seeded shuffling preserves replay determinism. Regions are internal editorial groups, not extra clues sent to guessers.
+Researched 2026-09-10; simplified and personalized after player feedback on the same date. The current bank contains 96 curated nouns (28 regional-theme associations, 12 birthday, 56 everyday) plus 990 subject/action combinations (30 subjects × 33 actions), totaling 1,086 prompts. The six personal names and five personalized actions were supplied by the user; a further 20 familiar actions were selected for recognizable poses or simple props. Sixteen animation characters add the requested childhood-nostalgia theme. Personal-name combinations do not infer anyone's biography. Six choices are dealt without replacement: three nouns from distinct regions, one birthday noun, one everyday noun, one playful phrase. Seeded shuffling preserves replay determinism. Regions are internal editorial groups, not extra clues sent to guessers.
 
-These pages support the regional associations and object selection. We use short factual names, not their prose, illustrations or a licensed game's word list. Objects such as bamboo, telescopes and diving masks are drawable editorial associations with the described activities; they are not claims of local exclusivity. Chinese translations such as 重逢塔 (Reunion Tower) and 巧克力山 (Chocolate Hills) are used in the game.
+## Emoji-inspired everyday additions
+
+The user suggested selecting recognizable emoji subjects and explicitly requested 虾, with 煎蛋 already in the bank. Twenty-four nouns were selected from familiar animal/food shapes in the [Unicode emoji list](https://unicode.org/emoji/charts/emoji-list.html) and [full emoji chart](https://unicode.org/emoji/charts/full-emoji-list.html), checked 2026-09-10. Examples include 🦐 虾、🦀 螃蟹、🍇 葡萄、🥕 胡萝卜、🍔 汉堡、🍕 披萨、🍩 甜甜圈. The Chinese words are editorial labels; this is not a claim that an emoji guarantees an easy drawing. Only text is added to the everyday pool, with no emoji-image dependency, answer illustration or changed dealing weight.
+
+## Childhood-character selection
+
+The group described themselves as born around 1995 and requested distinctive childhood-animation characters. The 16-name selection is an editorial fit for their request, not a claim that everyone of that age watched every series. It favors silhouettes and props such as a square sponge, starfish, round mouse ears, a gourd, a staff or a police cap. Names combine with the existing simple actions, e.g. 皮卡丘刷牙、派大星抠脚、哪吒跳绳. The game stores prompt text, with no bundled character art or media.
+
+Reference pages checked on 2026-09-10: [CCTV 动画城](https://news.cctv.com/program/dhc/03/index.shtml), [CCTV 海绵宝宝](https://donghua.cctv.com/special/hmbb/shouye/), [CCTV 2013 animation programming](https://shaoer.cntv.cn/special/2013gq/index.shtml), [official Pokémon Chinese Pokédex: 皮卡丘](https://pokedex.pokemon.cn/play/pokedex/0025), [TV Asahi Doraemon characters](https://www.tv-asahi.co.jp/doraemon/character/), [Studio Ghibli works](https://www.ghibli.jp/works/?OpBrower=1). These support character/series identity and animation context; perceived recognizability remains an editorial judgment.
+
+## Initial regional research
+
+The source table below records the initial research, not the current playable inventory. Exact landmarks and obscure local food names were removed in favor of familiar objects: 西湖绸伞 → 雨伞, 盖碗茶 → 茶杯, 长江索道 → 缆车, 秋千长椅 → 秋千. New generic motifs such as lanterns, kites, shells and monkeys are editorial choices, not sourced claims of regional exclusivity. Avoid requiring written labels, regional trivia or subtle differences between nearly identical objects. Difficult or crowded actions such as repairing pipes, riding a roller coaster and playing piano were replaced with one-action scenes such as blowing bubbles, fishing and sleeping. The source of truth for actual words is `packages/game-core/src/draw-guess/word-bank.ts` and `words.ts`.
+
+These pages supported the initial regional associations and object selection. We use short factual names, not their prose, illustrations or a licensed game's word list. The initial bank included Chinese translations such as 重逢塔 (Reunion Tower) and 巧克力山 (Chocolate Hills); both have been removed from the simplified bank.
 
 | Theme | Sources and examples |
 | --- | --- |

@@ -47,7 +47,10 @@ export function ActiveTradePanel({ game, busy, onCommand, compact = false }: {
   const selectedAffordable = selectedTerms !== null && hasTradeResources(game.you.resources, selectedTerms.give);
 
   return (
+    // A newly received offer opens once for a seat that still has to answer it;
+    // the proposer's own offer and already-answered offers stay collapsed.
     <TradePanelShell key={`${offer.offerId}:${compact}`} compact={compact}
+      initiallyOpen={!ownOffer && ownResponse === undefined}
       label={ownOffer ? "等待桌上回应" : "查看报价并回应"}
       title={ownOffer ? "你的公开报价" : `${proposer?.name ?? "玩家"} 的报价`}
       summary={`${briefResources(offer.give)} 换 ${briefResources(offer.receive)} · ${offer.responses.length}/${game.players.length - 1} 已回应`}

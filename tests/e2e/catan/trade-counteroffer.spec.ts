@@ -104,15 +104,14 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     await proposerPage.getByRole("button", { name: "向所有玩家发布报价" }).click();
     await proposerPage.setViewportSize({ width: 1280, height: 720 });
 
-    await expect(responderPage.getByRole("region", { name: "查看报价并回应" })).toBeVisible();
-    await expect(thirdResponderPage.getByRole("region", { name: "查看报价并回应" })).toBeVisible();
+    // A newly received offer opens by itself for seats that still have to answer.
+    await expect(responderPage.getByRole("dialog", { name: "查看报价并回应" })).toBeVisible();
+    await expect(thirdResponderPage.getByRole("dialog", { name: "查看报价并回应" })).toBeVisible();
     await expect.poll(() => thirdResponderPage.evaluate(() => ({
       horizontal: document.documentElement.scrollWidth <= window.innerWidth,
       vertical: document.documentElement.scrollHeight <= window.innerHeight + 1,
     }))).toEqual({ horizontal: true, vertical: true });
 
-    await responderPage.getByRole("button", { name: /展开交易详情/ }).click();
-    await thirdResponderPage.getByRole("button", { name: /展开交易详情/ }).click();
 
     let forcedStaleRevision = false;
     const commandUrl = new RegExp(`/api/rooms/${responder.roomId}/commands$`);
@@ -177,6 +176,8 @@ test("players can publish, counter and complete a trade on desktop and mobile", 
     expect(repeatedCounter.game?.revision).toBe(counterRoom.game?.revision);
     expect(repeatedCounter.game?.history).toEqual(counterRoom.game?.history);
 
+    // The proposer's own offer never opens by itself.
+    await proposerPage.getByRole("button", { name: "你的公开报价 等待桌上回应" }).click();
     await expect(proposerPage.getByRole("button", { name: "岚：提出反报价" })).toBeVisible();
     await proposerPage.screenshot({ path: path.join(artifactDir, "trade-counter-desktop.png"), fullPage: true });
     await proposerPage.getByRole("button", { name: "岚：提出反报价" }).click();

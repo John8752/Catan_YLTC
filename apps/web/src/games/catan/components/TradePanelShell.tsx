@@ -5,11 +5,15 @@ import { cn } from "../../../lib/utils.js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../../../components/ui/dialog.js";
 
-export function TradePanelShell({ compact, label, title, summary, badge, children }: {
-  readonly compact: boolean; readonly label: string; readonly title: string;
+/**
+ * Opens by itself only when mounted with `initiallyOpen`. The caller keys the
+ * shell by offer, so later responses to the same offer never reopen it.
+ */
+export function TradePanelShell({ compact, initiallyOpen, label, title, summary, badge, children }: {
+  readonly compact: boolean; readonly initiallyOpen: boolean; readonly label: string; readonly title: string;
   readonly summary: string; readonly badge: ReactNode; readonly children: ReactNode;
 }) {
-  const [expanded, setExpanded] = useState(!compact);
+  const [expanded, setExpanded] = useState(initiallyOpen);
   const trigger = <button type="button" data-trade-details-trigger={compact || undefined} aria-label={compact ? `展开交易详情，${summary}` : `${title} ${label}`} className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-[#294b47] hover:bg-white/35">
     <Handshake className="size-4 shrink-0" aria-hidden="true" />
     <span className="min-w-0 flex-1"><small className="block text-[10px] font-bold text-[#99543d]">{title}</small><strong className="block truncate text-xs">{compact ? summary : label}</strong></span>

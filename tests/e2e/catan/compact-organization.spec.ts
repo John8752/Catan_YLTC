@@ -48,6 +48,7 @@ for (const viewport of [...primaryPhoneCases, viewportCase(1280, 800)]) {
         await page.keyboard.press("Escape");
         await expect(page.getByRole("button", { name: /展开交易详情/ })).toBeFocused();
       } else {
+        await page.getByRole("button", { name: "你的公开报价 等待桌上回应" }).click();
         await expect(page.getByRole("button", { name: "玩家6的完整长名字：提出反报价" })).toBeVisible();
       }
       run.push({ ...room, revision: 44, game: { ...room.game, revision: 44, openTrade: null } });

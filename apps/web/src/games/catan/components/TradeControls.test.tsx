@@ -17,6 +17,12 @@ const players = [
 
 afterEach(() => cleanup());
 
+/** The desktop panel opens by itself only for an unanswered incoming offer. */
+function expandTradePanel() {
+  const trigger = document.querySelector<HTMLButtonElement>("#active-trade-panel > button");
+  if (trigger?.getAttribute("aria-expanded") === "false") fireEvent.click(trigger);
+}
+
 describe("TradeControls", () => {
   it("composes a player offer from multiple resource types", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
@@ -70,6 +76,7 @@ describe("TradeControls", () => {
   it("shows every response and lets the proposer choose an accepted partner", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
     render(<ActiveTradePanel game={tradeView("player_1")} busy={false} onCommand={onCommand} />);
+    expandTradePanel();
 
     expect(screen.getByRole("region", { name: "等待桌上回应" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "岚：同意交易" })).toBeTruthy();
@@ -85,9 +92,21 @@ describe("TradeControls", () => {
     });
   });
 
+  it("opens a new incoming offer once for a seat that has not answered", () => {
+    const view = tradeView("player_2");
+    const unanswered = { ...view, openTrade: { ...view.openTrade!, responses: view.openTrade!.responses.filter((response) => response.playerId !== "player_2") } };
+    render(<ActiveTradePanel game={unanswered} busy={false} onCommand={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "同意" })).toBeTruthy();
+    cleanup();
+
+    render(<ActiveTradePanel game={tradeView("player_1")} busy={false} onCommand={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "岚：同意交易" })).toBeNull();
+  });
+
   it("records a responder decision without completing the transfer", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
     render(<ActiveTradePanel game={tradeView("player_3")} busy={false} onCommand={onCommand} />);
+    expandTradePanel();
 
     expect(screen.getByText("你已拒绝，仍可修改回应")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "同意" }));
@@ -98,14 +117,19 @@ describe("TradeControls", () => {
 
   it("disables responses and counteroffer submissions that are already public", () => {
     const accepted = render(<ActiveTradePanel game={tradeView("player_2")} busy={false} onCommand={vi.fn()} />);
+    expandTradePanel();
     expect((screen.getByRole("button", { name: "同意" }) as HTMLButtonElement).disabled).toBe(true);
     accepted.unmount();
 
     const declined = render(<ActiveTradePanel game={tradeView("player_3")} busy={false} onCommand={vi.fn()} />);
+
+    expandTradePanel();
     expect((screen.getByRole("button", { name: "拒绝" }) as HTMLButtonElement).disabled).toBe(true);
     declined.unmount();
 
     render(<ActiveTradePanel game={counterTradeView("player_2")} busy={false} onCommand={vi.fn()} />);
+
+    expandTradePanel();
     fireEvent.click(screen.getByRole("button", { name: "反报价" }));
     expect((screen.getByRole("button", { name: "提交反报价" }) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -113,6 +137,7 @@ describe("TradeControls", () => {
   it("lets a responder compose and replace their response with a counteroffer", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
     render(<ActiveTradePanel game={tradeView("player_2")} busy={false} onCommand={onCommand} />);
+    expandTradePanel();
 
     fireEvent.click(screen.getByRole("button", { name: "反报价" }));
     fireEvent.click(screen.getByRole("button", { name: /从反报价中你希望获得移除 1 张砖/ }));
@@ -130,6 +155,7 @@ describe("TradeControls", () => {
   it("shows counteroffer terms and lets the proposer accept them", () => {
     const onCommand = vi.fn<(command: GameCommand) => void>();
     render(<ActiveTradePanel game={counterTradeView("player_1")} busy={false} onCommand={onCommand} />);
+    expandTradePanel();
 
     fireEvent.click(screen.getByRole("button", { name: "岚：提出反报价" }));
     fireEvent.click(screen.getByRole("button", { name: "接受所选反报价" }));

@@ -4,7 +4,7 @@ import path from "node:path";
 import type { RoomView } from "@catan/protocol/catan";
 import { expect, test } from "@playwright/test";
 
-test("six-player board keeps five opponents, the map and the private dock in one phone viewport", async ({ browser, request }) => {
+test("six-player board keeps every seat, the map and the private dock in one phone viewport", async ({ browser, request }) => {
   const hostResponse = await request.post("/api/rooms", { data: { playerName: "甲" } });
   const host = await hostResponse.json() as RoomSession<RoomView>;
   const settingsResponse = await request.patch(`/api/rooms/${host.roomId}/settings`, {
@@ -36,11 +36,10 @@ test("six-player board keeps five opponents, the map and the private dock in one
     await page.goto("/");
     await expect(page.getByRole("img", { name: "由三十块六边形地形组成的游戏棋盘" })).toBeVisible();
     const opponentStrip = page.getByRole("region", { name: "座位顺序" });
+    // All six seats, the local one included, share the phone row without scrolling.
     await expect(opponentStrip.locator("[data-player-id]")).toHaveCount(5);
-    await expect.poll(() => opponentStrip.evaluate((element) => ({
-      contained: getComputedStyle(element).overflowX === "auto",
-      scrollable: element.scrollWidth > element.clientWidth + 1,
-    }))).toEqual({ contained: true, scrollable: true });
+    await expect(opponentStrip.locator("[data-seat-of]:visible")).toHaveCount(6);
+    await expect.poll(() => opponentStrip.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
     await expect.poll(() => page.evaluate(() => ({
       horizontal: document.documentElement.scrollWidth <= window.innerWidth,
       vertical: document.documentElement.scrollHeight <= window.innerHeight + 1,

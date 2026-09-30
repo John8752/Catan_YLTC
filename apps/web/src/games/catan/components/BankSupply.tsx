@@ -3,7 +3,7 @@ import { Landmark } from "lucide-react";
 import { ResourceCard, resourceLabel } from "./ResourceCard.js";
 import { cn } from "../../../lib/utils.js";
 
-export function BankSupply({ resources, className, effectAnchor = true }: { readonly resources: ResourceHand | null; readonly className?: string; readonly effectAnchor?: boolean }) {
+export function BankSupply({ resources, className, cardClassName, effectAnchor = true }: { readonly resources: ResourceHand | null; readonly className?: string; readonly cardClassName?: string; readonly effectAnchor?: boolean }) {
   return (
     <section
       className={cn("mr-auto flex min-w-0 items-center gap-1 rounded-lg border border-white/15 bg-[#173f42]/72 p-1 shadow-sm backdrop-blur-sm lg:gap-1.5 lg:rounded-xl lg:p-1.5", className)}
@@ -20,6 +20,7 @@ export function BankSupply({ resources, className, effectAnchor = true }: { read
             resource={resource}
             count={resources === null ? undefined : resources[resource]}
             variant="bank"
+            className={cardClassName}
             ariaLabel={resources === null ? `银行${resourceLabel(resource)}，数量不公开` : `银行剩余${resourceLabel(resource)} ${resources[resource]} 张`}
           />
         ))}

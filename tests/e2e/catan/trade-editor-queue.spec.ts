@@ -26,28 +26,29 @@ for (const viewport of [...primaryPhoneCases, viewportCase(1280, 800)]) {
       await route.fulfill({ json: { commandId: body.commandId, room: room() } });
     });
     try {
-      const queueTrigger = page.getByRole("button", { name: "查看完整行动队列", exact: true });
-      const queueDialog = page.getByRole("dialog", { name: "完整行动队列", exact: true });
+      const seats = page.getByRole("region", { name: "座位顺序", exact: true });
       if (compact) {
-        await expect(page.locator('[data-turn-queue-player]')).toHaveCount(0);
-        await expect(queueTrigger).toContainText(base.players[1]!.name);
-        await queueTrigger.click();
-        await expect(queueDialog).toBeInViewport({ ratio: 1 });
+        // Phones read order from the seat row; the desktop queue is not mounted.
+        await expect(page.locator('[data-turn-forecast]')).toHaveCount(0);
+        await expect(seats.locator("[data-seat-of]:visible")).toHaveCount(6);
+        await expect(seats.locator("[data-seat-active]")).toHaveAttribute("data-seat-of", "p2");
+        // p2's primary turn is followed by the paired action three seats later.
+        await expect(seats.locator("[data-seat-next]")).toHaveAttribute("data-seat-of", "p5");
+        await expect(seats.locator("[data-seat-next]")).toHaveAttribute("data-seat-next", "paired");
+      } else {
+        await expect(page.locator('[data-turn-queue-player]')).toHaveCount(room().game.turnQueue.length);
+        await expect(page.locator('[data-turn-queue-current]')).toHaveAttribute("data-turn-queue-player", "p2");
       }
-      await expect(page.locator('[data-turn-queue-player]')).toHaveCount(room().game.turnQueue.length);
-      await expect(page.locator('[data-turn-queue-current]')).toHaveAttribute("data-turn-queue-player", "p2");
       state = { ...state, revision: 2, phase: { kind: "turn", step: "action", activePlayerId: "p1", turnNumber: 2 } };
       run.push(room());
-      await expect(page.locator('[data-turn-queue-current]')).toHaveAttribute("data-turn-queue-player", "p1");
       await mkdir("output/playwright/trade-queue-0909", { recursive: true });
       if (compact) {
+        await expect(seats.locator("[data-seat-active]")).toHaveAttribute("data-seat-of", "p1");
         await page.screenshot({ path: `output/playwright/trade-queue-0909/queue-${viewport.width}x${viewport.height}.png`, scale: "css" });
-        await page.keyboard.press("Escape");
-        await expect(queueDialog).toBeHidden();
-        await expect(queueTrigger).toBeFocused();
-        await expect(page.locator('[data-turn-queue-player]')).toHaveCount(0);
+      } else {
+        await expect(page.locator('[data-turn-queue-current]')).toHaveAttribute("data-turn-queue-player", "p1");
+        await expect(page.locator('[data-turn-forecast-summary]')).toHaveText("轮到你了 · 主回合");
       }
-      await expect(page.locator('[data-turn-forecast-summary]')).toHaveText("轮到你了 · 主回合");
       const opener = page.getByRole("button", { name: "发起交易", exact: true });
       await opener.click();
       const dialog = page.getByRole("dialog", { name: "交易桌", exact: true });

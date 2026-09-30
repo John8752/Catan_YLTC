@@ -11,7 +11,7 @@ import { type PlayerSession } from "../../room-session.js";
 import { getCatanRoom as getRoom, rerollRoomMap, submitGameCommand, updateRoomSettings } from "./api.js";
 import { Board } from "./components/Board.js";
 import { BankSupply } from "./components/BankSupply.js";
-import { BankSupplyButton } from "./components/BankSupplyButton.js";
+import { CompactTableBar } from "./components/CompactTableBar.js";
 import { ResponsiveRoomPanel } from "./components/ResponsiveRoomPanel.js";
 import { useMediaQuery } from "../../hooks/use-media-query.js";
 import { GameResult } from "./GameResult.js";
@@ -172,7 +172,7 @@ export function CatanTable({ room, session, updates, busy, error, connectionStat
   // Route one bank/effect anchor to its current surface; do not mount hidden copies.
   const bankSupply = liveGame === null ? null : bankInSidebar
     ? <BankSupply resources={liveGame.bankResources} className="mr-0 w-full shrink-0 justify-center border-transparent bg-transparent shadow-none backdrop-blur-none lg:rounded-none lg:[&>span]:bg-white/5 lg:[&>span]:text-[var(--game-rail-muted)]" />
-    : <BankSupplyButton resources={liveGame.bankResources} effectAnchor={false} />;
+    : <BankSupply resources={liveGame.bankResources} className="border-transparent bg-transparent p-0 shadow-none backdrop-blur-none" cardClassName="h-12 w-9" />;
   const aiControl = liveGame === null ? null : <AiCommentaryControl compact={!bankInSidebar}
       session={session}
       revision={liveGame.revision}
@@ -190,6 +190,18 @@ export function CatanTable({ room, session, updates, busy, error, connectionStat
     headerAction={bankInSidebar ? aiControl : null}
   />;
 
+  const tableUtilities = <TableUtilities
+    compact={!bankInSidebar}
+    tools={roomControls}
+    persistentControl={aiControl}
+    soundControl={<SoundControl {...sound} />}
+    accountControl={compactAccountControl}
+    room={room}
+    playerId={session.playerId}
+    busy={busy}
+    onDisband={handleDisband}
+  />;
+
   return (
     <main className={liveGame === null
       ? "game-layout grid min-h-svh grid-cols-1 gap-3 p-3 lg:h-svh lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:overflow-hidden"
@@ -201,21 +213,9 @@ export function CatanTable({ room, session, updates, busy, error, connectionStat
       </div> : null}
       {liveGame === null ? null : (
         <div className="seat-column col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col gap-1 phone-landscape:col-span-2 xl:min-h-0">
-          <TurnForecastBar
-            compact={!bankInSidebar}
-            game={liveGame}
-            actions={<TableUtilities
-              compact={!bankInSidebar}
-              tools={<>{bankSupply}{roomControls}</>}
-              persistentControl={aiControl}
-              soundControl={<SoundControl {...sound} />}
-              accountControl={compactAccountControl}
-              room={room}
-              playerId={session.playerId}
-              busy={busy}
-              onDisband={handleDisband}
-            />}
-          />
+          {bankInSidebar
+            ? <TurnForecastBar game={liveGame} actions={tableUtilities} />
+            : <CompactTableBar game={liveGame} bank={bankSupply} actions={tableUtilities} />}
           <OpponentStrip game={liveGame} />
         </div>
       )}

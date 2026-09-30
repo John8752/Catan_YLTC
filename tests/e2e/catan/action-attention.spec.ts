@@ -1,4 +1,3 @@
-import { clickGameTool, closeGameMenu } from "./game-tools.js";
 import { mkdir } from "node:fs/promises";
 import { createGame, resourceAmounts, type GameState } from "../../../packages/game-core/src/catan.js";
 import { projectGameForPlayer, type RoomView, type TurnTimerView } from "../../../packages/protocol/src/catan/index.js";
@@ -57,14 +56,15 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
     const { page } = run;
     try {
       await expect(page.locator('[data-action-attention="none"]')).toHaveCount(1);
-      await expect(page.locator('[data-turn-forecast]')).toBeVisible();
-      await expect(page.locator('[data-turn-forecast-summary]')).toHaveText("再过 4 次操作 · 搭档行动");
-      if (width < 1024) await page.getByRole("button", { name: "查看完整行动队列" }).click();
-      await expect(page.locator('[data-turn-queue-current="true"]')).toHaveAttribute("data-turn-queue-player", "p2");
-      await expect(page.locator('[data-turn-queue-self="true"]')).toHaveAttribute("data-turn-queue-player", "p1");
       if (width < 1024) {
-        await page.keyboard.press("Escape");
-        await expect(page.getByRole("dialog", { name: "完整行动队列", exact: true })).toBeHidden();
+        const seats = page.getByRole("region", { name: "座位顺序", exact: true });
+        await expect(seats.locator("[data-seat-active]")).toHaveAttribute("data-seat-of", "p2");
+        await expect(seats.locator('[data-seat-self]')).toBeVisible();
+      } else {
+        await expect(page.locator('[data-turn-forecast]')).toBeVisible();
+        await expect(page.locator('[data-turn-forecast-summary]')).toHaveText("再过 4 次操作 · 搭档行动");
+        await expect(page.locator('[data-turn-queue-current="true"]')).toHaveAttribute("data-turn-queue-player", "p2");
+        await expect(page.locator('[data-turn-queue-self="true"]')).toHaveAttribute("data-turn-queue-player", "p1");
       }
       const forecastArtifact = name.includes("iPhone 16 portrait browser-area")
         ? "iphone-16-portrait"
@@ -81,11 +81,8 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
         });
       }
       await expect(page.locator('[data-resource-source="bank"] [data-resource-count]')).toHaveCount(0);
-      if (width < 1024) await clickGameTool(page, "查看银行库存");
       await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-card]')).toHaveCount(5);
       await expect(page.locator('[aria-label="银行剩余资源"] [data-resource-count]')).toHaveCount(0);
-      if (width < 1024) await page.keyboard.press("Escape");
-      await closeGameMenu(page);
       const mapViewport = page.getByRole("region", { name: "可移动地图视口", exact: true });
       await mapViewport.focus();
       run.push(scenario(2, turn("roll")));
@@ -116,7 +113,9 @@ for (const { name, width, height, options } of [...primaryPhoneCases, ...([
         const tile = document.querySelector(`[data-hex-id="${hexId}"] .hex-surface`)!.getBoundingClientRect();
         const token = document.querySelector(`[data-hex-id="${hexId}"] .token`)!.getBoundingClientRect();
         const anchor = document.querySelector(`[data-robber-anchor="${hexId}"]`)!.getBoundingClientRect();
-        return { clear: pawn.bottom < token.top, upperLeft: pawn.x + pawn.width / 2 < tile.x + tile.width / 2 && pawn.y + pawn.height / 2 < tile.y + tile.height / 2,
+        // The pawn is drawn to rest on the token's top edge in SVG units; after the
+        // fit scale that edge can land a fraction of a pixel either way.
+        return { clear: pawn.bottom - token.top < tile.height * 0.01, upperLeft: pawn.x + pawn.width / 2 < tile.x + tile.width / 2 && pawn.y + pawn.height / 2 < tile.y + tile.height / 2,
           inside: pawn.left >= tile.left && pawn.right <= tile.right && pawn.top >= tile.top && pawn.bottom <= tile.bottom,
           anchorDistance: Math.hypot(pawn.x + pawn.width / 2 - anchor.x - anchor.width / 2, pawn.y + pawn.height / 2 - anchor.y - anchor.height / 2) };
       }, numbered.id);

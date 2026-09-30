@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import { resourceAmounts } from "../../../packages/game-core/src/catan.js";
 import { fixture, openFixture, measure } from "./fixtures.js";
 import { primaryPhoneCases, viewportCase } from "../viewport-cases.js";
-import { clickGameTool, closeGameMenu } from "./game-tools.js";
 
 for (const viewport of [...primaryPhoneCases, viewportCase(1280, 800)]) {
   test(`player details and long negotiations stay reachable at ${viewport.name}`, async ({ browser }, testInfo) => {
@@ -22,11 +21,8 @@ for (const viewport of [...primaryPhoneCases, viewportCase(1280, 800)]) {
       await page.keyboard.press("Escape");
       await expect(detailsTrigger).toBeFocused();
       if (compact) {
-        await clickGameTool(page, "查看银行库存");
-        await expect(page.getByRole("dialog", { name: "银行库存", exact: true })).toBeInViewport({ ratio: 1 });
+        await expect(page.locator('.seat-column [data-resource-source="bank"]')).toBeInViewport({ ratio: 1 });
         await expect(page.locator('[data-resource-source="bank"]')).toHaveCount(1);
-        await page.keyboard.press("Escape");
-        await closeGameMenu(page);
         expect((await measure(page)).board.height).toBeGreaterThan(290);
       }
       const offer = { offerId: "disclosure-trade", proposerId: "p1", give: resourceAmounts({ brick: 1, lumber: 1, wool: 1 }), receive: resourceAmounts({ ore: 1, grain: 1 }), responses: [] };

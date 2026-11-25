@@ -21,6 +21,10 @@ The product now hosts Catan and an original drawing-telephone game for 3–6 pla
 
 ## Consequences
 
+### Carcassonne extension (2026-11-25)
+
+The same room directory now explicitly dispatches `carcassonne` as a third independent game. Its core owns tile/feature half-edge topology, deterministic tile draws and scoring; protocol owns redacted deck views, authoritative placement/follower options and version-1 final scores. Atomic turns bind to match and turn, with receipt deduplication. The server saves a final settlement before installing the finishing state so storage failures remain retryable. The browser owns only the preview and camera. ADR-0017 replaces its original SVG relief with real-time Three.js miniatures and retains SVG as compatibility fallback; the application stack is unchanged. Browser projects bind `testDir` directly to their game directory, preventing an ancestor worktree name from matching another game's tests.
+
 Documentation, test entry points and commit scopes distinguish `platform`, `catan` and `draw-guess`. Preserve existing Catan, account takeover and transport coverage; execute only the modules and layers affected by a change under ADR-0015. New-game rule/protocol/flow work includes the corresponding headless, privacy and multiplayer/browser tests; a local UI edit does not trigger another game's regression.
 
 ## Boundary implementation

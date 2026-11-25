@@ -1,14 +1,17 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { GAME_CATALOG, type GameType, type AccountMatchRecord } from "@catan/protocol/platform";
+import { GAME_CATALOG,DEFAULT_GAME_ID,getGameDefinition,isGameType,unregisteredGame,type GameType, type AccountMatchRecord } from "@catan/protocol/platform";
 import { getMatchHistory } from "../auth-api.js";
 import { Button } from "./ui/button.js";
 
-const CatanMatchItem = lazy(() => import("../games/catan/AccountMatchItem.js"));
 const PokerMatchItem = lazy(() => import("../games/texas-holdem/AccountMatchItem.js"));
+const CatanMatchItem = lazy(() => import("../games/catan/AccountMatchItem.js"));
 const DrawGuessMatchItem = lazy(() => import("../games/draw-guess/AccountMatchItem.js"));
+const CarcassonneMatchItem = lazy(() => import("../games/carcassonne/AccountMatchItem.js"));
+
+const CamelMatchItem = lazy(() => import("../games/camel-up/AccountMatchItem.js"));
 
 export function AccountHistory() {
-  const [gameId, setGameId] = useState<GameType>("catan");
+  const [gameId, setGameId] = useState<GameType>(DEFAULT_GAME_ID);
   const currentGame = useRef(gameId); currentGame.current = gameId;
   const [matches, setMatches] = useState<readonly AccountMatchRecord[]>([]);
   const [offset, setOffset] = useState<number | null>(0);
@@ -34,7 +37,7 @@ export function AccountHistory() {
     } catch { if (currentGame.current === gameId) setError("加载失败，请重试"); }
     finally { if (currentGame.current === gameId) setBusy(false); }
   }
-  return <section className="grid min-w-0 gap-3" aria-label={gameId === "catan" ? "卡坦岛对局记录" : gameId === "texas-holdem" ? "德州扑克对局记录" : "传画猜词对局记录"}>
+  return <section className="grid min-w-0 gap-3" aria-label={getGameDefinition(gameId).historyLabel}>
     <label className="flex items-center gap-3 text-sm font-medium">记录游戏<select className="min-h-10 min-w-0 rounded-lg border px-3" value={gameId} onChange={(e) => setGameId(e.target.value as GameType)}>{GAME_CATALOG.map((game) => <option key={game.id} value={game.id}>{game.name}</option>)}</select></label>
     <p className="text-sm text-muted-foreground">仅保存正常结束的对局结算。中途解散不记录；传画猜词不长期保存画作或词语。</p>
     {error && <p role="alert">{error}</p>}
@@ -45,10 +48,17 @@ export function AccountHistory() {
   </section>;
 }
 function MatchItem({ match }: { readonly match: AccountMatchRecord }) {
-  if (match.dataVersion !== 1 || (match.gameId !== "catan" && match.gameId !== "draw-guess" && match.gameId !== "texas-holdem")) {
-    return <p>此对局的结算版本暂不支持显示。</p>;
+  const gameId=match.gameId;
+  if(!isGameType(gameId)||match.dataVersion!==getGameDefinition(gameId).settlementVersion)return <p>此对局的结算版本暂不支持显示。</p>;
+  function result(id:GameType){
+    switch(id){
+      case "catan":return <CatanMatchItem match={match}/>;
+      case "draw-guess":return <DrawGuessMatchItem match={match}/>;
+      case "camel-up":return <CamelMatchItem match={match}/>;
+      case "carcassonne":return <CarcassonneMatchItem match={match}/>;
+      case "texas-holdem":return <PokerMatchItem match={match}/>;
+      default:return unregisteredGame(id);
+    }
   }
-  return <Suspense fallback={<p role="status">正在读取对局…</p>}>
-    {match.gameId === "catan" ? <CatanMatchItem match={match} /> : match.gameId === "texas-holdem" ? <PokerMatchItem match={match} /> : <DrawGuessMatchItem match={match} />}
-  </Suspense>;
+  return <Suspense fallback={<p role="status">正在读取对局…</p>}>{result(gameId)}</Suspense>;
 }

@@ -19,7 +19,7 @@ const RESOURCE_LABELS: Record<Resource, string> = {
 };
 
 test("players can publish, counter and complete a trade on desktop and mobile", async ({ browser, request }) => {
-  const hostResponse = await request.post("/api/rooms", { data: { playerName: "林" } });
+  const hostResponse = await request.post("/api/rooms", { data: { gameId: "catan", playerName: "林" } });
   const host = await hostResponse.json() as RoomSession<RoomView>;
   const secondResponse = await request.post(`/api/rooms/${host.roomId}/join`, { data: { playerName: "岚" } });
   const second = await secondResponse.json() as RoomSession<RoomView>;

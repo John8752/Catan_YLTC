@@ -42,7 +42,7 @@ function cli(args, input) { return execFileSync(process.execPath, [cliFile, ...a
 try {
   await start();
   const registered = await api("/api/auth/register", { username: "runtime_smoke", displayName: "重启验收", password: "runtime-smoke-password" });
-  await api("/api/rooms", { playerName: "ignored" }, registered.cookie, registered.data.csrfToken);
+  await api("/api/rooms", { gameId: "catan", playerName: "ignored" }, registered.cookie, registered.data.csrfToken);
   assert.equal((await api("/api/auth/me", undefined, registered.cookie)).data.activeSeat.room.members.length, 1);
   cli(["backup", join(directory, "backups"), "14"]);
   assert.throws(() => cli(["reset-password", "runtime_smoke"], "new-smoke-password"));

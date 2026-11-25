@@ -92,7 +92,7 @@ describe("texas-holdem server", () => {
       expect(retry.game!.deadline!.deadlineAt).toBe(current.game!.deadline!.deadlineAt);
       expect(() => send(r, seats[1]!, { type: "next-hand" })).toThrow();
       expect(() => r.updatePokerSettings(host.roomId, host.seatToken, view(r, host).revision, DEFAULT_POKER_SETTINGS)).toThrow();
-      const other = r.createRoom("卡坦");
+      const other = r.createRoom("卡坦", null, "catan");
       const wrong = await app.inject({ method: "POST", url: `/api/rooms/${other.roomId}/texas-holdem/commands`, payload: { seatToken: other.seatToken, commandId: "wrong", command: c } });
       expect(wrong.json()).toMatchObject({ error: { code: "WRONG_GAME" } });
     } finally { await app.close(); }

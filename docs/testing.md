@@ -9,6 +9,8 @@
 | platform | 账号、房间、座位、公共入口、平台传输契约 | protocol/platform；server/platform、auth、database；web 公共组件、会话、lib | tests/e2e/platform |
 | catan | 卡坦规则、地图、手牌、交易、历史、反馈 | core 的 Catan 领域目录；protocol/catan；server/games/catan；web/games/catan、effects | tests/e2e/catan |
 | draw-guess | 选词、画画、猜词、草稿、提示、揭晓 | core/draw-guess；protocol/draw-guess；server/games/draw-guess；web/games/draw-guess | tests/e2e/draw-guess |
+| carcassonne | 拼图、随从、地形连通、农夫与计分 | core/carcassonne；protocol/carcassonne；server/games/carcassonne；web/games/carcassonne | tests/e2e/carcassonne |
+| camel-up | 堆叠移动、摇骰、投注、观众牌、合伙与结算 | core/camel-up；protocol/camel-up；server/games/camel-up；web/games/camel-up | tests/e2e/camel-up |
 | tooling | 测试选择、CI、依赖边界 | scripts/testing、tests/architecture | 收集清单验证，不自行开启游戏回归 |
 
 代码层为 `core`、`protocol`、`server`、`web`、`browser`、`tooling`。游戏测试跟随自己的实现；公共测试即使使用某个游戏作为身份/传输夹具，也只验证平台契约。浏览器的 Catan 夹具放在 `tests/e2e/catan/fixtures.ts`，账号历史也使用它，因此该夹具修改同时影响 platform 和 catan 的浏览器测试。公共设备描述统一在 `tests/e2e/viewport-cases.ts`。
@@ -86,7 +88,7 @@ Catan 地图已支持缩放，手机端不设置默认缩放下的最小字号�
 | iPhone 16 | 393 × 852 | 393 × 659 | 3 |
 | iPhone 16 Pro Max | 440 × 956 | 440 × 763 | 3 |
 
-用 `tests/e2e/viewport-cases.ts` 中的定义。`pnpm test:e2e:catan:mobile` 检查 Catan 的地图/港口/HUD；`pnpm test:e2e:draw-guess:mobile` 检查选词、Canvas、字数提示、主持人和画册。没有跨游戏默认 `test:e2e:mobile`。局部场景继续用 `--grep` 缩小，不把一整个手机 suite 当作所有 UI 修改的固定步骤。报告实际引擎和尺寸，Chromium 模拟不等于真机 Safari 验收。
+用 `tests/e2e/viewport-cases.ts` 中的定义。`pnpm test:e2e:catan:mobile` 检查 Catan 的地图/港口/HUD；`pnpm test:e2e:draw-guess:mobile` 检查选词、Canvas、字数提示、主持人和画册；`pnpm test:e2e:carcassonne:mobile` 检查卡卡颂的预览、随从、缩放、长条地图、安全区与动效。没有跨游戏默认 `test:e2e:mobile`。局部场景继续用 `--grep` 缩小，不把一整个手机 suite 当作所有 UI 修改的固定步骤。报告实际引擎和尺寸，Chromium 模拟不等于真机 Safari 验收。
 
 ## 构建、CI 与显式集成
 
@@ -105,6 +107,12 @@ pnpm test:catan:replay  # Catan 的完整规则重放，可单独定位
 全量用于明确的跨模块集成、测试结构迁移核验或发布要求，需要记录原因。它不再是每次提交、每次规则调整的默认要求；不要为了“保险”重复两遍。重放、边界检查已在完整单元集合中，全量 gate 不重复跑一遍；手机用例已包含在所属浏览器集合中，也不重跑一次。
 
 遇到失败先跑失败用例。只有新修复影响其他用例时才扩大到相应 suite；一次无关游戏超时不应让当前单游戏工作反复全跑。验证记录应写明范围、命令、结果、没有验证的相关风险，保留失败与重试证据。
+
+## 骆驼大赛
+
+使用 `pnpm validate:camel-up`、`pnpm test:camel-up --layer core`、`pnpm test:e2e:camel-up`，主要手机矩阵为 `pnpm test:e2e:camel-up:mobile`。其 WebGL 依赖按需加载，不引入其他游戏规则依赖。新增子路径导出触发该游戏的编译与构建；运行时依赖变动需要构建并检查公共入口和按需加载边界。平台房间和目录分派变化选取 platform；没有其他游戏规则改动时不因此重复卡坦或传画猜词玩法回归。
+
+手机验收使用共享 viewport-cases 中四个 primaryPhoneCases，并补充 iPhone14BrowserAreaCase；验证固定底部行动区、浏览器可用高度变化、安全区、最多玩家、长名称、3D 旋转/缩放/复位、极端堆叠和上下文丢失回退。动效检查还需确认重连不重放、暗投色不进入投影 effects、减少动态设置保留可读结果。
 
 ## 德州扑克
 

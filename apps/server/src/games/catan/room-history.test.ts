@@ -7,7 +7,7 @@ import type { CatanRoomRecord } from "./room-types.js";
 it("sends new history/effects per subscription and recent history without replay effects on reconnect", () => {
   const registry = new RoomRegistry({ nextSeed: () => 42 });
   try {
-    const host = registry.createRoom("甲"); registry.joinRoom(host.roomId, "乙");
+    const host = registry.createRoom("甲", null, "catan"); registry.joinRoom(host.roomId, "乙");
     const modern: RoomView[] = [], legacy: RoomView[] = [];
     registry.subscribe(host.roomId, host.seatToken, (view) => modern.push(view), undefined, undefined, true);
     registry.subscribe(host.roomId, host.seatToken, (view) => legacy.push(view));
@@ -31,7 +31,7 @@ it("pages past 200 events through an authenticated seat and rejects invalid or r
   const registry = new RoomRegistry({ nextSeed: () => 42 }), app = await buildApp(registry);
   registry.configureAccountValidation(() => true); // This fixture exercises seat rotation; auth/session validity has its own suite.
   try {
-    const host = registry.createRoom("甲", "owner"), other = registry.joinRoom(host.roomId, "乙");
+    const host = registry.createRoom("甲", "owner", "catan"), other = registry.joinRoom(host.roomId, "乙");
     registry.startRoom(host.roomId, host.seatToken);
     const internal = (registry as unknown as { rooms: Map<string, CatanRoomRecord> }).rooms.get(host.roomId)!;
     internal.game = { ...internal.game!, revision: 601 };

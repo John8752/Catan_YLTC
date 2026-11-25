@@ -2,7 +2,7 @@ import type { PlayerColor } from "@catan/game-core/primitives";
 import type { GameType } from "./index.js";
 
 export interface CreateRoomRequest {
-  readonly gameId?: GameType;
+  readonly gameId: GameType;
   readonly playerName: string;
 }
 

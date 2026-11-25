@@ -13,3 +13,7 @@ coverage/
 output/playwright/
 test-results/
 playwright-report/
+.impeccable/
+!apps/web/.impeccable/
+apps/web/.impeccable/*
+!apps/web/.impeccable/design.json

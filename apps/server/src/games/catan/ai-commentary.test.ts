@@ -93,7 +93,7 @@ describe("buildAiGameContext", () => {
 
 function startedRoom() {
   const registry = new RoomRegistry();
-  const host = registry.createRoom("林");
+  const host = registry.createRoom("林", null, "catan");
   registry.joinRoom(host.roomId, "周");
   registry.joinRoom(host.roomId, "陈");
   const room = registry.startRoom(host.roomId, host.seatToken);

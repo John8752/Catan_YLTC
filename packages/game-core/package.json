@@ -7,6 +7,8 @@
     "./catan": "./src/catan.ts",
     "./primitives": "./src/primitives/index.ts",
     "./draw-guess": "./src/draw-guess/index.ts",
+    "./carcassonne": "./src/carcassonne/index.ts",
+    "./camel-up": "./src/camel-up/index.ts",
     "./texas-holdem": "./src/texas-holdem/index.ts"
   },
   "scripts": {

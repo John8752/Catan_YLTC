@@ -215,7 +215,7 @@ describe("draw-guess server", () => {
       expect((await post({ type: "reveal", matchId: game.id, expectedCursor: 0 })).statusCode).toBe(400);
       expect((await post({ type: "submit", matchId: game.id, taskId: game.task!.id, page: { kind: "text", text: "a".repeat(81) } })).statusCode).toBe(400);
       expect((await app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/commands`, payload: { seatToken: host.seatToken, expectedRevision: 1, commandId: "x", command: { type: "RollDice" } } })).json()).toMatchObject({ error: { code: "WRONG_GAME" } });
-      const catan = registry.createRoom("卡坦玩家");
+      const catan = registry.createRoom("卡坦玩家", null, "catan");
       expect((await app.inject({ method: "POST", url: `/api/rooms/${catan.roomId}/draw-guess/commands`, payload: { seatToken: catan.seatToken, commandId: "x", command: { type: "submit", matchId: "fake", taskId: "fake", page: { kind: "text", text: "hi" } } } })).json()).toMatchObject({ error: { code: "WRONG_GAME" } });
     } finally { await app.close(); }
   });

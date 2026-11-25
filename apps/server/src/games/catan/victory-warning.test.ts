@@ -6,7 +6,7 @@ import { RoomRegistry } from "./test-helpers/registry.js";
 it("broadcasts a real scoring milestone, retains it on reconnect and deduplicates command retries", () => {
   const registry = new RoomRegistry({ nextSeed: () => 42, now: () => 0 });
   try {
-    const host = registry.createRoom("林");
+    const host = registry.createRoom("林", null, "catan");
     const seats = [host, registry.joinRoom(host.roomId, "周"), registry.joinRoom(host.roomId, "陈")];
     const lobby = registry.getRoom(host.roomId, host.seatToken);
     registry.updateSettings(host.roomId, host.seatToken, lobby.revision, { ...lobby.settings, victoryPointsToWin: 6 });

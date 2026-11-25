@@ -7,7 +7,7 @@ it("locks bank visibility to host lobby settings and redacts commands, reads and
   const registry = new RoomRegistry({ nextSeed: () => 42 });
   const app = await buildApp(registry);
   try {
-    const host = registry.createRoom("甲");
+    const host = registry.createRoom("甲", null, "catan");
     const guest = registry.joinRoom(host.roomId, "乙");
     registry.joinRoom(host.roomId, "丙");
     let room = registry.getRoom(host.roomId, host.seatToken);

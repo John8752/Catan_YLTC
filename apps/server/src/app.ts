@@ -1,7 +1,9 @@
+import { registerCamelRoutes } from "./games/camel-up/routes.js";
 import { sendError, normalizeError, rejectionCodes } from "./route-errors.js";
 import { registerCatanRoutes } from "./games/catan/routes.js";
 import { registerPokerRoutes } from "./games/texas-holdem/routes.js";
 import { registerDrawGuessRoutes } from "./games/draw-guess/routes.js";
+import { registerCarcassonneRoutes } from "./games/carcassonne/routes.js";
 import { createRoomEventEncoder, ROOM_EVENT_TRANSPORT, createRoomStreamEncoder, ROOM_MAP_TRANSPORT } from "@catan/protocol/catan";
 import { playerNameSchema, startRoomSchema, playerColorSchema, shuffleRoomMembersSchema, leaveRoomSchema } from "./route-schemas.js";
 import { SqliteDatabase } from "./database/sqlite-database.js";
@@ -149,6 +151,8 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
   registerCatanRoutes(app, registry, options);
   registerDrawGuessRoutes(app, registry);
   registerPokerRoutes(app, registry);
+  registerCarcassonneRoutes(app, registry);
+  registerCamelRoutes(app, registry);
 
   app.get("/health", async () => ({ ok: true, service: "catan-server", rooms: registry.roomCount }));
   app.get("/api/games", async () => ({ games: GAME_CATALOG }));

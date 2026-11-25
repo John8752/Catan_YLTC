@@ -1,0 +1,29 @@
+/* Game-owned SVG renderer and state motion; business layouts stay in Tailwind. */
+.carc-game [data-carc-renderer="ready"] canvas { cursor: grab; outline-offset: -4px; }
+.carc-game [data-carc-renderer="ready"] canvas:active { cursor: grabbing; }
+.carc-game [data-carc-renderer="ready"] canvas:focus-visible { outline: 2px solid #34523f; }
+.carc-game .carc-map-svg { outline-offset: -3px; }
+.carc-game .carc-map-svg:focus-visible { outline: 2px solid #e7cd85; }
+.carc-game .carc-map-svg [role="button"] { cursor: pointer; outline: none; }
+.carc-game .carc-map-svg [role="button"]:focus-visible { filter: drop-shadow(0 0 2px #fff2b0); }
+.carc-game .carc-map-svg [data-feature-kind="field"]:focus-visible { fill: #f7d77b; fill-opacity: .8; }
+.carc-game .carc-map-svg [data-feature-kind="road"]:focus-visible > [data-road-surface] { stroke: #f7d77b; stroke-width: 16; }
+.carc-game .carc-map-svg [data-feature-kind="city"]:focus-visible > [data-city-surface] { fill: #f7d77b; stroke: #fff4cd; stroke-width: 3; }
+.carc-game .carc-camera { transition: transform 220ms cubic-bezier(.16,1,.3,1); }
+.carc-game .carc-camera-moving { transition: none; }
+.carc-game .carc-tile-art > g { transition: transform 220ms cubic-bezier(.16,1,.3,1); transform-box: view-box; }
+.carc-game .carc-preview { filter: drop-shadow(3px 6px 5px #071f2160); }
+.carc-game .carc-preview .carc-tile-art { animation: carc-preview-in 220ms cubic-bezier(.16,1,.3,1); }
+.carc-game .carc-pawn-selected { animation: carc-pawn-in 250ms cubic-bezier(.16,1,.3,1); }
+.carc-game .carc-tile-arrived { animation: carc-tile-in 380ms cubic-bezier(.16,1,.3,1); }
+.carc-game .carc-tool svg { filter: drop-shadow(0 1px 0 #fff9e2); transition: transform 160ms ease-out; }
+.carc-game .carc-tool:active svg { transform: scale(.88); }
+.carc-game .carc-score-notice { animation: carc-score-in 400ms cubic-bezier(.16,1,.3,1); }
+@keyframes carc-preview-in { from { opacity: .65; translate: 0 -8px; } to { opacity: 1; translate: 0 0; } }
+@keyframes carc-pawn-in { from { opacity: .6; translate: 0 -10px; } to { opacity: 1; translate: 0 0; } }
+@keyframes carc-tile-in { from { opacity: .7; translate: 0 -15px; } to { opacity: 1; translate: 0 0; } }
+@keyframes carc-score-in { from { opacity: .5; translate: 0 5px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .carc-game .carc-camera,.carc-game .carc-tile-art > g,.carc-game .carc-tool svg { transition: none; }
+  .carc-game .carc-preview .carc-tile-art,.carc-game .carc-pawn-selected,.carc-game .carc-tile-arrived,.carc-game .carc-score-notice { animation: none; }
+}

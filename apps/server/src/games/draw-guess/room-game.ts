@@ -1,3 +1,4 @@
+import { DRAW_GUESS_PLAYER_LIMITS } from "@catan/game-core/draw-guess";
 import { randomUUID } from "node:crypto";
 import { DrawGuessError, createDrawGuess, executeDrawGuess, type DrawGuessPlayerCommand, type DrawGuessState } from "@catan/game-core/draw-guess";
 import { DEFAULT_DRAW_GUESS_SETTINGS, REVEAL_INTERVAL_MS, REVEAL_INTRO_MS, projectDrawGuess, type DrawGuessRoomView, type DrawGuessSettings, type DrawGuessSettlementV1 } from "@catan/protocol/draw-guess";
@@ -19,9 +20,9 @@ export class DrawGuessRoomGame {
       members: room.members.map(({ id, name, color }) => ({ id, name, color, isHost: id === room.hostPlayerId })), settings: { ...room.settings },
       game: room.game ? projectDrawGuess(room.game, viewerId, timer ? { deadlineAt: timer.deadlineAt, durationMs: timer.durationMs, serverNow: this.now() } : null) : null };
   }
-  capacity(): number { return 6; }
+  capacity(): number { return DRAW_GUESS_PLAYER_LIMITS.max; }
   start(room: DrawGuessRoomRecord) {
-    if (room.members.length < 3 || room.members.length > 6) throw new RoomError("NOT_ENOUGH_PLAYERS", "传画猜词需要 3–6 人");
+    if (room.members.length < DRAW_GUESS_PLAYER_LIMITS.min || room.members.length > DRAW_GUESS_PLAYER_LIMITS.max) throw new RoomError("NOT_ENOUGH_PLAYERS", "传画猜词需要 3–6 人");
     const matchId = randomUUID(); const game = createDrawGuess(matchId, room.members.map(({ id, name }) => ({ id, name })), room.seed);
     room.matchId = matchId; room.startedAt = this.now(); room.game = game; this.sync(room);
   }

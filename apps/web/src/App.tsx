@@ -1,3 +1,4 @@
+import { unregisteredGame } from "@catan/protocol/platform";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { AccountView, AuthResponse, AnyRoomView, GameType } from "@catan/protocol/platform";
 import { getAccount } from "./auth-api.js";
@@ -14,9 +15,12 @@ import { adoptLegacyTabSession, createPlayerSessionStore, seatSlotFromLocation }
 
 adoptLegacyTabSession(window.sessionStorage, window.localStorage);
 const playerSessionStore = createPlayerSessionStore(window.localStorage, seatSlotFromLocation(window.location.search));
-const CatanTable = lazy(() => import("./games/catan/CatanTable.js").then((module) => ({ default: module.CatanTable })));
 const PokerTable = lazy(() => import("./games/texas-holdem/PokerTable.js").then((module) => ({ default: module.PokerTable })));
+const CatanTable = lazy(() => import("./games/catan/CatanTable.js").then((module) => ({ default: module.CatanTable })));
 const DrawGuessTable = lazy(() => import("./games/draw-guess/DrawGuessTable.js").then((module) => ({ default: module.DrawGuessTable })));
+const CarcassonneTable = lazy(() => import("./games/carcassonne/CarcassonneTable.js").then((module) => ({ default: module.CarcassonneTable })));
+
+const CamelTable = lazy(() => import("./games/camel-up/CamelTable.js").then((module) => ({ default: module.CamelTable })));
 
 /** Account, room and connection shell. Game-specific controls live in games/<gameId>. */
 export function App() {
@@ -75,11 +79,18 @@ export function App() {
   const compactAccountControl = <AccountControl compact account={account} session={session} onLogin={installAccount} onLogout={clearAccount} onProfile={setAccount} />;
   if (!session) return <Welcome busy={busy || !authReady} error={error} onCreate={handleCreate} onJoin={handleJoin} accountControl={accountControl} defaultPlayerName={account?.displayName ?? ""} />;
   if (!room) return <main className="loading-table"><span className="brand-mark" aria-hidden="true">⬡</span><p>{error ?? "正在重新铺好桌面…"}</p>
-    <button className="quiet-button" type="button" onClick={clearCurrentSession}>清除失效会话并返回</button></main>;
+    <button className="quiet-button" type="button" onClick={clearCurrentSession}>返回大厅选择游戏</button></main>;
   const common = { session, busy, error, connectionState, accountControl, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby: handleReplay };
-  return <Suspense fallback={<main className="loading-table"><p role="status">正在准备游戏桌面…</p></main>}>{room.gameId === "catan"
-    ? <CatanTable key={room.id} {...common} room={room} updates={updates} snapshotEpoch={snapshotEpoch} compactAccountControl={compactAccountControl} />
-    : room.gameId === "texas-holdem" ? <PokerTable key={room.id} {...common} room={room} snapshotEpoch={snapshotEpoch} />
-    : <DrawGuessTable key={room.id} {...common} room={room} />}</Suspense>;
+  function table(view:AnyRoomView){
+    switch(view.gameId){
+      case "catan":return <CatanTable key={view.id} {...common} room={view} updates={updates} snapshotEpoch={snapshotEpoch} compactAccountControl={compactAccountControl}/>;
+      case "draw-guess":return <DrawGuessTable key={view.id} {...common} room={view}/>;
+      case "camel-up":return <CamelTable key={view.id} {...common} room={view} snapshotEpoch={snapshotEpoch}/>;
+      case "carcassonne":return <CarcassonneTable key={view.id} {...common} room={view}/>;
+      case "texas-holdem":return <PokerTable key={view.id} {...common} room={view} snapshotEpoch={snapshotEpoch}/>;
+      default:return unregisteredGame(view);
+    }
+  }
+  return <Suspense fallback={<main className="loading-table"><p role="status">正在准备游戏桌面…</p></main>}>{table(room)}</Suspense>;
 }
 function errorMessage(error: unknown) { return error instanceof Error ? error.message : "发生了未知错误"; }

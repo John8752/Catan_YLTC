@@ -1,6 +1,6 @@
 # 德州扑克开发与验证
 
-日期：2026-11-25。分支 `codex/texas-holdem`，独立 managed worktree `C:/Users/Administrator/.codex/worktrees/texas-holdem/Catan_YLTC`，基于已提交的 `main` / `62993de`。原 `E:/Catan_YLTC` 中未提交的骆驼大赛改动保留原处，未混入本分支；本次没有合并或部署。
+日期：2026-11-25。开发分支 `codex/texas-holdem`，独立 managed worktree `C:/Users/Administrator/.codex/worktrees/texas-holdem/Catan_YLTC`，开发起点为 `main` / `62993de`。开发期间未改动原工作区的未提交内容；后续接入最新 `main` 的验证见本文末尾。本次未部署。
 
 ## 范围
 
@@ -64,3 +64,21 @@ Playwright 驱动真实隔离服务，采集同一加注与弃牌交互的普通
 - 初版截图暴露公共牌裁切及方格布局不符用户参考；最终改为竖向椭圆环桌并补充垂直可见性、底池与头像避让断言。
 - 不以全局“无动画”为截图等待条件；行动倒计时本身会更新 SVG 圆环。截图等待有限的 authored animations，排除持续更新的 CSS transition，避免把计时器误判成未完成动作。
 - 未运行真实 iOS Safari、物理设备 GPU/帧率测试、线上 HTTP 真机联调或部署。本次没有游戏内现金、充值、重入、抽水或复制第三方品牌素材。
+
+## 接入 main 的合并验证
+
+2026-11-25，功能提交 `906080b` 接入 `main` / `c24cf94`。保留 main 已有的骆驼大赛、卡卡颂及 ADR-0018 显式游戏分派，向房间、桌面、战绩和同步策略的穷举分派加入德州扑克；保留现有游戏的创建标签、战绩标签、结算版本和独立设置。解决包导出、测试归属与 Playwright 项目冲突，按 main 新签名调整德州扑克测试。
+
+合并后的实际验证：
+
+| 命令 | 结果 |
+| --- | --- |
+| `pnpm test:plan --scope texas-holdem` | 独立四层与 browser 范围，7 个单元/集成文件、2 个静态保护 |
+| `pnpm validate:texas-holdem --build` | 本游戏 34 例、架构 8 例、plain-HTTP API 保护 4 例与四个包的生产构建通过 |
+| `pnpm validate:platform` | 协议 3 例、服务端 29 例、网页 23 例、架构 8 例通过 |
+| `pnpm validate:tooling` | 27 个测试选择用例与架构 8 例通过 |
+| `pnpm test:e2e:texas-holdem` | 8 例通过，包含两种模式、四个主手机区域及普通/减少动态 |
+| `pnpm test:e2e:platform unknown-game.spec.ts lazy-history.spec.ts` | 4 例通过，桌面及 iPhone 16 portrait browser-area 的未知游戏处理与战绩按需加载 |
+| `pnpm test:e2e:all --list` | 仅收集 196 例 / 35 文件；六个正向项目均可收集 |
+
+浏览器采用 Chromium 与前文相同的 CSS viewport 矩阵，使用独立端口、隔离服务和内存 SQLite；没有运行其他游戏的玩法回归或真实 iOS Safari。合并范围相对 main 的 `git diff --check` 通过。仅更新本地 Git，未推送或部署。

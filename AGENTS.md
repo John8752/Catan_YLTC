@@ -10,7 +10,7 @@
 
 ## Code map
 
-- `apps/web`: React room shell, Catan SVG board/DOM HUD, draw-guess Canvas 2D and game-specific controls.
+- `apps/web`: React room shell, Catan SVG board/DOM HUD, draw-guess Canvas 2D, camel-up Three.js playfield and game-specific controls.
 - `apps/server`: HTTP/WebSocket transport, room lifecycle and connection management.
 - `packages/game-core`: independent deterministic game modules, phases, commands, rules and invariants; Catan owns board generation.
 - `packages/protocol`: client/server message types and hidden-information redaction.
@@ -19,10 +19,11 @@
 
 ## Multi-game ownership
 
-- See ADR-0014 and `docs/multi-game-plan.md`. Product docs, test entries and commit notes distinguish `platform`, `catan` and `draw-guess`.
+- See ADR-0014 and `docs/multi-game-plan.md`. Product docs, test entries and commit notes distinguish `platform`, `catan`, `draw-guess`, `camel-up` and `carcassonne`.
 - A room's `gameId` is immutable. Each start creates a fresh globally unique `matchId`; completed rooms may return to the same game's lobby.
+- Every registered game has an explicit dispatch case. `else`/`default` rejects unknown games; never borrow another game's capacity, settings, table, result UI or synchronization policy. Player limits belong to each game's core (Catan uses its named rule profile); see ADR-0018.
 - Keep one common room/account/seat directory. Game adapters live under `apps/server/src/games`; game screens under `apps/web/src/games`.
-- `game-core` retains Catan's domain modules and provides independent `draw-guess` and shared `primitives` subpaths. Do not import Catan rules into another game. `protocol` owns the discriminated room views.
+- `game-core` retains Catan's domain modules and provides independent `draw-guess`, `camel-up`, `carcassonne` and shared `primitives` subpaths. Do not import Catan rules into another game. `protocol` owns the discriminated room views.
 - Draw-guess uses bounded Canvas 2D strokes under ADR-0014. Drafts and unrevealed pages are private; do not broadcast them or persist them to SQLite. Client commands bind to a match and task, not the global revision of simultaneous submissions.
 - Browser regression launches isolated test servers and in-memory SQLite; never reuse a running development server/database for acceptance.
 
@@ -35,7 +36,7 @@
 - Prefer small feature modules. Split a file before adding substantial behavior once it approaches 500 lines.
 - Shared identifiers, resource names, commands and events must not be duplicated across apps.
 - UI copy defaults to Simplified Chinese. Stable protocol values remain English code strings.
-- Use SVG for the board and DOM for text-heavy controls, dialogs, logs and accessibility-sensitive UI.
+- Use SVG for Catan and DOM for text-heavy controls, dialogs, logs and accessibility-sensitive UI. Camel-up uses Three.js under ADR-0016; Carcassonne uses its own Three.js renderer under ADR-0017. Both retain SVG compatibility views; meshes never decide rules or legality.
 
 ## Frontend stack constraints
 
@@ -162,6 +163,13 @@ Hard constraints:
 - Before committing, inspect `git status --short` and `git diff --cached`; do not include logs, browser artifacts, databases, secrets or unrelated edits.
 - Do not rewrite published history or use destructive Git commands unless the user explicitly requests it.
 - See `docs/development-workflow.md` for the full lightweight workflow.
+
+## Camel-up ownership
+
+- See `docs/rules/camel-up.md` and ADR-0016. Rules and state: `game-core/camel-up`; safe snapshots, effects and results: `protocol/camel-up`; adapters and screens: `games/camel-up`.
+- Dice outcomes are server-selected explicit inputs. Core never generates randomness. Secret finish-card colours must not enter logs, effects or other players’ snapshots before the finish.
+- Keep Three.js and font assets local to the web game. Do not couple its camera/geometry to legality. Provide SVG fallback after WebGL failure, DOM controls, reduced motion and full renderer disposal.
+- Mobile follows Catan’s fitted playfield / bottom dock pattern, with portrait iPhone 16 and Pro Max primary cases plus iPhone 14 compatibility. Test using `pnpm test:e2e:camel-up` / `pnpm test:e2e:camel-up:mobile` in isolated servers.
 
 ## Texas-holdem ownership
 

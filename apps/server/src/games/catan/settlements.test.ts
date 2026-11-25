@@ -11,7 +11,7 @@ it("persists exactly one final settlement before broadcasting, survives retry, o
   const registry = new RoomRegistry({ nextSeed: () => 81 });
   const repository = new SqliteMatchRepository(database);
   registry.configureMatchRepository(repository);
-  const host = registry.createRoom("甲", "a"); registry.joinRoom(host.roomId, "游客");
+  const host = registry.createRoom("甲", "a", "catan"); registry.joinRoom(host.roomId, "游客");
   registry.updateSettings(host.roomId, host.seatToken, 2, { ruleProfile: "base-3-4", victoryPointsToWin: 5 });
   registry.startRoom(host.roomId, host.seatToken);
   const room = (registry as unknown as { rooms: Map<string, CatanRoomRecord> }).rooms.get(host.roomId)!;
@@ -43,7 +43,7 @@ it("persists exactly one final settlement before broadcasting, survives retry, o
     players: room.members.map(({ id, name, color }) => ({ id, name, color })), summary: result.room.game?.summary } });
   expect(JSON.stringify(history)).not.toMatch(/"(seatToken|accountId|developmentCards|developmentDeck|password|history|mapSeed)":/);
   expect(registry.accountSeat("a")).toBeNull();
-  expect(registry.createRoom("第二局", "a").roomId).not.toBe(host.roomId);
+  expect(registry.createRoom("第二局", "a", "catan").roomId).not.toBe(host.roomId);
   registry.disbandRoom(host.roomId, host.seatToken);
   expect(repository.history("a", "catan", 0, 20).matches).toHaveLength(1);
   registry.dispose(); database.close();
@@ -52,9 +52,9 @@ it("persists exactly one final settlement before broadcasting, survives retry, o
 it("never archives unfinished disbanded or abandoned rooms", () => {
   const database = new SqliteDatabase(":memory:"); const repository = new SqliteMatchRepository(database);
   const registry = new RoomRegistry({ now: () => 100 }); registry.configureMatchRepository(repository);
-  const first = registry.createRoom("游客"); registry.joinRoom(first.roomId, "朋友"); registry.startRoom(first.roomId, first.seatToken);
+  const first = registry.createRoom("游客", null, "catan"); registry.joinRoom(first.roomId, "朋友"); registry.startRoom(first.roomId, first.seatToken);
   registry.disbandRoom(first.roomId, first.seatToken);
-  registry.createRoom("另一位"); registry.evictIdleRooms(0);
+  registry.createRoom("另一位", null, "catan"); registry.evictIdleRooms(0);
   expect(database.db.prepare("SELECT count(*) n FROM match_results").get()?.n).toBe(0);
   registry.dispose(); database.close();
 });

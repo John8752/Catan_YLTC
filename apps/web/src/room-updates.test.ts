@@ -3,12 +3,20 @@ import { createDrawGuess } from "@catan/game-core/draw-guess";
 import { DEFAULT_DRAW_GUESS_SETTINGS, projectDrawGuess, type DrawGuessRoomView } from "@catan/protocol/draw-guess";
 import { RoomUpdates } from "./room-updates.js";
 import { createGameRoomPolicy } from "./games/room-sync.js";
+import type { AnyRoomView,GameType } from "@catan/protocol/platform";
 
 const session = { roomId: "ROOM", playerId: "a", seatToken: "seat" };
 const state = createDrawGuess("MATCH", ["a", "b", "c"].map((id) => ({ id, name: id })), 42);
 const room = (revision: number): DrawGuessRoomView => ({
   id: "ROOM", gameId: "draw-guess", matchId: state.id, revision, hostPlayerId: "a", members: [],
   settings: DEFAULT_DRAW_GUESS_SETTINGS, game: projectDrawGuess(state, "a", null),
+});
+it("rejects unknown games before selecting any synchronization policy",()=>{
+  const publish=vi.fn(),policy=vi.fn(),updates=new RoomUpdates(session,publish,policy);
+  expect(()=>updates.accept({...room(1),gameId:"unregistered-game"} as unknown as AnyRoomView,session)).toThrow("未知游戏类型");
+  expect(updates.snapshot).toBeNull();expect(policy).not.toHaveBeenCalled();expect(publish).not.toHaveBeenCalled();
+  expect(()=>createGameRoomPolicy("unregistered-game" as GameType,updates)).toThrow("未注册");
+  for(const gameId of ["draw-guess","camel-up","carcassonne"] as const)expect(createGameRoomPolicy(gameId,updates)).toBeNull();
 });
 
 it("orders drawing snapshots without a Catan history policy and rejects old-seat responses", () => {

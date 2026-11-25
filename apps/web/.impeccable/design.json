@@ -1,0 +1,673 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-25T07:13:22.477668+00:00",
+  "title": "Design System: YLTC Tabletop",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Primary",
+        "tonalRamp": [
+          "oklch(0.150 0.0220 185.00)",
+          "oklch(0.260 0.0358 185.00)",
+          "oklch(0.380 0.0467 185.00)",
+          "oklch(0.500 0.0550 185.00)",
+          "oklch(0.620 0.0550 185.00)",
+          "oklch(0.740 0.0467 185.00)",
+          "oklch(0.860 0.0330 185.00)",
+          "oklch(0.950 0.0138 185.00)"
+        ]
+      },
+      "primary-foreground": {
+        "role": "primary",
+        "displayName": "Primary Foreground",
+        "tonalRamp": [
+          "oklch(0.150 0.0060 86.00)",
+          "oklch(0.260 0.0097 86.00)",
+          "oklch(0.380 0.0127 86.00)",
+          "oklch(0.500 0.0150 86.00)",
+          "oklch(0.620 0.0150 86.00)",
+          "oklch(0.740 0.0127 86.00)",
+          "oklch(0.860 0.0090 86.00)",
+          "oklch(0.950 0.0037 86.00)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "tonalRamp": [
+          "oklch(0.150 0.0140 82.00)",
+          "oklch(0.260 0.0228 82.00)",
+          "oklch(0.380 0.0298 82.00)",
+          "oklch(0.500 0.0350 82.00)",
+          "oklch(0.620 0.0350 82.00)",
+          "oklch(0.740 0.0298 82.00)",
+          "oklch(0.860 0.0210 82.00)",
+          "oklch(0.950 0.0088 82.00)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Foreground",
+        "tonalRamp": [
+          "oklch(0.150 0.0120 185.00)",
+          "oklch(0.260 0.0195 185.00)",
+          "oklch(0.380 0.0255 185.00)",
+          "oklch(0.500 0.0300 185.00)",
+          "oklch(0.620 0.0300 185.00)",
+          "oklch(0.740 0.0255 185.00)",
+          "oklch(0.860 0.0180 185.00)",
+          "oklch(0.950 0.0075 185.00)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card",
+        "tonalRamp": [
+          "oklch(0.150 0.0160 86.00)",
+          "oklch(0.260 0.0260 86.00)",
+          "oklch(0.380 0.0340 86.00)",
+          "oklch(0.500 0.0400 86.00)",
+          "oklch(0.620 0.0400 86.00)",
+          "oklch(0.740 0.0340 86.00)",
+          "oklch(0.860 0.0240 86.00)",
+          "oklch(0.950 0.0100 86.00)"
+        ]
+      },
+      "popover": {
+        "role": "neutral",
+        "displayName": "Popover",
+        "tonalRamp": [
+          "oklch(0.150 0.0100 86.00)",
+          "oklch(0.260 0.0163 86.00)",
+          "oklch(0.380 0.0213 86.00)",
+          "oklch(0.500 0.0250 86.00)",
+          "oklch(0.620 0.0250 86.00)",
+          "oklch(0.740 0.0213 86.00)",
+          "oklch(0.860 0.0150 86.00)",
+          "oklch(0.950 0.0063 86.00)"
+        ]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Secondary",
+        "tonalRamp": [
+          "oklch(0.150 0.0220 80.00)",
+          "oklch(0.260 0.0358 80.00)",
+          "oklch(0.380 0.0467 80.00)",
+          "oklch(0.500 0.0550 80.00)",
+          "oklch(0.620 0.0550 80.00)",
+          "oklch(0.740 0.0467 80.00)",
+          "oklch(0.860 0.0330 80.00)",
+          "oklch(0.950 0.0138 80.00)"
+        ]
+      },
+      "secondary-foreground": {
+        "role": "secondary",
+        "displayName": "Secondary Foreground",
+        "tonalRamp": [
+          "oklch(0.150 0.0120 185.00)",
+          "oklch(0.260 0.0195 185.00)",
+          "oklch(0.380 0.0255 185.00)",
+          "oklch(0.500 0.0300 185.00)",
+          "oklch(0.620 0.0300 185.00)",
+          "oklch(0.740 0.0255 185.00)",
+          "oklch(0.860 0.0180 185.00)",
+          "oklch(0.950 0.0075 185.00)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(0.150 0.0100 80.00)",
+          "oklch(0.260 0.0163 80.00)",
+          "oklch(0.380 0.0213 80.00)",
+          "oklch(0.500 0.0250 80.00)",
+          "oklch(0.620 0.0250 80.00)",
+          "oklch(0.740 0.0213 80.00)",
+          "oklch(0.860 0.0150 80.00)",
+          "oklch(0.950 0.0063 80.00)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Foreground",
+        "tonalRamp": [
+          "oklch(0.150 0.0100 175.00)",
+          "oklch(0.260 0.0163 175.00)",
+          "oklch(0.380 0.0213 175.00)",
+          "oklch(0.500 0.0250 175.00)",
+          "oklch(0.620 0.0250 175.00)",
+          "oklch(0.740 0.0213 175.00)",
+          "oklch(0.860 0.0150 175.00)",
+          "oklch(0.950 0.0063 175.00)"
+        ]
+      },
+      "accent": {
+        "role": "tertiary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(0.150 0.0560 42.00)",
+          "oklch(0.260 0.0910 42.00)",
+          "oklch(0.380 0.1190 42.00)",
+          "oklch(0.500 0.1400 42.00)",
+          "oklch(0.620 0.1400 42.00)",
+          "oklch(0.740 0.1190 42.00)",
+          "oklch(0.860 0.0840 42.00)",
+          "oklch(0.950 0.0350 42.00)"
+        ]
+      },
+      "accent-foreground": {
+        "role": "tertiary",
+        "displayName": "Accent Foreground",
+        "tonalRamp": [
+          "oklch(0.150 0.0060 86.00)",
+          "oklch(0.260 0.0097 86.00)",
+          "oklch(0.380 0.0127 86.00)",
+          "oklch(0.500 0.0150 86.00)",
+          "oklch(0.620 0.0150 86.00)",
+          "oklch(0.740 0.0127 86.00)",
+          "oklch(0.860 0.0090 86.00)",
+          "oklch(0.950 0.0037 86.00)"
+        ]
+      },
+      "destructive": {
+        "role": "tertiary",
+        "displayName": "Destructive",
+        "tonalRamp": [
+          "oklch(0.150 0.0600 28.00)",
+          "oklch(0.260 0.0975 28.00)",
+          "oklch(0.380 0.1275 28.00)",
+          "oklch(0.500 0.1500 28.00)",
+          "oklch(0.620 0.1500 28.00)",
+          "oklch(0.740 0.1275 28.00)",
+          "oklch(0.860 0.0900 28.00)",
+          "oklch(0.950 0.0375 28.00)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(0.150 0.0140 75.00)",
+          "oklch(0.260 0.0228 75.00)",
+          "oklch(0.380 0.0298 75.00)",
+          "oklch(0.500 0.0350 75.00)",
+          "oklch(0.620 0.0350 75.00)",
+          "oklch(0.740 0.0298 75.00)",
+          "oklch(0.860 0.0210 75.00)",
+          "oklch(0.950 0.0088 75.00)"
+        ]
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Input",
+        "tonalRamp": [
+          "oklch(0.150 0.0140 75.00)",
+          "oklch(0.260 0.0228 75.00)",
+          "oklch(0.380 0.0298 75.00)",
+          "oklch(0.500 0.0350 75.00)",
+          "oklch(0.620 0.0350 75.00)",
+          "oklch(0.740 0.0298 75.00)",
+          "oklch(0.860 0.0210 75.00)",
+          "oklch(0.950 0.0088 75.00)"
+        ]
+      },
+      "ring": {
+        "role": "neutral",
+        "displayName": "Ring",
+        "tonalRamp": [
+          "oklch(0.150 0.0320 190.00)",
+          "oklch(0.260 0.0520 190.00)",
+          "oklch(0.380 0.0680 190.00)",
+          "oklch(0.500 0.0800 190.00)",
+          "oklch(0.620 0.0800 190.00)",
+          "oklch(0.740 0.0680 190.00)",
+          "oklch(0.860 0.0480 190.00)",
+          "oklch(0.950 0.0200 190.00)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(0.150 0.0103 191.93)",
+          "oklch(0.260 0.0168 191.93)",
+          "oklch(0.380 0.0219 191.93)",
+          "oklch(0.500 0.0258 191.93)",
+          "oklch(0.620 0.0258 191.93)",
+          "oklch(0.740 0.0219 191.93)",
+          "oklch(0.860 0.0155 191.93)",
+          "oklch(0.950 0.0064 191.93)"
+        ]
+      },
+      "pine": {
+        "role": "primary",
+        "displayName": "Pine",
+        "tonalRamp": [
+          "oklch(0.150 0.0172 190.58)",
+          "oklch(0.260 0.0280 190.58)",
+          "oklch(0.380 0.0366 190.58)",
+          "oklch(0.500 0.0431 190.58)",
+          "oklch(0.620 0.0431 190.58)",
+          "oklch(0.740 0.0366 190.58)",
+          "oklch(0.860 0.0259 190.58)",
+          "oklch(0.950 0.0108 190.58)"
+        ]
+      },
+      "pine-soft": {
+        "role": "primary",
+        "displayName": "Pine Soft",
+        "tonalRamp": [
+          "oklch(0.150 0.0206 184.17)",
+          "oklch(0.260 0.0335 184.17)",
+          "oklch(0.380 0.0439 184.17)",
+          "oklch(0.500 0.0516 184.17)",
+          "oklch(0.620 0.0516 184.17)",
+          "oklch(0.740 0.0439 184.17)",
+          "oklch(0.860 0.0310 184.17)",
+          "oklch(0.950 0.0129 184.17)"
+        ]
+      },
+      "ocean": {
+        "role": "secondary",
+        "displayName": "Ocean",
+        "tonalRamp": [
+          "oklch(0.150 0.0268 210.45)",
+          "oklch(0.260 0.0435 210.45)",
+          "oklch(0.380 0.0569 210.45)",
+          "oklch(0.500 0.0669 210.45)",
+          "oklch(0.620 0.0669 210.45)",
+          "oklch(0.740 0.0569 210.45)",
+          "oklch(0.860 0.0401 210.45)",
+          "oklch(0.950 0.0167 210.45)"
+        ]
+      },
+      "parchment": {
+        "role": "neutral",
+        "displayName": "Parchment",
+        "tonalRamp": [
+          "oklch(0.150 0.0163 86.73)",
+          "oklch(0.260 0.0265 86.73)",
+          "oklch(0.380 0.0347 86.73)",
+          "oklch(0.500 0.0408 86.73)",
+          "oklch(0.620 0.0408 86.73)",
+          "oklch(0.740 0.0347 86.73)",
+          "oklch(0.860 0.0245 86.73)",
+          "oklch(0.950 0.0102 86.73)"
+        ]
+      },
+      "parchment-deep": {
+        "role": "neutral",
+        "displayName": "Parchment Deep",
+        "tonalRamp": [
+          "oklch(0.150 0.0245 84.95)",
+          "oklch(0.260 0.0399 84.95)",
+          "oklch(0.380 0.0521 84.95)",
+          "oklch(0.500 0.0613 84.95)",
+          "oklch(0.620 0.0613 84.95)",
+          "oklch(0.740 0.0521 84.95)",
+          "oklch(0.860 0.0368 84.95)",
+          "oklch(0.950 0.0153 84.95)"
+        ]
+      },
+      "terracotta": {
+        "role": "tertiary",
+        "displayName": "Terracotta",
+        "tonalRamp": [
+          "oklch(0.150 0.0480 38.50)",
+          "oklch(0.260 0.0781 38.50)",
+          "oklch(0.380 0.1021 38.50)",
+          "oklch(0.500 0.1201 38.50)",
+          "oklch(0.620 0.1201 38.50)",
+          "oklch(0.740 0.1021 38.50)",
+          "oklch(0.860 0.0720 38.50)",
+          "oklch(0.950 0.0300 38.50)"
+        ]
+      },
+      "wheat": {
+        "role": "tertiary",
+        "displayName": "Wheat",
+        "tonalRamp": [
+          "oklch(0.150 0.0487 84.97)",
+          "oklch(0.260 0.0792 84.97)",
+          "oklch(0.380 0.1035 84.97)",
+          "oklch(0.500 0.1218 84.97)",
+          "oklch(0.620 0.1218 84.97)",
+          "oklch(0.740 0.1035 84.97)",
+          "oklch(0.860 0.0731 84.97)",
+          "oklch(0.950 0.0304 84.97)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "tonalRamp": [
+          "oklch(0.150 0.0103 191.93)",
+          "oklch(0.260 0.0168 191.93)",
+          "oklch(0.380 0.0219 191.93)",
+          "oklch(0.500 0.0258 191.93)",
+          "oklch(0.620 0.0258 191.93)",
+          "oklch(0.740 0.0219 191.93)",
+          "oklch(0.860 0.0155 191.93)",
+          "oklch(0.950 0.0064 191.93)"
+        ]
+      },
+      "carcassonne-table": {
+        "role": "neutral",
+        "displayName": "Carcassonne Table",
+        "tonalRamp": [
+          "oklch(0.150 0.0188 175.54)",
+          "oklch(0.260 0.0306 175.54)",
+          "oklch(0.380 0.0400 175.54)",
+          "oklch(0.500 0.0470 175.54)",
+          "oklch(0.620 0.0470 175.54)",
+          "oklch(0.740 0.0400 175.54)",
+          "oklch(0.860 0.0282 175.54)",
+          "oklch(0.950 0.0118 175.54)"
+        ]
+      },
+      "carcassonne-mat": {
+        "role": "neutral",
+        "displayName": "Carcassonne Mat",
+        "tonalRamp": [
+          "oklch(0.150 0.0183 177.45)",
+          "oklch(0.260 0.0297 177.45)",
+          "oklch(0.380 0.0389 177.45)",
+          "oklch(0.500 0.0457 177.45)",
+          "oklch(0.620 0.0457 177.45)",
+          "oklch(0.740 0.0389 177.45)",
+          "oklch(0.860 0.0274 177.45)",
+          "oklch(0.950 0.0114 177.45)"
+        ]
+      },
+      "carcassonne-paper": {
+        "role": "neutral",
+        "displayName": "Carcassonne Paper",
+        "tonalRamp": [
+          "oklch(0.150 0.0111 88.75)",
+          "oklch(0.260 0.0181 88.75)",
+          "oklch(0.380 0.0236 88.75)",
+          "oklch(0.500 0.0278 88.75)",
+          "oklch(0.620 0.0278 88.75)",
+          "oklch(0.740 0.0236 88.75)",
+          "oklch(0.860 0.0167 88.75)",
+          "oklch(0.950 0.0070 88.75)"
+        ]
+      },
+      "carcassonne-action": {
+        "role": "primary",
+        "displayName": "Carcassonne Action",
+        "tonalRamp": [
+          "oklch(0.150 0.0264 155.06)",
+          "oklch(0.260 0.0429 155.06)",
+          "oklch(0.380 0.0561 155.06)",
+          "oklch(0.500 0.0659 155.06)",
+          "oklch(0.620 0.0659 155.06)",
+          "oklch(0.740 0.0561 155.06)",
+          "oklch(0.860 0.0396 155.06)",
+          "oklch(0.950 0.0165 155.06)"
+        ]
+      },
+      "carcassonne-action-hover": {
+        "role": "primary",
+        "displayName": "Carcassonne Action Hover",
+        "tonalRamp": [
+          "oklch(0.150 0.0233 155.26)",
+          "oklch(0.260 0.0379 155.26)",
+          "oklch(0.380 0.0495 155.26)",
+          "oklch(0.500 0.0583 155.26)",
+          "oklch(0.620 0.0583 155.26)",
+          "oklch(0.740 0.0495 155.26)",
+          "oklch(0.860 0.0350 155.26)",
+          "oklch(0.950 0.0146 155.26)"
+        ]
+      },
+      "carcassonne-action-ink": {
+        "role": "primary",
+        "displayName": "Carcassonne Action Ink",
+        "tonalRamp": [
+          "oklch(0.150 0.0141 91.12)",
+          "oklch(0.260 0.0230 91.12)",
+          "oklch(0.380 0.0300 91.12)",
+          "oklch(0.500 0.0353 91.12)",
+          "oklch(0.620 0.0353 91.12)",
+          "oklch(0.740 0.0300 91.12)",
+          "oklch(0.860 0.0212 91.12)",
+          "oklch(0.950 0.0088 91.12)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Welcome headline; preserve its existing responsive overrides."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Carcassonne lobby headline, not a universal game title."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Shared Radix dialog title."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default body role."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Shared buttons, tabs and descriptions."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Badges and supporting text."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Room codes and identifier-like utilities."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shared-panel",
+        "value": "0 18px 55px rgba(34, 30, 20, 0.2)",
+        "purpose": "Existing shared shadow custom property, entry surfaces and errors."
+      },
+      {
+        "name": "carcassonne-dock",
+        "value": "0 6px 20px #0d261e40",
+        "purpose": "Carcassonne-only paper dock."
+      },
+      {
+        "name": "carcassonne-mat",
+        "value": "inset 0 4px 24px #0b241c80",
+        "purpose": "Carcassonne-only inset map."
+      },
+      {
+        "name": "carcassonne-action",
+        "value": "0 4px 10px #254a3340",
+        "purpose": "Carcassonne-only soft contact shadow under confirmation controls."
+      }
+    ],
+    "motion": [
+      {
+        "name": "shared-transition",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Tailwind default transition, shared interactive controls."
+      },
+      {
+        "name": "carcassonne-camera-rotation-preview",
+        "value": "220ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "Camera positioning, tile rotation and preview entrance; direct dragging has no interpolation."
+      },
+      {
+        "name": "carcassonne-pawn",
+        "value": "250ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "Selected pawn entrance."
+      },
+      {
+        "name": "carcassonne-tile",
+        "value": "380ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "One new tile arrival."
+      },
+      {
+        "name": "carcassonne-score",
+        "value": "400ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "New score notice entrance, never historical replay."
+      },
+      {
+        "name": "carcassonne-tool",
+        "value": "160ms ease-out",
+        "purpose": "Pressed icon scale to .88."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "none",
+        "purpose": "Carcassonne transitions and animations are removed; pending spinner also stops. Global CSS shortens existing transitions/animations and suppresses resource/robber travel."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "shared-dialog-sm",
+        "value": "640px"
+      },
+      {
+        "name": "welcome-stack-max",
+        "value": "820px"
+      },
+      {
+        "name": "welcome-small-max",
+        "value": "480px"
+      },
+      {
+        "name": "carcassonne-dock-lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Source-expanded shared Button variant.",
+      "html": "<button class=\"ds-primary\">确认</button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:1px solid transparent;border-radius:var(--radius-md,.625rem);font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);font-size:.875rem;line-height:1.25rem;font-weight:500;white-space:nowrap;padding:.5rem 1rem;min-height:2.25rem;cursor:pointer;transition:all 150ms cubic-bezier(.4,0,.2,1);background:var(--primary,oklch(.31 .055 185));color:var(--primary-foreground,oklch(.98 .015 86));}.ds-primary:hover:not(:disabled){background:color-mix(in oklab,var(--primary,oklch(.31 .055 185)) 90%,transparent);}.ds-primary:focus-visible{outline:none;border-color:var(--ring,oklch(.55 .08 190));box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,oklch(.55 .08 190)) 50%,transparent);}.ds-primary:disabled{opacity:.5;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Source-expanded shared Button variant.",
+      "html": "<button class=\"ds-outline\">查看详情</button>",
+      "css": ".ds-outline{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:1px solid transparent;border-radius:var(--radius-md,.625rem);font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);font-size:.875rem;line-height:1.25rem;font-weight:500;white-space:nowrap;padding:.5rem 1rem;min-height:2.25rem;cursor:pointer;transition:all 150ms cubic-bezier(.4,0,.2,1);border-color:var(--border,oklch(.72 .035 75 / 45%));color:var(--foreground,oklch(.27 .03 185));background:var(--background,oklch(.89 .035 82));box-shadow:0 1px 2px 0 rgb(0 0 0 / .05);}.ds-outline:hover:not(:disabled){background:var(--accent,oklch(.62 .14 42));color:var(--accent-foreground,oklch(.98 .015 86));}.ds-outline:focus-visible{outline:none;border-color:var(--ring,oklch(.55 .08 190));box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,oklch(.55 .08 190)) 50%,transparent);}.ds-outline:disabled{opacity:.5;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-outline{transition:none}}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Source-expanded shared Button variant.",
+      "html": "<button class=\"ds-secondary\">次要操作</button>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:1px solid transparent;border-radius:var(--radius-md,.625rem);font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);font-size:.875rem;line-height:1.25rem;font-weight:500;white-space:nowrap;padding:.5rem 1rem;min-height:2.25rem;cursor:pointer;transition:all 150ms cubic-bezier(.4,0,.2,1);background:var(--secondary,oklch(.86 .055 80));color:var(--secondary-foreground,oklch(.29 .03 185));}.ds-secondary:hover:not(:disabled){background:color-mix(in oklab,var(--secondary,oklch(.86 .055 80)) 80%,transparent);}.ds-secondary:focus-visible{outline:none;border-color:var(--ring,oklch(.55 .08 190));box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,oklch(.55 .08 190)) 50%,transparent);}.ds-secondary:disabled{opacity:.5;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Source-expanded shared Button variant.",
+      "html": "<button class=\"ds-ghost\">返回</button>",
+      "css": ".ds-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:1px solid transparent;border-radius:var(--radius-md,.625rem);font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);font-size:.875rem;line-height:1.25rem;font-weight:500;white-space:nowrap;padding:.5rem 1rem;min-height:2.25rem;cursor:pointer;transition:all 150ms cubic-bezier(.4,0,.2,1);background:transparent;color:var(--foreground,oklch(.27 .03 185));}.ds-ghost:hover:not(:disabled){background:var(--accent,oklch(.62 .14 42));color:var(--accent-foreground,oklch(.98 .015 86));}.ds-ghost:focus-visible{outline:none;border-color:var(--ring,oklch(.55 .08 190));box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,oklch(.55 .08 190)) 50%,transparent);}.ds-ghost:disabled{opacity:.5;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-ghost{transition:none}}"
+    },
+    {
+      "name": "Welcome Entry Field",
+      "kind": "input",
+      "refersTo": "input-entry",
+      "description": "The existing welcome field, not an invented shared Input component.",
+      "html": "<input class=\"ds-entry\" aria-label=\"显示名称\" placeholder=\"你的名字\" />",
+      "css": ".ds-entry{width:100%;border:1px solid rgba(40,62,59,.22);border-radius:10px;padding:.85rem 1rem;color:var(--ink,#203433);background:rgba(255,255,255,.56);font:inherit;font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);outline:none}.ds-entry:focus{border-color:var(--ocean,#2f6f7a);box-shadow:0 0 0 3px rgba(47,111,122,.14)}.ds-entry:disabled{opacity:.5;cursor:not-allowed}"
+    },
+    {
+      "name": "Primary Badge",
+      "kind": "chip",
+      "refersTo": "badge-primary",
+      "description": "An interactive primary badge sample; passive badges keep span semantics.",
+      "html": "<a class=\"ds-badge\" href=\"#details\">已入座</a>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;justify-content:center;gap:.25rem;border:1px solid transparent;border-radius:9999px;padding:.125rem .5rem;background:var(--primary,oklch(.31 .055 185));color:var(--primary-foreground,oklch(.98 .015 86));font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);font-size:.75rem;line-height:1rem;font-weight:500;text-decoration:none;transition:color 150ms,box-shadow 150ms}.ds-badge:hover{background:color-mix(in oklab,var(--primary,oklch(.31 .055 185)) 90%,transparent)}.ds-badge:focus-visible{outline:none;border-color:var(--ring,oklch(.55 .08 190));box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,oklch(.55 .08 190)) 50%,transparent);}@media(prefers-reduced-motion:reduce){.ds-badge{transition:none}}"
+    },
+    {
+      "name": "Shared Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Card header and content preserve the source section insets.",
+      "html": "<section class=\"ds-card\"><div class=\"ds-card-header\"><strong class=\"ds-card-title\">等待朋友入座</strong><p class=\"ds-card-description\">用房间码邀请朋友一起玩。</p></div><div class=\"ds-card-content\">共享一张桌子，开始一场游戏。</div></section>",
+      "css": ".ds-card{display:flex;flex-direction:column;gap:1.5rem;border:1px solid var(--border,oklch(.72 .035 75 / 45%));border-radius:var(--radius-xl,1rem);padding:1.5rem 0;background:var(--card,oklch(.93 .04 86));color:var(--card-foreground,oklch(.27 .03 185));font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);box-shadow:0 1px 3px 0 rgb(0 0 0 / .1),0 1px 2px -1px rgb(0 0 0 / .1)}.ds-card-header{display:grid;gap:.5rem;padding:0 1.5rem}.ds-card-title{font-weight:600;line-height:1}.ds-card-description{margin:0;color:var(--muted-foreground,oklch(.51 .025 175));font-size:.875rem;line-height:1.25rem}.ds-card-content{padding:0 1.5rem}"
+    },
+    {
+      "name": "Shared Tabs",
+      "kind": "nav",
+      "refersTo": "tabs",
+      "description": "Visual tab states from Radix Tabs; production keyboard and selection behavior remains Radix-owned.",
+      "html": "<div class=\"ds-tabs\" aria-label=\"视图预览\"><button class=\"ds-tab ds-tab-selected\" aria-pressed=\"true\">概览</button><button class=\"ds-tab\" aria-pressed=\"false\">记录</button></div>",
+      "css": ".ds-tabs{display:inline-flex;align-items:center;justify-content:center;width:fit-content;height:2.25rem;border-radius:var(--radius-lg,.75rem);padding:3px;background:var(--ui-muted,oklch(.88 .025 80));color:var(--muted-foreground,oklch(.51 .025 175))}.ds-tab{display:inline-flex;align-items:center;justify-content:center;height:calc(100% - 1px);border:1px solid transparent;border-radius:var(--radius-md,.625rem);padding:.25rem .5rem;background:transparent;color:color-mix(in oklab,var(--foreground,oklch(.27 .03 185)) 60%,transparent);font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);font-size:.875rem;line-height:1.25rem;font-weight:500;cursor:pointer;transition:all 150ms}.ds-tab:hover{color:var(--foreground,oklch(.27 .03 185))}.ds-tab-selected{background:var(--background,oklch(.89 .035 82));color:var(--foreground,oklch(.27 .03 185));box-shadow:0 1px 3px 0 rgb(0 0 0 / .1),0 1px 2px -1px rgb(0 0 0 / .1)}.ds-tab:focus-visible{outline:none;border-color:var(--ring,oklch(.55 .08 190));box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,oklch(.55 .08 190)) 50%,transparent);}.ds-tab:disabled{opacity:.5;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-tab{transition:none}}"
+    },
+    {
+      "name": "Carcassonne Confirmation",
+      "kind": "button",
+      "refersTo": "carcassonne-confirm",
+      "description": "Carcassonne-only confirmation action with soft elevation, visible focus and pressed displacement; does not replace shared Button.",
+      "html": "<button class=\"ds-carc-confirm\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m20 6-11 11-5-5\"/></svg>完成回合</button>",
+      "css": ".ds-carc-confirm{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:1px solid transparent;border-radius:var(--radius-md,.625rem);font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);font-size:.875rem;line-height:1.25rem;font-weight:500;white-space:nowrap;padding:.5rem 1rem;min-height:2.25rem;cursor:pointer;transition:all 150ms cubic-bezier(.4,0,.2,1);min-height:2.75rem;background:#335e43;color:#fff6dc;box-shadow:0 4px 10px #254a3340;}.ds-carc-confirm:hover:not(:disabled){background:#294e37;}.ds-carc-confirm:focus-visible{outline:none;border-color:var(--ring,oklch(.55 .08 190));box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,oklch(.55 .08 190)) 50%,transparent);}.ds-carc-confirm:disabled{opacity:.5;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-carc-confirm{transition:none}}.ds-carc-confirm:active:not(:disabled){transform:translateY(1px)}"
+    },
+    {
+      "name": "Carcassonne Map Tool",
+      "kind": "button",
+      "refersTo": "carcassonne-map-tool",
+      "description": "Game-owned material icon and short text; tray fill belongs to its wrapper.",
+      "html": "<div class=\"ds-carc-tray\"><button class=\"ds-carc-tool\" aria-label=\"放大地图\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg><span class=\"ds-carc-tool-label\">放大</span></button></div>",
+      "css": ".ds-carc-tray{display:inline-flex;border-radius:.75rem;padding:.25rem;background:#f4ecd8;box-shadow:0 3px 12px #08241f55}.ds-carc-tool{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:1px solid transparent;border-radius:var(--radius-md,.625rem);font-family:var(--font-sans,\"Noto Sans SC Variable\",\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif);font-size:.875rem;line-height:1.25rem;font-weight:500;white-space:nowrap;padding:.5rem 1rem;min-height:2.25rem;cursor:pointer;transition:all 150ms cubic-bezier(.4,0,.2,1);height:3rem;min-width:2.75rem;flex-direction:column;gap:.125rem;border-radius:var(--radius-lg,.75rem);padding:.25rem .5rem;background:transparent;color:#34523f}.ds-carc-tool-label{font-size:10px;line-height:1}.ds-carc-tool svg{filter:drop-shadow(0 1px 0 #fff9e2);transition:transform 160ms ease-out}.ds-carc-tool:hover{background:#dfdcc0}.ds-carc-tool:active{transform:translateY(1px)}.ds-carc-tool:active svg{transform:scale(.88)}.ds-carc-tool:focus-visible{outline:none;border-color:var(--ring,oklch(.55 .08 190));box-shadow:0 0 0 3px color-mix(in oklab,var(--ring,oklch(.55 .08 190)) 50%,transparent);}.ds-carc-tool:disabled{opacity:.5;pointer-events:none}@media(prefers-reduced-motion:reduce){.ds-carc-tool,.ds-carc-tool svg{transition:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "A warmly lit wooden game table",
+    "overview": "Wood grain, parchment, pine, muted ocean blue and earthen accents establish a familiar place for friends to play. Chinese typography stays in one self-hosted family; weight and space carry hierarchy. Crisp geometry and tangible material cues give controls and pieces presence without displacing the game surface.\n\nThis document records the implemented shared web system. Each game retains its own renderer, density and visual vocabulary. Carcassonne applies this world through a deep green mat and original miniature SVG relief; its local colors, portrait composition and tile workflow are scoped to that surface. They do not replace Catan's island or draw-guess's canvas presentation.",
+    "keyCharacteristics": [
+      "Natural pigments and light paper against dark tabletop surfaces.",
+      "One Chinese type family with compact, readable DOM controls.",
+      "Material depth connected to pieces, panels and actions.",
+      "Game-owned composition and restrained state feedback."
+    ],
+    "rules": [
+      {
+        "name": "The Seat Identity Rule",
+        "body": "Reuse the canonical player palette for pieces and swatches; an action color never substitutes for a player's color.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Use Noto Sans SC for Chinese headings, controls and board labels; reserve the mono stack for code-like identifiers and numeric utilities.",
+        "section": "typography"
+      },
+      {
+        "name": "The Game Surface Rule",
+        "body": "Keep map or canvas space primary; apply each game's composition and breakpoints in its own modules.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "**Do** reuse semantic tokens for shared UI and the canonical player palette for seat identity.",
+      "**Do** keep Chinese text in the self-hosted Noto Sans SC family and use weight to organize hierarchy.",
+      "**Do** keep game-specific palettes, composition, motion and renderer details inside their game surface.",
+      "**Do** provide visible focus, pending/disabled states and the existing reduced-motion path.",
+      "**Do** keep map artwork and pieces in one scalable world, with text-heavy actions in DOM controls."
+    ],
+    "donts": [
+      "**Don't** apply Carcassonne's green mat, tile geometry or turn dock as a redesign of Catan or draw-guess.",
+      "**Don't** copy official game artwork, logos, rulebook text or proprietary assets.",
+      "**Don't** replay historical rewards or state-change motion after reconnect.",
+      "**Don't** replace owned Radix interaction behavior with hand-built modal or focus logic.",
+      "**Don't** promote legacy eyebrow styling or cramped local captions into a new shared typography rule."
+    ]
+  }
+}

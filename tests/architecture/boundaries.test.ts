@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "@babel/parser";
+import { GAME_IDS } from "../../packages/protocol/src/platform/index.js";
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../packages/game-core/src");
 
@@ -16,12 +17,13 @@ describe("game-core module boundaries", () => {
       }
     }
   });
+
   it("keeps drawing telephone independent of Catan domains and ambient nondeterminism", () => {
-    for (const file of sourceFiles(join(sourceRoot, "draw-guess"))) {
+    for (const game of ["draw-guess", "camel-up", "carcassonne", "texas-holdem"]) for (const file of sourceFiles(join(sourceRoot, game))) {
       expect(readFileSync(file, "utf8"), relative(sourceRoot, file)).not.toMatch(/Math\.random|Date\.|setTimeout|document|window|fetch/);
       for (const edge of imports(file)) {
         const target = resolveImport(file, edge.specifier);
-        expect(target && (target.startsWith(join(sourceRoot, "draw-guess")) || target === join(sourceRoot, "primitives", "index.ts")), `${file} -> ${edge.specifier}`).toBe(true);
+        expect(target && (target.startsWith(join(sourceRoot, game)) || target === join(sourceRoot, "primitives", "index.ts")), `${file} -> ${edge.specifier}`).toBe(true);
       }
     }
   });
@@ -120,11 +122,13 @@ function resolveImport(file: string, specifier: string): string | null {
   return [path.replace(/\.js$/, ".ts"), path.replace(/\.js$/, ".tsx"), `${path}.ts`, `${path}.tsx`].find(existsSync) ?? null;
 }
 
-function owner(file: string): "catan" | "draw-guess" | "texas-holdem" | "primitives" | "platform" | "dispatch" {
+function owner(file: string): "catan" | "draw-guess" | "camel-up" | "carcassonne" | "texas-holdem" | "primitives" | "platform" | "dispatch" {
   const path = relative(repositoryRoot, file).replaceAll("\\", "/");
   if (path.startsWith("packages/game-core/src/primitives/")) return "primitives";
   if (path.includes("/texas-holdem/")) return "texas-holdem";
+  if (path.includes("/camel-up/")) return "camel-up";
   if (path.includes("/draw-guess/")) return "draw-guess";
+  if (path.includes("/carcassonne/")) return "carcassonne";
   if (path.startsWith("packages/game-core/") || path.includes("/catan/") || path.startsWith("apps/web/src/effects/")) return "catan";
   if (["apps/web/src/App.tsx", "apps/web/src/games/room-sync.ts", "apps/server/src/app.ts", "apps/server/src/rooms.ts", "apps/server/src/room-types.ts", "apps/server/src/index.ts", "apps/server/src/e2e-server.ts", "packages/protocol/src/platform-stream.ts"].includes(path)) return "dispatch";
   return "platform";
@@ -140,8 +144,9 @@ describe("platform and game dependency boundaries", () => {
       if (edge.specifier.startsWith("@catan/") && !target) { violations.push(label); continue; }
       if (!target) continue;
       const destination = owner(target);
-      if ((["catan", "draw-guess", "texas-holdem"].includes(source) && ["catan", "draw-guess", "texas-holdem"].includes(destination) && source !== destination) || (source === "primitives" && destination !== "primitives")) violations.push(label);
-      if (source === "platform" && ["catan", "draw-guess", "texas-holdem"].includes(destination)) {
+      const games = ["catan", "draw-guess", "camel-up", "carcassonne", "texas-holdem"];
+      if ((games.includes(source) && games.includes(destination) && source !== destination) || (source === "primitives" && destination !== "primitives")) violations.push(label);
+      if (source === "platform" && games.includes(destination)) {
         // The discriminated view union names games; account history lazily renders their results.
         const union = file === join(repositoryRoot, "packages/protocol/src/platform/index.ts") && edge.typeOnly;
         const history = file === join(repositoryRoot, "apps/web/src/components/AccountHistory.tsx") && edge.dynamic;
@@ -163,5 +168,24 @@ describe("platform and game dependency boundaries", () => {
     }
     walk(join(repositoryRoot, "apps/web/src/components/AccountControl.tsx"));
     expect([...seen].filter((file) => owner(file) === "catan")).toEqual([]);
+  });
+  it("dispatches every game explicitly and reserves defaults for unknown-game errors",()=>{
+    for(const path of ["apps/server/src/rooms.ts","apps/web/src/App.tsx","apps/web/src/components/AccountHistory.tsx","apps/web/src/games/room-sync.ts"]){
+      const source=readFileSync(join(repositoryRoot,path),"utf8"),ast=parse(source,{sourceType:"module",plugins:["typescript","jsx"]});
+      let switches=0;
+      function visit(value:unknown){
+        if(!value||typeof value!=="object")return;
+        if(Array.isArray(value)){value.forEach(visit);return;}
+        const node=value as {type?:string;test?:unknown;consequent?:unknown;alternate?:unknown;cases?:{test?:{value?:unknown}|null;consequent?:unknown[]}[];[key:string]:unknown};
+        if(node.type==='ConditionalExpression'&&JSON.stringify(node.test).includes('"gameId"')&&/CallExpression|JSXElement/.test(JSON.stringify([node.consequent,node.alternate])))throw Error(`Game fallback: ${path}`);
+        if(node.type==='SwitchStatement'&&node.cases?.some(c=>c.test?.value==='catan')){
+          expect(node.cases.flatMap(c=>c.test?[c.test.value]:[]).sort(),path).toEqual([...GAME_IDS].sort());
+          expect(JSON.stringify(node.cases.find(c=>c.test===null)?.consequent),path).toMatch(/unknownGame|unregisteredGame/);
+          switches++;
+        }
+        Object.values(node).forEach(visit);
+      }
+      visit(ast);expect(switches,path).toBeGreaterThan(0);
+    }
   });
 });

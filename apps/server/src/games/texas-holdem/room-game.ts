@@ -22,6 +22,7 @@ export class PokerRoomGame {
       game: room.game ? projectPoker(room.game, viewer, timer ? { deadlineAt: timer.deadlineAt, durationMs: timer.durationMs, serverNow: this.now() } : null) : null };
   }
   settings(room: PokerRoomRecord, settings: PokerSettings) { this.translate(() => validatePokerSettings(settings)); room.settings = { ...settings }; }
+  capacity() { return 9; }
   start(room: PokerRoomRecord) {
     if (room.members.length < 2 || room.members.length > 9) throw new RoomError("NOT_ENOUGH_PLAYERS", "德州扑克需要 2–9 人");
     const id = randomUUID(); const game = this.translate(() => createPoker(id, room.members.map(({ id, name }) => ({ id, name })), room.settings, this.deck()));

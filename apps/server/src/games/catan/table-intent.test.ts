@@ -174,7 +174,7 @@ it.each(["match", "turn"] as const)("does not charge a newer %s when an older AI
 
 function tableInTurnOne() {
   const registry = new RoomRegistry({ nextSeed: () => 404 });
-  const host = registry.createRoom("林");
+  const host = registry.createRoom("林", null, "catan");
   const second = registry.joinRoom(host.roomId, "周");
   const third = registry.joinRoom(host.roomId, "陈");
   registry.startRoom(host.roomId, host.seatToken);

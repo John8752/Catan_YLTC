@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { browserTestMatch } from "./scripts/testing/scopes.mjs";
+const apiPort=Number(process.env.E2E_API_PORT??8794),webPort=Number(process.env.E2E_WEB_PORT??5184);
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -9,26 +10,26 @@ export default defineConfig({
   expect: { timeout: 8_000 },
   reporter: "line",
   use: {
-    baseURL: "http://127.0.0.1:5184",
+    baseURL: `http://127.0.0.1:${webPort}`,
     actionTimeout: 15_000,
     trace: "retain-on-failure",
   },
   projects: [
-    ...["platform", "catan", "draw-guess", "texas-holdem"].map((scope) => ({ name: scope, testMatch: browserTestMatch(scope), use: { ...devices["Desktop Chrome"] } })),
+    ...["platform", "catan", "draw-guess", "camel-up", "carcassonne", "texas-holdem"].map((scope) => ({ name: scope, testDir: `./tests/e2e/${scope}`, testMatch: browserTestMatch(scope), use: { ...devices["Desktop Chrome"] } })),
   ],
   webServer: [
     {
       command: "pnpm --filter @catan/server exec tsx src/e2e-server.ts",
-      url: "http://127.0.0.1:8794/health",
+      url: `http://127.0.0.1:${apiPort}/health`,
       reuseExistingServer: false,
-      env: { E2E_API_PORT: "8794" },
+      env: { E2E_API_PORT: String(apiPort) },
       timeout: 30_000,
     },
     {
-      command: "pnpm --filter @catan/web exec vite --host 127.0.0.1 --port 5184 --strictPort --force",
-      url: "http://127.0.0.1:5184",
+      command: `pnpm --filter @catan/web exec vite --host 127.0.0.1 --port ${webPort} --strictPort --force`,
+      url: `http://127.0.0.1:${webPort}`,
       reuseExistingServer: false,
-      env: { E2E_API_PORT: "8794" },
+      env: { E2E_API_PORT: String(apiPort) },
       timeout: 30_000,
     },
   ],

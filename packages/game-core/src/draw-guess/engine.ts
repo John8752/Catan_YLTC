@@ -1,3 +1,4 @@
+import { DRAW_GUESS_PLAYER_LIMITS } from "./player-limits.js";
 import { DrawGuessError, type DrawGuessCommand, type DrawGuessState, type DrawPlayer, type DrawTask, type PageContent } from "./types.js";
 import { pageIsEmpty, validatePage } from "./validation.js";
 import { wordSuggestions } from "./words.js";
@@ -5,7 +6,7 @@ import { guessCharacterCount, requiredGuessLength } from "./guess-length.js";
 import { reactToPage } from "./reactions.js";
 
 export function createDrawGuess(id: string, players: readonly DrawPlayer[], seed: number): DrawGuessState {
-  if (!id || players.length < 3 || players.length > 6 || new Set(players.map((p) => p.id)).size !== players.length || players.some((p) => !p.id || !p.name) || !Number.isInteger(seed)) throw new DrawGuessError("INVALID_PLAYERS", "传画猜词需要 3–6 位不同玩家");
+  if (!id || players.length < DRAW_GUESS_PLAYER_LIMITS.min || players.length > DRAW_GUESS_PLAYER_LIMITS.max || new Set(players.map((p) => p.id)).size !== players.length || players.some((p) => !p.id || !p.name) || !Number.isInteger(seed)) throw new DrawGuessError("INVALID_PLAYERS", "传画猜词需要 3–6 位不同玩家");
   const suggestions = wordSuggestions(seed, players.length);
   return { id, revision: 0, wordSeed: seed, suggestionRounds: {}, players: players.map((p) => ({ ...p })), suggestions: Object.fromEntries(players.map((p, i) => [p.id, suggestions[i]!])),
     phase: { kind: "work", step: 0 }, albums: players.map((p) => ({ ownerId: p.id, pages: [] })), drafts: {}, reactions: {} };

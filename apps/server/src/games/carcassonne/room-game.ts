@@ -1,3 +1,4 @@
+import { CARCASSONNE_PLAYER_LIMITS } from "@catan/game-core/carcassonne";
 import { randomUUID } from "node:crypto";
 import { CarcassonneError, createCarcassonne, executeCarcassonne, type PlaceCommand } from "@catan/game-core/carcassonne";
 import { projectCarcassonne, type CarcassonneRoomView, type CarcassonneSettlementV1 } from "@catan/protocol/carcassonne";
@@ -10,14 +11,14 @@ export class CarcassonneRoomGame {
   repository: MatchRepository | null = null;
   constructor(private readonly now: () => number, private readonly notify: (room: CarcassonneRoomRecord) => void) {}
   create(base: RoomBase): CarcassonneRoomRecord { return { ...base, gameId: "carcassonne", game: null }; }
-  capacity() { return 5; }
+  capacity() { return CARCASSONNE_PLAYER_LIMITS.max; }
   project(room: CarcassonneRoomRecord, viewerId: string): CarcassonneRoomView {
     return { id: room.id, gameId: "carcassonne", matchId: room.matchId, revision: room.revision, hostPlayerId: room.hostPlayerId,
       members: room.members.map(({ id, name, color }) => ({ id, name, color, isHost: id === room.hostPlayerId })),
       game: room.game ? projectCarcassonne(room.game, viewerId) : null };
   }
   start(room: CarcassonneRoomRecord) {
-    if (room.members.length < 2 || room.members.length > 5) throw new RoomError("NOT_ENOUGH_PLAYERS", "卡卡颂需要 2–5 人");
+    if (room.members.length < CARCASSONNE_PLAYER_LIMITS.min || room.members.length > CARCASSONNE_PLAYER_LIMITS.max) throw new RoomError("NOT_ENOUGH_PLAYERS", "卡卡颂需要 2–5 人");
     const matchId = randomUUID();
     room.game = createCarcassonne(matchId, room.members.map(({ id, name, color }) => ({ id, name, color })), room.seed);
     room.matchId = matchId; room.startedAt = this.now(); room.appliedCommands.clear();

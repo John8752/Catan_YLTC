@@ -1,4 +1,4 @@
-import type { AnyRoomView, GameType } from "@catan/protocol/platform";
+import { isGameType,type AnyRoomView,type GameType } from "@catan/protocol/platform";
 import type { PlayerSession } from "./room-session.js";
 
 export const ROOM_SNAPSHOT_WAIT_MS = 1_500;
@@ -36,6 +36,7 @@ export class RoomUpdates {
     return this.session?.seatToken === session.seatToken && this.session.roomId === session.roomId && this.session.playerId === session.playerId;
   }
   accept(room: AnyRoomView, session: PlayerSession): boolean {
+    if(!isGameType(room.gameId))throw new Error("未知游戏类型，请返回大厅选择游戏。");
     if (!this.belongsTo(session) || room.id !== session.roomId || (room.game !== null && room.game.you.id !== session.playerId)) return false;
     if (this.current && room.gameId !== this.current.gameId) return false;
     if (!this.current) this.policy = this.createPolicy(room.gameId, this);

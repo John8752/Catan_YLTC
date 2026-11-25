@@ -21,6 +21,7 @@
 
 - See ADR-0014 and `docs/multi-game-plan.md`. Product docs, test entries and commit notes distinguish `platform`, `catan`, `draw-guess`, `camel-up` and `carcassonne`.
 - A room's `gameId` is immutable. Each start creates a fresh globally unique `matchId`; completed rooms may return to the same game's lobby.
+- Every registered game has an explicit dispatch case. `else`/`default` rejects unknown games; never borrow another game's capacity, settings, table, result UI or synchronization policy. Player limits belong to each game's core (Catan uses its named rule profile); see ADR-0018.
 - Keep one common room/account/seat directory. Game adapters live under `apps/server/src/games`; game screens under `apps/web/src/games`.
 - `game-core` retains Catan's domain modules and provides independent `draw-guess`, `camel-up`, `carcassonne` and shared `primitives` subpaths. Do not import Catan rules into another game. `protocol` owns the discriminated room views.
 - Draw-guess uses bounded Canvas 2D strokes under ADR-0014. Drafts and unrevealed pages are private; do not broadcast them or persist them to SQLite. Client commands bind to a match and task, not the global revision of simultaneous submissions.

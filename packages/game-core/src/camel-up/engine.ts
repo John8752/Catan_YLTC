@@ -1,9 +1,10 @@
+import { CAMEL_UP_PLAYER_LIMITS } from "./player-limits.js";
 import { CamelError, DICE, RACING_CAMELS, type CamelState, type CamelSetup, type CamelCommand, type RollInput, type Face } from "./types.js";
 import { moveCamel, rankCamels } from "./movement.js";
 function fail(code: string, text: string): never { throw new CamelError(code, text); }
 const face = (value: number): value is Face => Number.isInteger(value) && value >= 1 && value <= 3;
 export function createCamelUp(id: string, players: readonly { id: string; name: string }[], setup: CamelSetup): CamelState {
-  if (!id || players.length < 3 || players.length > 6 || new Set(players.map(p => p.id)).size !== players.length) fail("INVALID_SETUP", "骆驼大赛需要 3–6 位不同玩家");
+  if (!id || players.length < CAMEL_UP_PLAYER_LIMITS.min || players.length > CAMEL_UP_PLAYER_LIMITS.max || new Set(players.map(p => p.id)).size !== players.length) fail("INVALID_SETUP", "骆驼大赛需要 3–6 位不同玩家");
   if (setup.positions.length !== 5 || !setup.positions.every(face) || setup.crazyPositions.length !== 2 || !setup.crazyPositions.every(face) || setup.order.length !== 5 || new Set(setup.order).size !== 5 || !setup.order.every(c => RACING_CAMELS.includes(c))) fail("INVALID_SETUP", "初始化骰子无效");
   const state: CamelState = { id, revision: 0, leg: 1, phase: { kind: "racing", activePlayerId: players[0]!.id },
     players: players.map(({ id, name }) => ({ id, name, coins: 3, tickets: [], pyramidTickets: 0, partnerId: null })),

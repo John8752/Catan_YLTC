@@ -1,10 +1,11 @@
+import { CARCASSONNE_PLAYER_LIMITS } from "./player-limits.js";
 import { createSeededRandom, shuffled } from "../primitives/index.js";
 import { coordinateId, featureRef, legalPlacements, regions, validPlacement } from "./map.js";
 import { rotatedFeatures, TILE_CATALOG } from "./tiles.js";
 import { CarcassonneError, type CarcassonnePlayer, type CarcassonneState, type Placement, type PlaceCommand, type PlacedTile, type Region } from "./types.js";
 
 export function createCarcassonne(id: string, players: readonly Omit<CarcassonnePlayer, "score">[], seed: number): CarcassonneState {
-  if (players.length < 2 || players.length > 5 || new Set(players.map((p) => p.id)).size !== players.length) throw new CarcassonneError("INVALID_PLAYERS", "卡卡颂需要 2–5 位不同玩家");
+  if (players.length < CARCASSONNE_PLAYER_LIMITS.min || players.length > CARCASSONNE_PLAYER_LIMITS.max || new Set(players.map((p) => p.id)).size !== players.length) throw new CarcassonneError("INVALID_PLAYERS", "卡卡颂需要 2–5 位不同玩家");
   const deck = shuffled(TILE_CATALOG.flatMap((t) => Array.from({ length: t.count - Number(t.id === "D") }, () => t.id)), createSeededRandom(seed));
   const state: CarcassonneState = { id, revision: 1, players: players.map((p) => ({ ...p, score: 0 })), board: [{ id: "0,0", type: "D", x: 0, y: 0, rotation: 0 }],
     phase: { kind: "turn", playerId: players[0]!.id, turn: 1 }, meeples: [], currentTile: null, deck, discarded: [], scores: [] };

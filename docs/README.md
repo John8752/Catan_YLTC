@@ -19,6 +19,8 @@ Draw-guess regional/birthday/everyday nouns: [Word-bank research and sources](./
 
 Draw-guess conversation reveal, drawing tools and next-round expiry fix: [Verification](./validation/draw-guess-conversation-tools-expiry.md).
 
+Current explicit game-dispatch audit: [No game fallbacks and independent settings](./validation/game-capability-isolation.md), [ADR-0018](./adr/0018-exhaustive-game-capabilities.md).
+
 Platform/game isolation refactor: [Ownership and validation](./validation/game-isolation.md).
 
 For current work, read product direction, [development workflow](./development-workflow.md), [scoped testing](./testing.md), then the affected game's rule notes and relevant ADRs. Draw-guess work does not require reading historical Catan milestones.

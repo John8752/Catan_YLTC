@@ -23,3 +23,5 @@ Add a new ADR when reversing an accepted decision. Do not silently rewrite the h
 
 - [ADR-0016: Camel-up 3D playfield and local typography](./0016-camel-up-three-dimensional-playfield.md) — accepted
 - [ADR-0017: Carcassonne real-time 3D miniatures](0017-carcassonne-three-renderer.md)
+
+- [ADR-0018: Explicit game dispatch without fallbacks](./0018-exhaustive-game-capabilities.md) — accepted

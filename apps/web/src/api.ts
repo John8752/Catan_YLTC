@@ -4,7 +4,7 @@ import { request } from "./http.js";
 import type { LeaveRoomResponse, RoomSession, AnyRoomServerMessage, AnyRoomView, GameType } from "@catan/protocol/platform";
 import type { PlayerColor } from "@catan/game-core/primitives";
 
-export async function createRoom(playerName: string, gameId: GameType = "catan"): Promise<RoomSession> {
+export async function createRoom(playerName: string, gameId: GameType): Promise<RoomSession> {
   return request<RoomSession>("/api/rooms", {
     method: "POST",
     headers: { "content-type": "application/json" },

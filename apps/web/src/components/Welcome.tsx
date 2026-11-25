@@ -1,5 +1,5 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
-import { GAME_CATALOG, type GameType } from "@catan/protocol/platform";
+import { GAME_CATALOG,DEFAULT_GAME_ID,getGameDefinition,type GameType } from "@catan/protocol/platform";
 import { cn } from "../lib/utils.js";
 
 export interface WelcomeProps {
@@ -22,7 +22,7 @@ const TABLE_LEGENDS = [
 
 export function Welcome({ busy, error, onCreate, onJoin, accountControl, defaultPlayerName = "" }: WelcomeProps) {
   const [playerName, setPlayerName] = useState("");
-  const [gameId, setGameId] = useState<GameType>("catan");
+  const [gameId, setGameId] = useState<GameType>(DEFAULT_GAME_ID);
   useEffect(() => { if (defaultPlayerName) setPlayerName(defaultPlayerName); }, [defaultPlayerName]);
   const [roomId, setRoomId] = useState("");
 
@@ -92,7 +92,7 @@ export function Welcome({ busy, error, onCreate, onJoin, accountControl, default
             </label>)}
           </fieldset>
           <button className="primary-button" type="submit" disabled={busy || playerName.trim().length === 0}>
-            {busy ? "正在准备桌面…" : gameId === "catan" ? "创建今晚的岛" : gameId === "camel-up" ? "创建骆驼大赛房间" : gameId === "draw-guess" ? "创建传画猜词房间" : "创建卡卡颂房间"}
+            {busy ? "正在准备桌面…" : getGameDefinition(gameId).createLabel}
           </button>
         </form>
 

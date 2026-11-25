@@ -17,7 +17,7 @@ describe("catan room API", () => {
     const host = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     })).json<RoomSession<RoomView>>();
 
     // One seat is not a match: the profile floor is what turns it away.
@@ -54,7 +54,7 @@ describe("catan room API", () => {
     const host = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     })).json<RoomSession<RoomView>>();
     const second = (await app.inject({
       method: "POST",
@@ -131,7 +131,7 @@ describe("catan room API", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     });
     const host = createResponse.json<RoomSession<RoomView>>();
     expect(host.room.settings).toEqual({
@@ -224,7 +224,7 @@ describe("catan room API", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     });
     const host = createResponse.json<RoomSession<RoomView>>();
 
@@ -335,7 +335,7 @@ describe("catan room API", () => {
     const host = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     })).json<RoomSession<RoomView>>();
     for (const playerName of ["周", "陈"]) {
       await app.inject({ method: "POST", url: `/api/rooms/${host.roomId}/join`, payload: { playerName } });
@@ -401,7 +401,7 @@ describe("catan room API", () => {
     const host = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "一" },
+      payload: { gameId: "catan", playerName: "一" },
     })).json<RoomSession<RoomView>>();
 
     const settingsResponse = await app.inject({
@@ -453,7 +453,7 @@ describe("catan room API", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     });
     const host = createResponse.json<RoomSession<RoomView>>();
     const startResponse = await app.inject({

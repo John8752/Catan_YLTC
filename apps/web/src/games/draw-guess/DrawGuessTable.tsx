@@ -1,3 +1,4 @@
+import { DRAW_GUESS_PLAYER_LIMITS } from "@catan/game-core/draw-guess";
 import { useLayoutEffect, type ReactNode } from "react";
 import type { AnyRoomView } from "@catan/protocol/platform";
 import type { DrawGuessRoomView, DrawGuessSettings } from "@catan/protocol/draw-guess";
@@ -54,7 +55,7 @@ export function DrawGuessTable({ room, session, busy, error, connectionState, ac
           <label className="grid gap-2 text-sm font-medium">画画时间<select aria-label="画画时间" className="h-11 w-full rounded-lg border bg-white px-2" disabled={!isHost || busy} value={room.settings.drawingSeconds} onChange={(e) => void settings({ ...room.settings, drawingSeconds: Number(e.target.value) as DrawGuessSettings["drawingSeconds"] })}>{[60, 90, 120].map((seconds) => <option key={seconds} value={seconds}>{seconds} 秒</option>)}</select></label>
         </div>
         <p className="text-sm text-slate-500">房间固定为传画猜词，需要 3–6 人。超时自动收稿；语音聊天请使用你们已有的软件。</p>
-        {isHost ? <div className="flex flex-wrap gap-2"><Button className="min-h-11 flex-1" disabled={busy || room.members.length < 3} onClick={() => void handleStart()}>开始传画猜词</Button><Button className="min-h-11" variant="outline" disabled={busy || room.members.length < 2} onClick={() => void runBusy(async () => setRoom(await shuffleRoomMembers(session, room.revision)))}>打乱座位</Button></div> : <p role="status" className="text-center">等待房主开始…</p>}
+        {isHost ? <div className="flex flex-wrap gap-2"><Button className="min-h-11 flex-1" disabled={busy || room.members.length < DRAW_GUESS_PLAYER_LIMITS.min} onClick={() => void handleStart()}>开始传画猜词</Button><Button className="min-h-11" variant="outline" disabled={busy || room.members.length < 2} onClick={() => void runBusy(async () => setRoom(await shuffleRoomMembers(session, room.revision)))}>打乱座位</Button></div> : <p role="status" className="text-center">等待房主开始…</p>}
       </section> : game.phase.kind === "work" && game.task ? <DrawWork key={game.task.id} game={game} session={session} onRoom={setRoom} compactGuess={guessViewport.compact} /> : <Gallery key={game.id} room={room} session={session} onRoom={setRoom} isHost={isHost} busy={busy} onReplay={() => void onReturnToLobby()} />}
       {error && <p role="alert" className="break-words rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {!game && <footer className="border-t border-slate-300 pt-4">{controls}</footer>}

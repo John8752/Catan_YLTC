@@ -1,3 +1,4 @@
+import { CAMEL_UP_PLAYER_LIMITS } from "@catan/game-core/camel-up";
 import { randomInt, randomUUID } from "node:crypto";
 import { CamelError, createCamelUp, executeCamelUp, RACING_CAMELS, type CamelCommand, type Face, type RollInput } from "@catan/game-core/camel-up";
 import { projectCamelUp, type CamelRoomView, type CamelSettlementV1 } from "@catan/protocol/camel-up";
@@ -10,12 +11,13 @@ export class CamelRoomGame {
   constructor(private readonly now: () => number, private readonly notify: (room: CamelRoomRecord) => void,
     private readonly pick: (maximum: number) => number = randomInt) {}
   create(base: RoomBase): CamelRoomRecord { return { ...base, gameId: "camel-up", game: null }; }
+  capacity() { return CAMEL_UP_PLAYER_LIMITS.max; }
   project(room: CamelRoomRecord, viewerId: string): CamelRoomView {
     return { id: room.id, gameId: "camel-up", matchId: room.matchId, revision: room.revision, hostPlayerId: room.hostPlayerId,
       members: room.members.map(({ id, name, color }) => ({ id, name, color, isHost: id === room.hostPlayerId })), game: room.game ? projectCamelUp(room.game, viewerId) : null };
   }
   start(room: CamelRoomRecord) {
-    if (room.members.length < 3 || room.members.length > 6) throw new RoomError("NOT_ENOUGH_PLAYERS", "骆驼大赛需要 3–6 人");
+    if (room.members.length < CAMEL_UP_PLAYER_LIMITS.min || room.members.length > CAMEL_UP_PLAYER_LIMITS.max) throw new RoomError("NOT_ENOUGH_PLAYERS", "骆驼大赛需要 3–6 人");
     const order = [...RACING_CAMELS];
     for (let i = order.length - 1; i > 0; i--) { const j = this.pick(i + 1); [order[i], order[j]] = [order[j]!, order[i]!]; }
     const face = () => (this.pick(3) + 1) as Face;

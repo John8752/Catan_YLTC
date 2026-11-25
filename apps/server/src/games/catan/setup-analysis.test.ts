@@ -107,7 +107,7 @@ function resultFor(input: PublicSetupAnalysisInput): PublicSetupAnalysisContent 
 }
 
 function createStartedRoom(registry: RoomRegistry): RoomSession<RoomView>[] {
-  const host = registry.createRoom("林");
+  const host = registry.createRoom("林", null, "catan");
   const second = registry.joinRoom(host.roomId, "周");
   const third = registry.joinRoom(host.roomId, "陈");
   registry.startRoom(host.roomId, host.seatToken);

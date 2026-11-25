@@ -16,7 +16,7 @@ The long-lived decisions are recorded separately in [ADR-0010](./adr/adr-0010-sq
 
 - Accounts are optional. A room link, display name and room code remain sufficient for guest play.
 - The login identifier and public display name are separate. The first version uses a case-insensitive ASCII username (letters, digits and underscore) and a Unicode display name. Usernames, display names and passwords are required but have no product character-count bounds, in registration, login, profile editing, password changes or offline reset. Generic HTTP request-size limits and authentication rate limits still apply.
-- An account can occupy at most one live room seat. Attempting to create or join another room returns the existing active seat instead of allocating another player.
+- An account can occupy at most one live room seat. Creating the same game or joining that exact active room may recover its seat. Creating another game or joining a different room rejects with `ACCOUNT_BUSY`, instead of silently switching the user's requested destination. Login takeover still explicitly returns the active seat.
 - A room member captures the account's display name when joining. Later profile edits do not rename a match already in progress.
 - The latest successful login replaces the previous login globally, including the active room connection.
 - Logging out from an account with an active seat makes that seat dormant rather than converting it to an unowned guest seat. Logging in again reclaims it while the in-memory room still exists.

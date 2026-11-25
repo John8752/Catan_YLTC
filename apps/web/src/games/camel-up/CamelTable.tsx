@@ -1,3 +1,4 @@
+import { CAMEL_UP_PLAYER_LIMITS } from "@catan/game-core/camel-up";
 import { ActionFlight } from "./ActionFlight.js";
 import "./typography.css";
 import { useRaceFeedback } from "./use-race-feedback.js";
@@ -84,8 +85,8 @@ export function CamelTable({ snapshotEpoch, room, session, busy, error, connecti
             <div><h2 className="mb-3 text-2xl font-bold">谁会笑到最后？</h2><p className="text-base leading-relaxed text-[#626d61]">五只赛骆驼，全桌都能押。它们会叠在一起跑，还可能被逆行骆驼带回起点。</p></div>
             <div className="grid gap-4 border-y border-[#dad8c8] py-4"><p className="mb-0 flex items-center gap-3 text-sm"><TicketIcon />抢赛段票，越早押中赚得越多。</p><p className="mb-0 flex items-center gap-3 text-sm"><Dices className="size-5 shrink-0" />摇骰推动比赛，稳拿 1 金币。</p><p className="mb-0 flex items-center gap-3 text-sm"><Flag className="size-5 shrink-0" />放观众牌，让比赛多一点变数。</p></div>
             <p className="mb-0 text-sm leading-relaxed text-[#626d61]">3–6 人 · 每人 3 金币起步 · 最多金币获胜。终局预测仅自己可见，比赛结束统一揭晓。</p>
-            {host ? <Button className="h-14 rounded-xl bg-[#1b5650] text-base font-bold hover:bg-[#24675e]" disabled={busy || room.members.length < 3 || connectionState !== "live"} onClick={() => void handleStart()}>开始骆驼大赛</Button> : <p role="status" className="text-center font-medium">等待房主开始比赛</p>}
-            {room.members.length < 3 && <p role="status" className="mb-0 text-center text-sm text-[#626d61]">还差 {3 - room.members.length} 人，把房间码发给朋友吧。</p>}
+            {host ? <Button className="h-14 rounded-xl bg-[#1b5650] text-base font-bold hover:bg-[#24675e]" disabled={busy || room.members.length < CAMEL_UP_PLAYER_LIMITS.min || connectionState !== "live"} onClick={() => void handleStart()}>开始骆驼大赛</Button> : <p role="status" className="text-center font-medium">等待房主开始比赛</p>}
+            {room.members.length < CAMEL_UP_PLAYER_LIMITS.min && <p role="status" className="mb-0 text-center text-sm text-[#626d61]">还差 {CAMEL_UP_PLAYER_LIMITS.min - room.members.length} 人，把房间码发给朋友吧。</p>}
           </> : finished ? <>
             <Trophy className="size-10 text-[#9b7021]" /><h2 className="mb-0 text-2xl font-bold">{game.players.filter(p => game.phase.kind === "finished" && game.phase.winnerIds.includes(p.id)).map(p => p.name).join("、")} 获胜</h2>
             <ol aria-label="最终金币排名" className="grid gap-3">{[...game.players].sort((a, b) => b.coins - a.coins).map(p => <li key={p.id} className="flex min-w-0 justify-between gap-3 border-b border-[#ddd8c6] pb-3"><strong className="truncate">{p.name}</strong><span className="shrink-0 font-bold tabular-nums">{p.coins} 金币</span></li>)}</ol>

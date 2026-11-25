@@ -7,7 +7,7 @@ import { CatanRoomGame } from "./room-game.js";
 it("acknowledges without building an extra private projection, preserves idempotency and legacy full replies", async () => {
   const registry = new RoomRegistry({ nextSeed: () => 42 }), app = await buildApp(registry);
   try {
-    const host = registry.createRoom("甲"); registry.joinRoom(host.roomId, "乙");
+    const host = registry.createRoom("甲", null, "catan"); registry.joinRoom(host.roomId, "乙");
     const started = registry.startRoom(host.roomId, host.seatToken);
     const vertexId = started.game!.interaction.vertexIds[0]!;
     const project = vi.spyOn(CatanRoomGame.prototype, "project");

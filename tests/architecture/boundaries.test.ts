@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "@babel/parser";
+import { GAME_IDS } from "../../packages/protocol/src/platform/index.js";
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../packages/game-core/src");
 
@@ -156,5 +157,24 @@ describe("platform and game dependency boundaries", () => {
     }
     walk(join(repositoryRoot, "apps/web/src/components/AccountControl.tsx"));
     expect([...seen].filter((file) => owner(file) === "catan")).toEqual([]);
+  });
+  it("dispatches every game explicitly and reserves defaults for unknown-game errors",()=>{
+    for(const path of ["apps/server/src/rooms.ts","apps/web/src/App.tsx","apps/web/src/components/AccountHistory.tsx","apps/web/src/games/room-sync.ts"]){
+      const source=readFileSync(join(repositoryRoot,path),"utf8"),ast=parse(source,{sourceType:"module",plugins:["typescript","jsx"]});
+      let switches=0;
+      function visit(value:unknown){
+        if(!value||typeof value!=="object")return;
+        if(Array.isArray(value)){value.forEach(visit);return;}
+        const node=value as {type?:string;test?:unknown;consequent?:unknown;alternate?:unknown;cases?:{test?:{value?:unknown}|null;consequent?:unknown[]}[];[key:string]:unknown};
+        if(node.type==='ConditionalExpression'&&JSON.stringify(node.test).includes('"gameId"')&&/CallExpression|JSXElement/.test(JSON.stringify([node.consequent,node.alternate])))throw Error(`Game fallback: ${path}`);
+        if(node.type==='SwitchStatement'&&node.cases?.some(c=>c.test?.value==='catan')){
+          expect(node.cases.flatMap(c=>c.test?[c.test.value]:[]).sort(),path).toEqual([...GAME_IDS].sort());
+          expect(JSON.stringify(node.cases.find(c=>c.test===null)?.consequent),path).toMatch(/unknownGame|unregisteredGame/);
+          switches++;
+        }
+        Object.values(node).forEach(visit);
+      }
+      visit(ast);expect(switches,path).toBeGreaterThan(0);
+    }
   });
 });

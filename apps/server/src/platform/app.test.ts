@@ -17,7 +17,7 @@ describe("platform room API", () => {
     const host = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     })).json<RoomSession<RoomView>>();
     const guest = (await app.inject({
       method: "POST",
@@ -66,7 +66,7 @@ describe("platform room API", () => {
 
   it("warns every subscriber before the disbanded room stops existing", () => {
     const registry = new RoomRegistry();
-    const host = registry.createRoom("林");
+    const host = registry.createRoom("林", null, "catan");
     const guest = registry.joinRoom(host.roomId, "周");
     const closed: string[] = [];
     const unsubscribes = [host, guest].map((seat) => registry.subscribe(
@@ -90,7 +90,7 @@ describe("platform room API", () => {
     const host = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     })).json<RoomSession<RoomView>>();
     const second = (await app.inject({
       method: "POST",
@@ -158,12 +158,12 @@ describe("platform room API", () => {
     const abandoned = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     })).json<RoomSession<RoomView>>();
     const watched = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "周" },
+      payload: { gameId: "catan", playerName: "周" },
     })).json<RoomSession<RoomView>>();
     registry.subscribe(watched.roomId, watched.seatToken, () => {});
 
@@ -193,7 +193,7 @@ describe("platform room API", () => {
     const app = await buildApp(registry, { idleRoomTtlMs: 50, roomSweepIntervalMs: 10 });
     apps.push(app);
 
-    await app.inject({ method: "POST", url: "/api/rooms", payload: { playerName: "林" } });
+    await app.inject({ method: "POST", url: "/api/rooms", payload: { gameId: "catan", playerName: "林" } });
     expect(registry.roomCount).toBe(1);
 
     now += 1_000;
@@ -208,7 +208,7 @@ describe("platform room API", () => {
       const accepted = await app.inject({
         method: "POST",
         url: "/api/rooms",
-        payload: { playerName: "林" },
+        payload: { gameId: "catan", playerName: "林" },
       });
       expect(accepted.statusCode).toBe(201);
     }
@@ -216,7 +216,7 @@ describe("platform room API", () => {
     const rejected = await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     });
     expect(rejected.statusCode).toBe(429);
     expect(rejected.json()).toEqual({
@@ -235,19 +235,19 @@ describe("platform room API", () => {
       method: "POST",
       url: "/api/rooms",
       headers: { "x-forwarded-for": "203.0.113.1" },
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     });
     const otherClient = await app.inject({
       method: "POST",
       url: "/api/rooms",
       headers: { "x-forwarded-for": "203.0.113.2" },
-      payload: { playerName: "周" },
+      payload: { gameId: "catan", playerName: "周" },
     });
     const sameClientAgain = await app.inject({
       method: "POST",
       url: "/api/rooms",
       headers: { "x-forwarded-for": "203.0.113.1" },
-      payload: { playerName: "陈" },
+      payload: { gameId: "catan", playerName: "陈" },
     });
 
     expect(first.statusCode).toBe(201);
@@ -267,7 +267,7 @@ describe("platform room API", () => {
     const host = (await app.inject({
       method: "POST",
       url: "/api/rooms",
-      payload: { playerName: "林" },
+      payload: { gameId: "catan", playerName: "林" },
     })).json<RoomSession<RoomView>>();
 
     const rejected = await app.inject({

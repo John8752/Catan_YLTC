@@ -9,6 +9,7 @@
 | platform | 账号、房间、座位、公共入口、平台传输契约 | protocol/platform；server/platform、auth、database；web 公共组件、会话、lib | tests/e2e/platform |
 | catan | 卡坦规则、地图、手牌、交易、历史、反馈 | core 的 Catan 领域目录；protocol/catan；server/games/catan；web/games/catan、effects | tests/e2e/catan |
 | draw-guess | 选词、画画、猜词、草稿、提示、揭晓 | core/draw-guess；protocol/draw-guess；server/games/draw-guess；web/games/draw-guess | tests/e2e/draw-guess |
+| carcassonne | 拼图、随从、地形连通、农夫与计分 | core/carcassonne；protocol/carcassonne；server/games/carcassonne；web/games/carcassonne | tests/e2e/carcassonne |
 | tooling | 测试选择、CI、依赖边界 | scripts/testing、tests/architecture | 收集清单验证，不自行开启游戏回归 |
 
 代码层为 `core`、`protocol`、`server`、`web`、`browser`、`tooling`。游戏测试跟随自己的实现；公共测试即使使用某个游戏作为身份/传输夹具，也只验证平台契约。浏览器的 Catan 夹具放在 `tests/e2e/catan/fixtures.ts`，账号历史也使用它，因此该夹具修改同时影响 platform 和 catan 的浏览器测试。公共设备描述统一在 `tests/e2e/viewport-cases.ts`。
@@ -86,7 +87,7 @@ Catan 地图已支持缩放，手机端不设置默认缩放下的最小字号�
 | iPhone 16 | 393 × 852 | 393 × 659 | 3 |
 | iPhone 16 Pro Max | 440 × 956 | 440 × 763 | 3 |
 
-用 `tests/e2e/viewport-cases.ts` 中的定义。`pnpm test:e2e:catan:mobile` 检查 Catan 的地图/港口/HUD；`pnpm test:e2e:draw-guess:mobile` 检查选词、Canvas、字数提示、主持人和画册。没有跨游戏默认 `test:e2e:mobile`。局部场景继续用 `--grep` 缩小，不把一整个手机 suite 当作所有 UI 修改的固定步骤。报告实际引擎和尺寸，Chromium 模拟不等于真机 Safari 验收。
+用 `tests/e2e/viewport-cases.ts` 中的定义。`pnpm test:e2e:catan:mobile` 检查 Catan 的地图/港口/HUD；`pnpm test:e2e:draw-guess:mobile` 检查选词、Canvas、字数提示、主持人和画册；`pnpm test:e2e:carcassonne:mobile` 检查卡卡颂的预览、随从、缩放、长条地图、安全区与动效。没有跨游戏默认 `test:e2e:mobile`。局部场景继续用 `--grep` 缩小，不把一整个手机 suite 当作所有 UI 修改的固定步骤。报告实际引擎和尺寸，Chromium 模拟不等于真机 Safari 验收。
 
 ## 构建、CI 与显式集成
 

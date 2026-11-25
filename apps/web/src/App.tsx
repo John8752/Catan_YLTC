@@ -16,6 +16,7 @@ adoptLegacyTabSession(window.sessionStorage, window.localStorage);
 const playerSessionStore = createPlayerSessionStore(window.localStorage, seatSlotFromLocation(window.location.search));
 const CatanTable = lazy(() => import("./games/catan/CatanTable.js").then((module) => ({ default: module.CatanTable })));
 const DrawGuessTable = lazy(() => import("./games/draw-guess/DrawGuessTable.js").then((module) => ({ default: module.DrawGuessTable })));
+const CarcassonneTable = lazy(() => import("./games/carcassonne/CarcassonneTable.js").then((module) => ({ default: module.CarcassonneTable })));
 
 /** Account, room and connection shell. Game-specific controls live in games/<gameId>. */
 export function App() {
@@ -78,6 +79,7 @@ export function App() {
   const common = { session, busy, error, connectionState, accountControl, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby: handleReplay };
   return <Suspense fallback={<main className="loading-table"><p role="status">正在准备游戏桌面…</p></main>}>{room.gameId === "catan"
     ? <CatanTable key={room.id} {...common} room={room} updates={updates} snapshotEpoch={snapshotEpoch} compactAccountControl={compactAccountControl} />
-    : <DrawGuessTable key={room.id} {...common} room={room} />}</Suspense>;
+    : room.gameId === "draw-guess" ? <DrawGuessTable key={room.id} {...common} room={room} />
+    : <CarcassonneTable key={room.id} {...common} room={room} />}</Suspense>;
 }
 function errorMessage(error: unknown) { return error instanceof Error ? error.message : "发生了未知错误"; }

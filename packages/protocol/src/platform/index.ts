@@ -2,16 +2,18 @@ import type { RoomView } from "../catan/views.js";
 import type { RoomBaseView } from "./room-base.js";
 export type { RoomBaseView, LobbyMemberView } from "./room-base.js";
 import type { DrawGuessRoomView } from "../draw-guess/index.js";
+import type { CarcassonneRoomView } from "../carcassonne/index.js";
 
-export const GAME_IDS = ["catan", "draw-guess"] as const;
+export const GAME_IDS = ["catan", "draw-guess", "carcassonne"] as const;
 export const DEFAULT_GAME_ID = GAME_IDS[0];
 export type GameType = (typeof GAME_IDS)[number];
 export const GAME_CATALOG = [
   { id: "catan", name: "卡坦", players: "2–6 人", description: "造路建城、交换资源，一起经营海岛。" },
   { id: "draw-guess", name: "传画猜词", players: "3–6 人", description: "你画我猜接力，最后一起看词语怎么越传越离谱。" },
+  { id: "carcassonne", name: "卡卡颂", players: "2–5 人", description: "拼接城镇与田野，派出随从，合力铺出各有算盘的风景。" },
 ] as const satisfies readonly { readonly id: GameType; readonly name: string; readonly players: string; readonly description: string }[];
 
-export type AnyRoomView = RoomView | DrawGuessRoomView;
+export type AnyRoomView = RoomView | DrawGuessRoomView | CarcassonneRoomView;
 export interface RoomSession<R extends RoomBaseView = AnyRoomView> {
   readonly roomId: string;
   readonly playerId: string;

@@ -40,7 +40,7 @@ export function makePlan(files, options = {}, tests = []) {
       ...(packageLayers.length ? ["tests/architecture/boundaries.test.ts"] : []),
       ...(packageLayers.includes("web") ? ["apps/web/src/lib/secure-context.test.ts"] : []),
     ].filter((file) => !chosen.some((test) => test.file === file)),
-    browserScopes: scopes.slice(0, 3).filter((scope) => selected.has(scope)),
+    browserScopes: scopes.filter((scope) => scope !== "tooling" && selected.has(scope)),
     browser: tests.filter((test) => test.layer === "browser" && selected.has(test.scope)),
     build: Boolean(options.build || reasons.some((reason) => reason.build && reason.scopes.some((scope) => affectedLayers(reason).some((layer) => selected.get(scope)?.has(layer))))),
   };

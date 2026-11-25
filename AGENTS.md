@@ -35,7 +35,7 @@
 - Prefer small feature modules. Split a file before adding substantial behavior once it approaches 500 lines.
 - Shared identifiers, resource names, commands and events must not be duplicated across apps.
 - UI copy defaults to Simplified Chinese. Stable protocol values remain English code strings.
-- Use SVG for the board and DOM for text-heavy controls, dialogs, logs and accessibility-sensitive UI.
+- Use SVG for the Catan board and DOM for text-heavy controls, dialogs, logs and accessibility-sensitive UI. Carcassonne uses a game-owned Three.js renderer with SVG compatibility fallback under ADR-0017; its meshes never decide rules or legality.
 
 ## Frontend stack constraints
 

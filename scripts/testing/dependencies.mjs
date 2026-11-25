@@ -13,6 +13,14 @@ function withoutTesting(manifest) {
 }
 export function manifestImpact(before, after, layer = "all") {
   if (before && after && JSON.stringify(withoutTesting(JSON.parse(before))) === JSON.stringify(withoutTesting(JSON.parse(after)))) return { scopes: ["tooling"], layer: "tooling" };
+  if (before && after) {
+    const original=withoutTesting(JSON.parse(before)),next=withoutTesting(JSON.parse(after));
+    const added=Object.keys(next.exports??{}).filter((key)=>!(key in (original.exports??{})));
+    if(added.length&&added.every((key)=>key==="./carcassonne")) {
+      const exports={...next.exports};for(const key of added)delete exports[key];
+      if(JSON.stringify(original)===JSON.stringify({...next,exports}))return{scopes:["carcassonne"],layer,build:true};
+    }
+  }
   return { scopes, layer, build: true };
 }
 function withoutTestImporters(text) {

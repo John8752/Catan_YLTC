@@ -15,6 +15,9 @@ import type { AiCommentator } from "./games/catan/ai-commentary.js";
 import { normalizePlayerName, RoomError } from "./room-errors.js";
 import { CatanRoomGame } from "./games/catan/room-game.js";
 import { DrawGuessRoomGame } from "./games/draw-guess/room-game.js";
+import { CarcassonneRoomGame } from "./games/carcassonne/room-game.js";
+import type { PlaceCommand } from "@catan/protocol/carcassonne";
+import type { CarcassonneRoomView } from "@catan/protocol/carcassonne";
 
 /** One authoritative directory and one seat/connection lifecycle for every game. */
 export class RoomRegistry {
@@ -26,14 +29,16 @@ export class RoomRegistry {
   private readonly now: () => number;
   private readonly catan: CatanRoomGame;
   private readonly drawGuess: DrawGuessRoomGame;
+  private readonly carcassonne: CarcassonneRoomGame;
   constructor(options: { readonly nextSeed?: () => number; readonly now?: () => number; readonly aiCommentator?: AiCommentator | null } = {}) {
     this.nextSeed = options.nextSeed ?? (() => randomInt(1, 2_147_483_647));
     this.now = options.now ?? Date.now;
     this.catan = new CatanRoomGame((id) => { const room = this.rooms.get(id); return room?.gameId === "catan" ? room : undefined; }, this.now, (room) => this.notify(room), options.aiCommentator ?? null);
     this.drawGuess = new DrawGuessRoomGame((id) => { const room = this.rooms.get(id); return room?.gameId === "draw-guess" ? room : undefined; }, this.now, (room) => this.notify(room));
+    this.carcassonne = new CarcassonneRoomGame(this.now, (room) => this.notify(room));
   }
   configureAiCommentator(ai: AiCommentator | null) { this.catan.configureAi(ai); }
-  configureMatchRepository(repository: MatchRepository, onError: () => void = () => {}) { this.catan.repository = repository; this.catan.onSettlementError = onError; this.drawGuess.repository = repository; }
+  configureMatchRepository(repository: MatchRepository, onError: () => void = () => {}) { this.catan.repository = repository; this.catan.onSettlementError = onError; this.drawGuess.repository = repository; this.carcassonne.repository = repository; }
   configureAccountValidation(validate: (accountId: string) => boolean) { this.accountIsActive = validate; }
   accountSeat(accountId: string): RoomSession | null { return this.accountSeats.seat(accountId); }
   prepareAccountTakeover(accountId: string, guestSeat?: { readonly roomId: string; readonly seatToken: string }): () => void { return this.accountSeats.prepare(accountId, guestSeat); }
@@ -41,7 +46,7 @@ export class RoomRegistry {
   createRoom(playerName: string, accountId?: null, gameId?: "catan"): RoomSession<RoomView>;
   createRoom(playerName: string, accountId: string | null, gameId?: GameType): RoomSession;
   createRoom(playerName: string, accountId: string | null = null, gameId: GameType = "catan"): RoomSession {
-    if (gameId !== "catan" && gameId !== "draw-guess") throw new RoomError("INVALID_REQUEST", "未知游戏");
+    if (gameId !== "catan" && gameId !== "draw-guess" && gameId !== "carcassonne") throw new RoomError("INVALID_REQUEST", "未知游戏");
     const existing = accountId === null ? null : this.accountSeat(accountId);
     if (existing) return existing;
     const name = normalizePlayerName(playerName);
@@ -50,7 +55,7 @@ export class RoomRegistry {
     const seatToken = randomBytes(24).toString("base64url");
     const base: RoomBase = { id: roomId, matchId: null, startedAt: 0, hostPlayerId: playerId, seed: this.createSeed(), revision: 1,
       members: [{ id: playerId, seatToken, accountId, name, color: PLAYER_COLORS[0] }], appliedCommands: new Set(), lastActiveAt: this.now() };
-    const room = gameId === "catan" ? this.catan.create(base) : this.drawGuess.create(base);
+    const room = gameId === "catan" ? this.catan.create(base) : gameId === "draw-guess" ? this.drawGuess.create(base) : this.carcassonne.create(base);
     this.rooms.set(roomId, room);
     return { roomId, playerId, seatToken, room: this.project(room, playerId) };
   }
@@ -59,7 +64,7 @@ export class RoomRegistry {
     if (existing) return existing;
     const room = this.requireRoom(roomId); const name = normalizePlayerName(playerName);
     if (room.game !== null) throw new RoomError("ROOM_ALREADY_STARTED", "房间已开局");
-    const cap = room.gameId === "catan" ? this.catan.capacity(room) : this.drawGuess.capacity();
+    const cap = room.gameId === "catan" ? this.catan.capacity(room) : room.gameId === "draw-guess" ? this.drawGuess.capacity() : this.carcassonne.capacity();
     if (room.members.length >= cap) throw new RoomError("ROOM_FULL", "房间已满");
     const color = PLAYER_COLORS.find((candidate) => !room.members.some((member) => member.color === candidate));
     if (!color) throw new RoomError("ROOM_FULL", "房间已满");
@@ -76,7 +81,7 @@ export class RoomRegistry {
       const active = member.accountId === null ? null : this.accountSeat(member.accountId);
       if (active && active.roomId !== room.id) throw new RoomError("ACCOUNT_BUSY", "有玩家已在另一个房间，请先退出旧座位");
     }
-    if (room.gameId === "catan") this.catan.start(room); else this.drawGuess.start(room);
+    if (room.gameId === "catan") this.catan.start(room); else if (room.gameId === "draw-guess") this.drawGuess.start(room); else this.carcassonne.start(room);
     room.revision++; this.notify(room); return this.project(room, member.id);
   }
   returnToLobby(roomId: string, seatToken: string, matchId: string): AnyRoomView {
@@ -87,7 +92,7 @@ export class RoomRegistry {
       const active = seat.accountId === null ? null : this.accountSeat(seat.accountId);
       if (active && active.roomId !== room.id) throw new RoomError("ACCOUNT_BUSY", "有玩家已在另一个房间，请先释放这个房间的座位");
     }
-    if (room.gameId === "catan") this.catan.reset(room); else this.drawGuess.reset(room);
+    if (room.gameId === "catan") this.catan.reset(room); else if (room.gameId === "draw-guess") this.drawGuess.reset(room); else this.carcassonne.reset(room);
     for (const sub of this.subscriptions.get(room.id) ?? []) if (sub.eventAfterRevision !== undefined) sub.eventAfterRevision = null;
     room.seed = this.createSeed(room.seed); room.revision++; this.notify(room); return this.project(room, member.id);
   }
@@ -162,6 +167,11 @@ export class RoomRegistry {
     const room = this.drawRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
     return this.drawGuess.command(room, member.id, commandId, command);
   }
+  executeCarcassonneCommand(roomId: string, seatToken: string, commandId: string, command: PlaceCommand): CarcassonneRoomView {
+    const room = this.requireRoom(roomId);
+    if (room.gameId !== "carcassonne") throw new RoomError("WRONG_GAME", "此操作仅适用于卡卡颂");
+    return this.carcassonne.command(room, this.credential(room, seatToken).id, commandId, command);
+  }
   executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand): GameCommandResponse;
   executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand, responseMode: "ack" | undefined, matchId?: string): GameCommandReply;
   executeCommand(roomId: string, seatToken: string, commandId: string, expectedRevision: number, command: GameCommand, responseMode?: "ack", matchId?: string): GameCommandReply {
@@ -211,7 +221,7 @@ export class RoomRegistry {
   private drawRoom(room: AnyRoomRecord): DrawGuessRoomRecord { if (room.gameId !== "draw-guess") throw new RoomError("WRONG_GAME", "此操作仅适用于传画猜词"); return room; }
   private project(room: AnyRoomRecord, id: string, after?: number | null): AnyRoomView {
     if (!room.members.some((m) => m.id === id)) throw new RoomError("PLAYER_NOT_FOUND", "玩家不属于这个房间");
-    return room.gameId === "catan" ? this.catan.project(room, id, after) : this.drawGuess.project(room, id);
+    return room.gameId === "catan" ? this.catan.project(room, id, after) : room.gameId === "draw-guess" ? this.drawGuess.project(room, id) : this.carcassonne.project(room, id);
   }
   private notify(room: AnyRoomRecord) {
     for (const sub of this.subscriptions.get(room.id) ?? []) {
@@ -219,7 +229,7 @@ export class RoomRegistry {
       if (sub.eventAfterRevision !== undefined) sub.eventAfterRevision = room.game?.revision ?? null;
     }
   }
-  private remove(room: AnyRoomRecord) { if (room.gameId === "catan") this.catan.cancel(room.id); else this.drawGuess.cancel(room.id); this.rooms.delete(room.id); this.subscriptions.delete(room.id); }
+  private remove(room: AnyRoomRecord) { if (room.gameId === "catan") this.catan.cancel(room.id); else if (room.gameId === "draw-guess") this.drawGuess.cancel(room.id); this.rooms.delete(room.id); this.subscriptions.delete(room.id); }
   private createRoomId() {
     for (let i = 0; i < 20; i++) { const id = randomBytes(3).toString("hex").toUpperCase(); if (!this.rooms.has(id)) return id; }
     throw new Error("Unable to allocate a unique room id");

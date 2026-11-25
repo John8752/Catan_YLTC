@@ -171,7 +171,9 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     if (activePlayerId === null) throw new Error("Active player id is missing from the local seat");
     const ownForecast = activePage.locator("[data-turn-forecast]");
     const observedForecast = observerPage.locator("[data-turn-forecast]");
-    const ownRollTimer = activePage.locator(`[data-turn-timer-player="${activePlayerId}"]:visible`);
+    // The compact layout intentionally shows this seat in both the order strip
+    // and the private dock. Verify the public seat timer consistently at both sizes.
+    const ownRollTimer = activePage.locator(`[data-seat-of="${activePlayerId}"] [data-turn-timer-player="${activePlayerId}"]:visible`);
     const observedRollTimer = observerPage.locator(`[data-turn-timer-player="${activePlayerId}"]:visible`);
     await expect(ownRollTimer).toHaveAttribute("aria-label", /掷骰倒计时/);
     await expect(observedRollTimer).toHaveAttribute("aria-label", /掷骰倒计时/);

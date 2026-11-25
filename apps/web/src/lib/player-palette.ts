@@ -1,5 +1,11 @@
 import type { PlayerColor } from "@catan/game-core/primitives";
 
+/** SVG pieces use the same shared seat colors as DOM swatches. */
+export const PLAYER_SVG_COLORS = {
+  terracotta: "#c94f3d", ocean: "#3e6fb0", pine: "#36afa6", wheat: "#d6a12b", plum: "#805a9d", charcoal: "#e3dccb",
+  coral: "#c95c7b", orange: "#d9782d", navy: "#274c77", emerald: "#2f8f62", lavender: "#a579b7", graphite: "#4a5052",
+} as const satisfies Record<PlayerColor, string>;
+
 export const PLAYER_SWATCH_CLASSES = {
   terracotta: "bg-[#c94f3d]",
   ocean: "bg-[#3e6fb0]",

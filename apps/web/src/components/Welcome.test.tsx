@@ -7,6 +7,13 @@ import { Welcome } from "./Welcome.js";
 afterEach(() => cleanup());
 
 describe("welcome story", () => {
+  it("creates the camel race from the new game choice", () => {
+    const create = vi.fn(); render(<Welcome busy={false} error={null} onCreate={create} onJoin={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("显示名称"), { target: { value: "领航员" } });
+    fireEvent.click(screen.getByRole("radio", { name: /骆驼大赛/ }));
+    fireEvent.click(screen.getByRole("button", { name: "创建骆驼大赛房间" }));
+    expect(create).toHaveBeenCalledWith("领航员", "camel-up");
+  });
   it("submits the selected game at creation without affecting join", () => {
     const create = vi.fn(), join = vi.fn(); render(<Welcome busy={false} error={null} onCreate={create} onJoin={join} />);
     fireEvent.change(screen.getByLabelText("显示名称"), { target: { value: "朋友" } });

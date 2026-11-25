@@ -44,7 +44,11 @@
     "test:protocol": "node scripts/testing/run.mjs unit --layer protocol",
     "test:server": "node scripts/testing/run.mjs unit --layer server",
     "test:web": "node scripts/testing/run.mjs unit --layer web",
-    "test:catan:replay": "pnpm --filter @catan/game-core exec vitest run src/engine/replay.test.ts -t \"replays a complete legal match\""
+    "test:catan:replay": "pnpm --filter @catan/game-core exec vitest run src/engine/replay.test.ts -t \"replays a complete legal match\"",
+    "test:camel-up": "node scripts/testing/run.mjs unit --scope camel-up",
+    "validate:camel-up": "node scripts/testing/run.mjs validate --scope camel-up",
+    "test:e2e:camel-up": "node scripts/testing/run.mjs e2e --scope camel-up",
+    "test:e2e:camel-up:mobile": "node scripts/testing/run.mjs e2e --scope camel-up --grep @primary-phone"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

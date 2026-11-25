@@ -6,6 +6,13 @@ const registries: RoomRegistry[] = [];
 afterEach(() => { for (const registry of registries.splice(0)) registry.dispose(); vi.useRealTimers(); });
 function registry() { let seed = 42; const rooms = new RoomRegistry({ nextSeed: () => seed++ }); registries.push(rooms); return rooms; }
 describe("platform room lifecycle", () => {
+  it.each([["camel-up", 6], ["carcassonne", 5]] as const)("keeps %s seat capacity independent when both adapters coexist", (gameId, capacity) => {
+    const rooms = registry(), host = rooms.createRoom("房主", null, gameId);
+    for (let i = 1; i < capacity; i++) rooms.joinRoom(host.roomId, `朋友${i}`);
+    expect(rooms.getRoom(host.roomId, host.seatToken)).toMatchObject({ gameId });
+    expect(rooms.getRoom(host.roomId, host.seatToken).members).toHaveLength(capacity);
+    expect(() => rooms.joinRoom(host.roomId, "超额座位")).toThrow("满");
+  });
   it("selects a game at creation, enforces its capacity and rejects switching settings", async () => {
     const rooms = registry(); const app = await buildApp(rooms);
     try {

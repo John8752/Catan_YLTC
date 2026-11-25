@@ -7,6 +7,8 @@ const CatanMatchItem = lazy(() => import("../games/catan/AccountMatchItem.js"));
 const DrawGuessMatchItem = lazy(() => import("../games/draw-guess/AccountMatchItem.js"));
 const CarcassonneMatchItem = lazy(() => import("../games/carcassonne/AccountMatchItem.js"));
 
+const CamelMatchItem = lazy(() => import("../games/camel-up/AccountMatchItem.js"));
+
 export function AccountHistory() {
   const [gameId, setGameId] = useState<GameType>("catan");
   const currentGame = useRef(gameId); currentGame.current = gameId;
@@ -45,10 +47,10 @@ export function AccountHistory() {
   </section>;
 }
 function MatchItem({ match }: { readonly match: AccountMatchRecord }) {
-  if (match.dataVersion !== 1 || (match.gameId !== "catan" && match.gameId !== "draw-guess" && match.gameId !== "carcassonne")) {
+  if (match.dataVersion !== 1 || (match.gameId !== "catan" && match.gameId !== "draw-guess" && match.gameId !== "camel-up" && match.gameId !== "carcassonne")) {
     return <p>此对局的结算版本暂不支持显示。</p>;
   }
   return <Suspense fallback={<p role="status">正在读取对局…</p>}>
-    {match.gameId === "catan" ? <CatanMatchItem match={match} /> : match.gameId === "draw-guess" ? <DrawGuessMatchItem match={match} /> : <CarcassonneMatchItem match={match} />}
+    {match.gameId === "catan" ? <CatanMatchItem match={match} /> : match.gameId === "draw-guess" ? <DrawGuessMatchItem match={match} /> : match.gameId === "camel-up" ? <CamelMatchItem match={match} /> : <CarcassonneMatchItem match={match} />}
   </Suspense>;
 }

@@ -7,7 +7,8 @@
     "./catan": "./src/catan.ts",
     "./primitives": "./src/primitives/index.ts",
     "./draw-guess": "./src/draw-guess/index.ts",
-    "./carcassonne": "./src/carcassonne/index.ts"
+    "./carcassonne": "./src/carcassonne/index.ts",
+    "./camel-up": "./src/camel-up/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

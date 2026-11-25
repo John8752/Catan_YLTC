@@ -14,7 +14,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    ...["platform", "catan", "draw-guess", "carcassonne"].map((scope) => ({ name: scope, testDir: `./tests/e2e/${scope}`, testMatch: "**/*.spec.ts", use: { ...devices["Desktop Chrome"] } })),
+    ...["platform", "catan", "draw-guess", "camel-up", "carcassonne"].map((scope) => ({ name: scope, testDir: `./tests/e2e/${scope}`, testMatch: "**/*.spec.ts", use: { ...devices["Desktop Chrome"] } })),
   ],
   webServer: [
     {

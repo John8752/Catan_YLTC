@@ -8,6 +8,7 @@ Current product areas:
 
 - **Platform**: [Multi-game roadmap and ownership](./multi-game-plan.md), [ADR-0014](./adr/0014-multi-game-rooms.md), [Accounts](./account-system-plan.md), [Deployment](./deployment.md).
 - **Catan**: the base/extended rules, first-playable plan, map/HUD/trade/effects and transport validation below.
+- **Camel-up**: [Rules](./rules/camel-up.md), [3D playfield decision](./adr/0016-camel-up-three-dimensional-playfield.md), [Verification](./validation/camel-up.md).
 - **Draw-guess**: [Drawing telephone rules](./rules/draw-guess.md), [Multi-game verification](./validation/multi-game.md).
 - **Carcassonne**: [基础版规则](./rules/carcassonne.md)、[手机界面与动效方向](./carcassonne-design.md)。
 - 卡卡颂完整开发、测试矩阵与独立试玩：[验收记录](./validation/carcassonne.md)。

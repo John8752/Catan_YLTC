@@ -32,6 +32,7 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
       const catanUi = () => requests.filter((path) => /\/games\/catan\/(components\/|GameResult|AccountMatchItem|CatanTable)/.test(path));
       expect(catanUi()).toEqual([]);
       expect(requests.some((path) => path.includes("/games/draw-guess/AccountMatchItem"))).toBe(true);
+      expect(requests.some((path) => /\/games\/camel-up\/(three|CamelTable|RaceBoard)/.test(path))).toBe(false);
       expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       const bounds = await dialog.boundingBox(), viewport = page.viewportSize()!;
       expect(bounds!.x).toBeGreaterThanOrEqual(0);

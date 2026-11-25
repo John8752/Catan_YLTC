@@ -16,9 +16,9 @@ export function manifestImpact(before, after, layer = "all") {
   if (before && after) {
     const original=withoutTesting(JSON.parse(before)),next=withoutTesting(JSON.parse(after));
     const added=Object.keys(next.exports??{}).filter((key)=>!(key in (original.exports??{})));
-    if(added.length&&added.every((key)=>key==="./carcassonne")) {
+    if(added.length&&added.every((key)=>["./camel-up","./carcassonne"].includes(key) && next.exports[key]===`./src/${key.slice(2)}/index.ts`)) {
       const exports={...next.exports};for(const key of added)delete exports[key];
-      if(JSON.stringify(original)===JSON.stringify({...next,exports}))return{scopes:["carcassonne"],layer,build:true};
+      if(JSON.stringify(original)===JSON.stringify({...next,exports}))return{scopes:added.map(key=>key.slice(2)),layer,build:true};
     }
   }
   return { scopes, layer, build: true };

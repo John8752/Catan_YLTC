@@ -1,8 +1,9 @@
 import type { AnyRoomView } from "@catan/protocol/platform";
 import type { CatanRoomRecord } from "./games/catan/room-types.js";
 import type { DrawGuessRoomRecord } from "./games/draw-guess/room-types.js";
+import type { CamelRoomRecord } from "./games/camel-up/room-types.js";
 import type { CarcassonneRoomRecord } from "./games/carcassonne/room-types.js";
-export type AnyRoomRecord = CatanRoomRecord | DrawGuessRoomRecord | CarcassonneRoomRecord;
+export type AnyRoomRecord = CatanRoomRecord | DrawGuessRoomRecord | CamelRoomRecord | CarcassonneRoomRecord;
 
 export type RoomListener = (room: AnyRoomView) => void;
 

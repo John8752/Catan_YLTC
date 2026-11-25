@@ -36,3 +36,7 @@ export const primaryPhoneCases: readonly ViewportCase[] = phones.flatMap((phone)
 export const iPhone16BrowserAreaCases: readonly ViewportCase[] = primaryPhoneCases
   .filter(({ name }) => name === "iPhone 16 portrait browser-area @primary-phone")
   .map((item) => ({ ...item, name: item.name.replace(" @primary-phone", "") }));
+
+// Camel-up compatibility coverage; primary acceptance remains the four cases above.
+const { defaultBrowserType: _iPhone14Engine, ...iPhone14Options } = devices["iPhone 14"]!;
+export const iPhone14BrowserAreaCase: ViewportCase = { name: "iPhone 14 portrait browser-area", ...iPhone14Options.viewport, options: iPhone14Options };

@@ -1,0 +1,25 @@
+@font-face {
+  font-family: "YLTC Smiley Sans";
+  src: url("/games/camel-up/fonts/SmileySans-UI.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+/* Game-local typography, including its Radix portals. Other games keep their fonts. */
+.camel-font { font-family: "Noto Sans SC Variable", sans-serif; }
+.camel-font :is(h1, h2, h3) { font-family: "YLTC Smiley Sans", "Noto Sans SC Variable", sans-serif; font-weight: 400; letter-spacing: 0; }
+@keyframes camel-action-reveal {
+  0% { opacity: 0; transform: translateY(9px) scale(.92); filter: blur(3px); }
+  65% { opacity: 1; transform: translateY(-2px) scale(1.025); filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes camel-coin-reward {
+  0%, 100% { transform: scale(1); color: #263e35; }
+  40% { transform: scale(1.22); color: #a56b14; }
+}
+.camel-action-feedback { animation: camel-action-reveal 420ms cubic-bezier(.16, 1, .3, 1) both; }
+.camel-coin-feedback { animation: camel-coin-reward 700ms cubic-bezier(.16, 1, .3, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .camel-action-feedback, .camel-coin-feedback { animation: none; }
+  .camel-font button { transition: none; }
+}

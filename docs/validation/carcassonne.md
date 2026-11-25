@@ -113,3 +113,19 @@ Impeccable 检测器对改动执行一次，只有局部 10/11px 密度字级与
 最后的随从/板块高度耦合修正后，`pnpm test:e2e:carcassonne --grep "two isolated browsers|invalid rotation|review captures|browser bars"` 在 8796/5196 上 5/5 通过（33.5s），随后 `pnpm --filter @catan/web build` 通过，场景块约 644 kB / gzip 167 kB。`pnpm test:inventory` 与 `git diff --check` 通过；后者只有 ADR 索引的换行归一化提示。试玩 8798 健康接口与 5198 页面均正常，原骆驼大赛工作区只作只读参照。
 
 独立视觉 Verdict Pass 为 `ship`：落点密度、随从净空与接触高度、连续桌面、随从有限动效四项全部 resolved。该结论只覆盖四项修正，不冒称整站认证；动效根据源代码复核，没有声称观看现场动画。文档检查为只读：共同 `DESIGN.md` / `design.json` 保持原有文件，确认字体、座位颜色、手机底部停靠与桌面侧栏延续既有体系，新的局部渲染器由方向文档与 ADR-0017 解释；未发现当前范围的实质文档矛盾。
+
+## 合并 main 与骆驼大赛（2026-11-25）
+
+卡卡颂实现提交 `e7a1d13`；合并前 main 为包含骆驼大赛的 `76039cd`。在卡卡颂 worktree 中完成公共游戏目录、房间分派、懒加载、账号记录、包导出、测试范围及 ADR 的冲突解决后验证，再更新 main。骆驼大赛的核心、协议、游戏服务端、网页场景及公开素材与合并前 main 一致。
+
+- `pnpm install --frozen-lockfile`：通过，锁文件与已有依赖匹配。
+- `pnpm test:plan`：确认公共分派影响已有消费者，两个新游戏分别拥有各自的测试。没有回归 Catan / draw-guess 核心规则或设备矩阵。
+- `pnpm validate --scope "platform,camel-up,carcassonne" --build`：通过四包检查/构建，核心 28、协议 4、服务端 31、网页 24 项及 6 项架构检查。
+- `pnpm validate --scope "catan,draw-guess" --files "packages/protocol/src/platform/index.ts,apps/server/src/rooms.ts,apps/web/src/App.tsx"`：通过受影响消费者的协议 53、服务端 50、网页 142 项和静态保护。
+- `pnpm validate:tooling`：25 项选择器测试和 6 项架构检查通过；正向项目目录隔离覆盖全部已注册游戏。
+- 新增房间人数边界确定性回归：`pnpm --filter @catan/server exec vitest run src/platform/rooms.test.ts -t "seat capacity independent"`：2 项通过，分别确认骆驼大赛 6 人与卡卡颂 5 人上限。
+- `E2E_API_PORT=8796 E2E_WEB_PORT=5196 pnpm test:e2e --scope "camel-up,carcassonne" --workers=2`：29/29 通过，包含两游戏的真实多浏览器回合、重连/终局/再开、竖屏及 3D/降级流程。
+- `E2E_API_PORT=8797 E2E_WEB_PORT=5197 pnpm test:e2e:platform lazy-history.spec.ts --workers=1`：2/2 通过，确认桌面及 iPhone 16 浏览器区域的账号记录懒加载隔离。
+- `git diff main --check` 通过。合并来源自带字体许可的行尾空格保持原样，不修改第三方许可文本。
+
+本次浏览器验收仍为 Chromium 模拟与隔离内存数据库，不是物理 iOS Safari 验证。首次合并检查发现人数分派调用不存在的方法及旧测试夹具导出路径不规范，两项已修正并先复验失败检查，再执行上述通过的合并范围验证。

@@ -4,6 +4,7 @@ import { getMatchHistory } from "../auth-api.js";
 import { Button } from "./ui/button.js";
 
 const CatanMatchItem = lazy(() => import("../games/catan/AccountMatchItem.js"));
+const PokerMatchItem = lazy(() => import("../games/texas-holdem/AccountMatchItem.js"));
 const DrawGuessMatchItem = lazy(() => import("../games/draw-guess/AccountMatchItem.js"));
 
 export function AccountHistory() {
@@ -33,7 +34,7 @@ export function AccountHistory() {
     } catch { if (currentGame.current === gameId) setError("加载失败，请重试"); }
     finally { if (currentGame.current === gameId) setBusy(false); }
   }
-  return <section className="grid min-w-0 gap-3" aria-label={gameId === "catan" ? "卡坦岛对局记录" : "传画猜词对局记录"}>
+  return <section className="grid min-w-0 gap-3" aria-label={gameId === "catan" ? "卡坦岛对局记录" : gameId === "texas-holdem" ? "德州扑克对局记录" : "传画猜词对局记录"}>
     <label className="flex items-center gap-3 text-sm font-medium">记录游戏<select className="min-h-10 min-w-0 rounded-lg border px-3" value={gameId} onChange={(e) => setGameId(e.target.value as GameType)}>{GAME_CATALOG.map((game) => <option key={game.id} value={game.id}>{game.name}</option>)}</select></label>
     <p className="text-sm text-muted-foreground">仅保存正常结束的对局结算。中途解散不记录；传画猜词不长期保存画作或词语。</p>
     {error && <p role="alert">{error}</p>}
@@ -44,10 +45,10 @@ export function AccountHistory() {
   </section>;
 }
 function MatchItem({ match }: { readonly match: AccountMatchRecord }) {
-  if (match.dataVersion !== 1 || (match.gameId !== "catan" && match.gameId !== "draw-guess")) {
+  if (match.dataVersion !== 1 || (match.gameId !== "catan" && match.gameId !== "draw-guess" && match.gameId !== "texas-holdem")) {
     return <p>此对局的结算版本暂不支持显示。</p>;
   }
   return <Suspense fallback={<p role="status">正在读取对局…</p>}>
-    {match.gameId === "catan" ? <CatanMatchItem match={match} /> : <DrawGuessMatchItem match={match} />}
+    {match.gameId === "catan" ? <CatanMatchItem match={match} /> : match.gameId === "texas-holdem" ? <PokerMatchItem match={match} /> : <DrawGuessMatchItem match={match} />}
   </Suspense>;
 }

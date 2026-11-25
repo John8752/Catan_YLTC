@@ -9,11 +9,30 @@ import { inventory, filesUnder } from "./inventory.mjs";
 import { makePlan } from "./plan.mjs";
 import { commandsFor, parseArgs } from "./run.mjs";
 import { changedFiles } from "./git-changes.mjs";
-import { impact, scopes } from "./scopes.mjs";
+import { impact, scopes, browserTestMatch } from "./scopes.mjs";
 import { manifestImpact, lockImpact, dependencyOverrides } from "./dependencies.mjs";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const allTests = inventory(root);
 const plan = (files, options = {}) => makePlan(files, options, allTests);
+
+test("browser ownership cannot match a same-named worktree ancestor", () => {
+  for (const scope of scopes.filter((s) => s !== "tooling")) {
+    const pattern = browserTestMatch(scope);
+    for (const separator of ["/", "\\"]) for (const game of scopes.filter((s) => s !== "tooling")) {
+      const path = `C:/worktrees/${scope}/Catan_YLTC/tests/e2e/${game}/play.spec.ts`.replaceAll("/", separator);
+      assert.equal(pattern.test(path), scope === game, path);
+    }
+  }
+});
+
+test("poker owns each layer and its added public exports build only poker consumers", () => {
+  assert.deepEqual(plan(["packages/game-core/src/texas-holdem/engine.ts"]).scopes, ["texas-holdem"]);
+  assert.deepEqual(plan(["apps/web/src/games/texas-holdem/PokerTable.tsx"]).layers, { "texas-holdem": ["web"] });
+  const before = JSON.stringify({ name: "@catan/game-core", exports: { "./catan": "./src/catan.ts" } });
+  const after = JSON.stringify({ name: "@catan/game-core", exports: { "./catan": "./src/catan.ts", "./texas-holdem": "./src/texas-holdem/index.ts" } });
+  assert.deepEqual(manifestImpact(before, after, "core"), { scopes: ["texas-holdem"], layer: "core", build: true });
+  assert.deepEqual(plan(["tests/e2e/texas-holdem/play.spec.ts"]).browserScopes, ["texas-holdem"]);
+});
 
 test("drawing UI changes select only web checks and drawing tests, with no Catan or platform gameplay", () => {
   const selected = plan(["apps/web/src/games/draw-guess/DrawWork.tsx"]);
@@ -33,11 +52,11 @@ test("drawing rules expand to their consumers without selecting Catan", () => {
 });
 test("Catan effects are Catan, while shared controls impact both games", () => {
   assert.deepEqual(plan(["apps/web/src/effects/ResourceEffectLayer.tsx"]).scopes, ["catan"]);
-  assert.deepEqual(plan(["apps/web/src/components/ui/button.tsx"]).scopes, ["platform", "catan", "draw-guess"]);
+  assert.deepEqual(plan(["apps/web/src/components/ui/button.tsx"]).scopes, ["platform", "catan", "draw-guess", "texas-holdem"]);
 });
 test("accounts do not select board gameplay and core primitives include all consumers", () => {
   assert.deepEqual(plan(["apps/server/src/auth/account-service.ts"]).scopes, ["platform"]);
-  assert.deepEqual(plan(["packages/game-core/src/primitives/random.ts"]).scopes, ["platform", "catan", "draw-guess"]);
+  assert.deepEqual(plan(["packages/game-core/src/primitives/random.ts"]).scopes, ["platform", "catan", "draw-guess", "texas-holdem"]);
 });
 test("mixed changes take a union of scopes without broadening each layer", () => {
   const selected = plan(["apps/server/src/games/draw-guess/routes.ts", "apps/web/src/games/catan/GameResult.tsx"]);
@@ -75,7 +94,7 @@ test("full validation runs each unit file once and does not repeat replay or bou
   assert.deepEqual(selected.scopes, scopes);
 });
 test("each game browser command uses a positive project allowlist", () => {
-  for (const scope of ["platform", "catan", "draw-guess"]) {
+  for (const scope of ["platform", "catan", "draw-guess", "texas-holdem"]) {
     const commands = commandsFor(plan([], { scope }), { action: "e2e", extra: ["--grep", "@primary-phone"] });
     assert.deepEqual(commands[0].args, ["exec", "playwright", "test", `--project=${scope}`, "--grep", "@primary-phone"]);
   }

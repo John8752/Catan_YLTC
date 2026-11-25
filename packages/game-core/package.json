@@ -6,7 +6,8 @@
   "exports": {
     "./catan": "./src/catan.ts",
     "./primitives": "./src/primitives/index.ts",
-    "./draw-guess": "./src/draw-guess/index.ts"
+    "./draw-guess": "./src/draw-guess/index.ts",
+    "./texas-holdem": "./src/texas-holdem/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

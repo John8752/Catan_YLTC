@@ -13,6 +13,13 @@ function withoutTesting(manifest) {
 }
 export function manifestImpact(before, after, layer = "all") {
   if (before && after && JSON.stringify(withoutTesting(JSON.parse(before))) === JSON.stringify(withoutTesting(JSON.parse(after)))) return { scopes: ["tooling"], layer: "tooling" };
+  if (before && after) {
+    const previous = withoutTesting(JSON.parse(before)), next = withoutTesting(JSON.parse(after));
+    const added = Object.keys(next.exports ?? {}).filter((key) => !(key in (previous.exports ?? {})));
+    const gameScopes = added.map((key) => key.slice(2));
+    const withoutAdded = { ...next, exports: Object.fromEntries(Object.entries(next.exports ?? {}).filter(([key]) => !added.includes(key))) };
+    if (added.length && gameScopes.every((scope, i) => scopes.includes(scope) && !["platform", "tooling"].includes(scope) && added[i] === `./${scope}` && next.exports[added[i]] === `./src/${scope}/index.ts`) && JSON.stringify(previous) === JSON.stringify(withoutAdded)) return { scopes: gameScopes, layer, build: true };
+  }
   return { scopes, layer, build: true };
 }
 function withoutTestImporters(text) {

@@ -92,7 +92,7 @@ export function Welcome({ busy, error, onCreate, onJoin, accountControl, default
             </label>)}
           </fieldset>
           <button className="primary-button" type="submit" disabled={busy || playerName.trim().length === 0}>
-            {busy ? "正在准备桌面…" : gameId === "catan" ? "创建今晚的岛" : "创建传画猜词房间"}
+            {busy ? "正在准备桌面…" : gameId === "catan" ? "创建今晚的岛" : gameId === "texas-holdem" ? "创建德州扑克房间" : "创建传画猜词房间"}
           </button>
         </form>
 

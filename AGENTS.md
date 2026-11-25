@@ -162,3 +162,12 @@ Hard constraints:
 - Before committing, inspect `git status --short` and `git diff --cached`; do not include logs, browser artifacts, databases, secrets or unrelated edits.
 - Do not rewrite published history or use destructive Git commands unless the user explicitly requests it.
 - See `docs/development-workflow.md` for the full lightweight workflow.
+
+## Texas-holdem ownership
+
+- See `docs/rules/texas-holdem.md`. Core state/rules belong to `game-core/texas-holdem`; safe views, DTOs and versioned results belong to `protocol/texas-holdem`; server and web each use `games/texas-holdem`.
+- Support both fixed-hands and tournament modes. Chips have no cash value; do not add cash, payments, rebuys or rake.
+- Server crypto-shuffles each full deck and passes the explicit order into core. Never expose deck, burns, future board or another player’s unrevealed/folded hole cards in views, logs or SQLite.
+- Chips must be conserved across all-ins, side pots, uncalled refunds and odd-chip splits. Bind commands and timers to match, hand and revision; timeouts check if free, otherwise fold.
+- Use `pnpm validate:texas-holdem --build` after package-export changes, and `pnpm test:e2e:texas-holdem` / `:mobile` for visible flows. Keep test ownership and the positive Playwright project in sync.
+- Cards need both visible rank and suit shapes, red/black distinction and accessible names; never rely on colour alone. Own hole cards and community cards must stay legible in the primary portrait phone matrix.

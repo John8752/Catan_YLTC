@@ -50,3 +50,9 @@
 - `validate:all` / `validate:full` 仅供明确的集成或发布需要，不能当作每次提交门槛。
 
 早期交付证据见 [多游戏验证](validation/multi-game.md)，它记录历史执行范围，不定义当前要求。
+
+## 德州扑克 / texas-holdem
+
+2–9 人虚拟筹码无限注，固定手数与锦标赛两种模式，规则见 [texas-holdem](rules/texas-holdem.md)。核心、协议、服务端适配器和网页分别使用 `texas-holdem` 子路径及目录。公共房间、账号、座位、WebSocket 和最终结算仓储保持一份；隐藏牌、洗牌、下注和边池属于此游戏。
+
+测试入口为 `pnpm validate:texas-holdem --build`、`pnpm test:e2e:texas-holdem`，手机使用 `pnpm test:e2e:texas-holdem:mobile`。新导出采用增量所有权，只构建与验证本游戏消费者；公共目录分派另选 platform 的契约回归，无需运行其他游戏玩法。

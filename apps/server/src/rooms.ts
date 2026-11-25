@@ -1,3 +1,7 @@
+import { PokerRoomGame } from "./games/texas-holdem/room-game.js";
+import type { PokerRoomRecord } from "./games/texas-holdem/room-types.js";
+import type { PokerCommand, PokerSettings } from "@catan/protocol/texas-holdem";
+import type { Card } from "@catan/game-core/texas-holdem";
 import { randomBytes, randomInt } from "node:crypto";
 import { PLAYER_COLORS, type PlayerColor } from "@catan/game-core/primitives";
 import type { PlayableRuleProfile, GameCommand } from "@catan/game-core/catan";
@@ -25,15 +29,17 @@ export class RoomRegistry {
   private readonly nextSeed: () => number;
   private readonly now: () => number;
   private readonly catan: CatanRoomGame;
+  private readonly poker: PokerRoomGame;
   private readonly drawGuess: DrawGuessRoomGame;
-  constructor(options: { readonly nextSeed?: () => number; readonly now?: () => number; readonly aiCommentator?: AiCommentator | null } = {}) {
+  constructor(options: { readonly pokerDeck?: () => Card[]; readonly nextSeed?: () => number; readonly now?: () => number; readonly aiCommentator?: AiCommentator | null } = {}) {
     this.nextSeed = options.nextSeed ?? (() => randomInt(1, 2_147_483_647));
     this.now = options.now ?? Date.now;
+    this.poker = new PokerRoomGame((id) => { const room = this.rooms.get(id); return room?.gameId === "texas-holdem" ? room : undefined; }, this.now, (room) => this.notify(room), options.pokerDeck);
     this.catan = new CatanRoomGame((id) => { const room = this.rooms.get(id); return room?.gameId === "catan" ? room : undefined; }, this.now, (room) => this.notify(room), options.aiCommentator ?? null);
     this.drawGuess = new DrawGuessRoomGame((id) => { const room = this.rooms.get(id); return room?.gameId === "draw-guess" ? room : undefined; }, this.now, (room) => this.notify(room));
   }
   configureAiCommentator(ai: AiCommentator | null) { this.catan.configureAi(ai); }
-  configureMatchRepository(repository: MatchRepository, onError: () => void = () => {}) { this.catan.repository = repository; this.catan.onSettlementError = onError; this.drawGuess.repository = repository; }
+  configureMatchRepository(repository: MatchRepository, onError: () => void = () => {}) { this.catan.repository = repository; this.catan.onSettlementError = onError; this.drawGuess.repository = repository; this.poker.repository = repository; this.poker.onSettlementError = onError; }
   configureAccountValidation(validate: (accountId: string) => boolean) { this.accountIsActive = validate; }
   accountSeat(accountId: string): RoomSession | null { return this.accountSeats.seat(accountId); }
   prepareAccountTakeover(accountId: string, guestSeat?: { readonly roomId: string; readonly seatToken: string }): () => void { return this.accountSeats.prepare(accountId, guestSeat); }
@@ -41,7 +47,7 @@ export class RoomRegistry {
   createRoom(playerName: string, accountId?: null, gameId?: "catan"): RoomSession<RoomView>;
   createRoom(playerName: string, accountId: string | null, gameId?: GameType): RoomSession;
   createRoom(playerName: string, accountId: string | null = null, gameId: GameType = "catan"): RoomSession {
-    if (gameId !== "catan" && gameId !== "draw-guess") throw new RoomError("INVALID_REQUEST", "未知游戏");
+    if (gameId !== "catan" && gameId !== "draw-guess" && gameId !== "texas-holdem") throw new RoomError("INVALID_REQUEST", "未知游戏");
     const existing = accountId === null ? null : this.accountSeat(accountId);
     if (existing) return existing;
     const name = normalizePlayerName(playerName);
@@ -50,7 +56,7 @@ export class RoomRegistry {
     const seatToken = randomBytes(24).toString("base64url");
     const base: RoomBase = { id: roomId, matchId: null, startedAt: 0, hostPlayerId: playerId, seed: this.createSeed(), revision: 1,
       members: [{ id: playerId, seatToken, accountId, name, color: PLAYER_COLORS[0] }], appliedCommands: new Set(), lastActiveAt: this.now() };
-    const room = gameId === "catan" ? this.catan.create(base) : this.drawGuess.create(base);
+    const room = gameId === "catan" ? this.catan.create(base) : gameId === "texas-holdem" ? this.poker.create(base) : this.drawGuess.create(base);
     this.rooms.set(roomId, room);
     return { roomId, playerId, seatToken, room: this.project(room, playerId) };
   }
@@ -59,7 +65,7 @@ export class RoomRegistry {
     if (existing) return existing;
     const room = this.requireRoom(roomId); const name = normalizePlayerName(playerName);
     if (room.game !== null) throw new RoomError("ROOM_ALREADY_STARTED", "房间已开局");
-    const cap = room.gameId === "catan" ? this.catan.capacity(room) : this.drawGuess.capacity();
+    const cap = room.gameId === "catan" ? this.catan.capacity(room) : room.gameId === "texas-holdem" ? 9 : this.drawGuess.capacity();
     if (room.members.length >= cap) throw new RoomError("ROOM_FULL", "房间已满");
     const color = PLAYER_COLORS.find((candidate) => !room.members.some((member) => member.color === candidate));
     if (!color) throw new RoomError("ROOM_FULL", "房间已满");
@@ -76,7 +82,7 @@ export class RoomRegistry {
       const active = member.accountId === null ? null : this.accountSeat(member.accountId);
       if (active && active.roomId !== room.id) throw new RoomError("ACCOUNT_BUSY", "有玩家已在另一个房间，请先退出旧座位");
     }
-    if (room.gameId === "catan") this.catan.start(room); else this.drawGuess.start(room);
+    if (room.gameId === "catan") this.catan.start(room); else if (room.gameId === "texas-holdem") this.poker.start(room); else this.drawGuess.start(room);
     room.revision++; this.notify(room); return this.project(room, member.id);
   }
   returnToLobby(roomId: string, seatToken: string, matchId: string): AnyRoomView {
@@ -87,7 +93,7 @@ export class RoomRegistry {
       const active = seat.accountId === null ? null : this.accountSeat(seat.accountId);
       if (active && active.roomId !== room.id) throw new RoomError("ACCOUNT_BUSY", "有玩家已在另一个房间，请先释放这个房间的座位");
     }
-    if (room.gameId === "catan") this.catan.reset(room); else this.drawGuess.reset(room);
+    if (room.gameId === "catan") this.catan.reset(room); else if (room.gameId === "texas-holdem") this.poker.reset(room); else this.drawGuess.reset(room);
     for (const sub of this.subscriptions.get(room.id) ?? []) if (sub.eventAfterRevision !== undefined) sub.eventAfterRevision = null;
     room.seed = this.createSeed(room.seed); room.revision++; this.notify(room); return this.project(room, member.id);
   }
@@ -143,7 +149,7 @@ export class RoomRegistry {
     return ids;
   }
   get roomCount() { return this.rooms.size; }
-  dispose() { this.catan.dispose(); this.drawGuess.dispose(); }
+  dispose() { this.catan.dispose(); this.drawGuess.dispose(); this.poker.dispose(); }
 
   // Typed game entry points. HTTP dispatch validates the corresponding DTO before calling these.
   updateSettings(roomId: string, seatToken: string, revision: number, settings: { readonly ruleProfile: PlayableRuleProfile; readonly victoryPointsToWin: number; readonly bankCountsPublic?: boolean | undefined }): RoomView {
@@ -157,6 +163,14 @@ export class RoomRegistry {
   updateDrawSettings(roomId: string, seatToken: string, revision: number, settings: DrawGuessSettings): DrawGuessRoomView {
     const room = this.drawRoom(this.configurable(roomId, seatToken, revision)); this.drawGuess.settings(room, settings);
     room.revision++; this.notify(room); return this.drawGuess.project(room, room.hostPlayerId);
+  }
+  updatePokerSettings(roomId: string, seatToken: string, revision: number, settings: PokerSettings) {
+    const room = this.pokerRoom(this.configurable(roomId, seatToken, revision)); this.poker.settings(room, settings);
+    room.revision++; this.notify(room); return this.poker.project(room, room.hostPlayerId);
+  }
+  executePokerCommand(roomId: string, seatToken: string, commandId: string, command: PokerCommand) {
+    const room = this.pokerRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
+    return this.poker.command(room, member.id, commandId, command);
   }
   executeDrawCommand(roomId: string, seatToken: string, commandId: string, command: DrawGuessPlayerCommand): DrawGuessRoomView {
     const room = this.drawRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
@@ -208,10 +222,11 @@ export class RoomRegistry {
     if (this.credential(room, token).id !== room.hostPlayerId) throw new RoomError("ONLY_HOST_CAN_CONFIGURE", "只有房主可以修改设置"); return room;
   }
   private catanRoom(room: AnyRoomRecord): CatanRoomRecord { if (room.gameId !== "catan") throw new RoomError("WRONG_GAME", "此操作仅适用于卡坦"); return room; }
+  private pokerRoom(room: AnyRoomRecord): PokerRoomRecord { if (room.gameId !== "texas-holdem") throw new RoomError("WRONG_GAME", "此操作仅适用于德州扑克"); return room; }
   private drawRoom(room: AnyRoomRecord): DrawGuessRoomRecord { if (room.gameId !== "draw-guess") throw new RoomError("WRONG_GAME", "此操作仅适用于传画猜词"); return room; }
   private project(room: AnyRoomRecord, id: string, after?: number | null): AnyRoomView {
     if (!room.members.some((m) => m.id === id)) throw new RoomError("PLAYER_NOT_FOUND", "玩家不属于这个房间");
-    return room.gameId === "catan" ? this.catan.project(room, id, after) : this.drawGuess.project(room, id);
+    return room.gameId === "catan" ? this.catan.project(room, id, after) : room.gameId === "texas-holdem" ? this.poker.project(room, id) : this.drawGuess.project(room, id);
   }
   private notify(room: AnyRoomRecord) {
     for (const sub of this.subscriptions.get(room.id) ?? []) {
@@ -219,7 +234,7 @@ export class RoomRegistry {
       if (sub.eventAfterRevision !== undefined) sub.eventAfterRevision = room.game?.revision ?? null;
     }
   }
-  private remove(room: AnyRoomRecord) { if (room.gameId === "catan") this.catan.cancel(room.id); else this.drawGuess.cancel(room.id); this.rooms.delete(room.id); this.subscriptions.delete(room.id); }
+  private remove(room: AnyRoomRecord) { if (room.gameId === "catan") this.catan.cancel(room.id); else if (room.gameId === "texas-holdem") this.poker.cancel(room.id); else this.drawGuess.cancel(room.id); this.rooms.delete(room.id); this.subscriptions.delete(room.id); }
   private createRoomId() {
     for (let i = 0; i < 20; i++) { const id = randomBytes(3).toString("hex").toUpperCase(); if (!this.rooms.has(id)) return id; }
     throw new Error("Unable to allocate a unique room id");

@@ -6,6 +6,8 @@ Test ownership/runner migration evidence: [Scoped infrastructure verification](.
 
 Current product areas:
 
+- **Texas-holdem**: [Rules and modes](./rules/texas-holdem.md), [Table design](./design/texas-holdem.md), [Validation](./validation/texas-holdem.md).
+
 - **Platform**: [Multi-game roadmap and ownership](./multi-game-plan.md), [ADR-0014](./adr/0014-multi-game-rooms.md), [Accounts](./account-system-plan.md), [Deployment](./deployment.md).
 - **Catan**: the base/extended rules, first-playable plan, map/HUD/trade/effects and transport validation below.
 - **Draw-guess**: [Drawing telephone rules](./rules/draw-guess.md), [Multi-game verification](./validation/multi-game.md).

@@ -105,3 +105,14 @@ pnpm test:catan:replay  # Catan 的完整规则重放，可单独定位
 全量用于明确的跨模块集成、测试结构迁移核验或发布要求，需要记录原因。它不再是每次提交、每次规则调整的默认要求；不要为了“保险”重复两遍。重放、边界检查已在完整单元集合中，全量 gate 不重复跑一遍；手机用例已包含在所属浏览器集合中，也不重跑一次。
 
 遇到失败先跑失败用例。只有新修复影响其他用例时才扩大到相应 suite；一次无关游戏超时不应让当前单游戏工作反复全跑。验证记录应写明范围、命令、结果、没有验证的相关风险，保留失败与重试证据。
+
+## 德州扑克
+
+`texas-holdem` 是独立归属范围，四层分别位于 `game-core/src/texas-holdem`、`protocol/src/texas-holdem`、`server/src/games/texas-holdem`、`web/src/games/texas-holdem`，浏览器位于 `tests/e2e/texas-holdem`。新增测试必须进入同一范围。
+
+- `pnpm test:texas-holdem --layer core` 覆盖牌型、下注权、全下、边池、退款、排名、两种模式及确定性完整重放。
+- `pnpm validate:texas-holdem --build` 覆盖四层类型、单元/集成、私密信息、架构边界、HTTP API 安全及子路径产物构建。
+- `pnpm test:e2e:texas-holdem` 覆盖独立浏览器的固定手数与锦标赛流程、重连和同房重开。
+- `pnpm test:e2e:texas-holdem:mobile` 使用共享四个 iPhone 16 / Pro Max portrait primaryPhoneCases，9 人长名字、牌面尺寸、底部操作、公共牌、浏览器区域缩小与安全区域模拟。全部为 Chromium 模拟，不等于真机 Safari。
+
+新增游戏的公开子路径如保持其他 manifest 不变，构建与回归只选择新游戏；移除/改变已有导出、编译器及依赖解析仍扩大检查。平台目录和房间分派按消费者保持契约检查，不因接入新游戏自动回归其他游戏规则。

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { browserTestMatch } from "./scripts/testing/scopes.mjs";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -13,7 +14,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    ...["platform", "catan", "draw-guess"].map((scope) => ({ name: scope, testMatch: `**/${scope}/**/*.spec.ts`, use: { ...devices["Desktop Chrome"] } })),
+    ...["platform", "catan", "draw-guess", "texas-holdem"].map((scope) => ({ name: scope, testMatch: browserTestMatch(scope), use: { ...devices["Desktop Chrome"] } })),
   ],
   webServer: [
     {

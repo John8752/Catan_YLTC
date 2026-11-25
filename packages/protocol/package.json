@@ -7,7 +7,8 @@
     "./platform": "./src/platform/index.ts",
     "./catan": "./src/catan/index.ts",
     "./draw-guess": "./src/draw-guess/index.ts",
-    "./transport": "./src/platform-stream.ts"
+    "./transport": "./src/platform-stream.ts",
+    "./camel-up": "./src/camel-up/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

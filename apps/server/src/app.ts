@@ -1,3 +1,4 @@
+import { registerCamelRoutes } from "./games/camel-up/routes.js";
 import { sendError, normalizeError, rejectionCodes } from "./route-errors.js";
 import { registerCatanRoutes } from "./games/catan/routes.js";
 import { registerDrawGuessRoutes } from "./games/draw-guess/routes.js";
@@ -147,6 +148,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
   registerAuthRoutes(app, accounts, matches, sessionLifetimeMs);
   registerCatanRoutes(app, registry, options);
   registerDrawGuessRoutes(app, registry);
+  registerCamelRoutes(app, registry);
 
   app.get("/health", async () => ({ ok: true, service: "catan-server", rooms: registry.roomCount }));
   app.get("/api/games", async () => ({ games: GAME_CATALOG }));

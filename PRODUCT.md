@@ -9,6 +9,7 @@ YLTC is a synchronous browser tabletop hub for private groups. A player opens th
 - **Platform**: optional accounts, anonymous entry, one authoritative room directory, membership/host succession, seat recovery, safe per-player transport and game-scoped final settlements. A room selects `gameId` at creation and cannot switch it. Finished rooms may return to their own lobby; every subsequent start gets a new `matchId`.
 - **Catan (`catan`)**: 2–6 players, its existing rule profiles, island renderer, trade, hidden cards, history and victory summaries. The historical milestones below describe this game only.
 - **Drawing telephone (`draw-guess`, 传画猜词)**: 3–6 players, each choosing one of six word-bank prompts and drawing their own opening, then alternating guesses (with character-count hints) and drawings. Private checkpointed drafts, authoritative deadlines, automatic shared reveal with a text system host and a finished gallery. Original prompts and rules inspired by the genre; no licensed assets or rulebook text.
+- **Camel race (`camel-up`, 骆驼大赛)**: 3–6 players, second-edition-inspired stacking race with leg tickets, secret finish bets, spectator tiles, crazy camels and six-player partnerships. Original real-time 3D toy diorama, camera rotation/zoom, server-safe action feedback and final coin results.
 - Voice chat remains external. HTTPS, microphone capture, public matchmaking, spectators, AI drawing and durable live-game recovery are not part of this milestone.
 
 Current cross-game plan and ownership: [Platform and game roadmap](docs/multi-game-plan.md). Drawing rules: [Draw-guess](docs/rules/draw-guess.md).
@@ -70,6 +71,12 @@ Accounts are an optional enhancement rather than a new entry requirement. Guest 
 
 ## Visual direction
 
-Typography uses self-hosted Noto Sans SC Variable throughout Chinese headings, body text, controls and board labels, with weight providing hierarchy. Room codes and countdowns may use a monospace stack with the same Chinese fallback. Fontsource's Unicode-range WOFF2 subsets load from the website's own origin with `font-display: swap`; no external font CDN is required. The SIL OFL license ships at `/fonts/NotoSansSC-OFL.txt`.
+Platform, Catan and drawing-telephone typography uses self-hosted Noto Sans SC Variable for Chinese headings, body text, controls and board labels, with weight providing hierarchy. Room codes and countdowns may use a monospace stack with the same Chinese fallback. Fontsource's Unicode-range WOFF2 subsets load from the website's own origin with `font-display: swap`; no external font CDN is required. The SIL OFL license ships at `/fonts/NotoSansSC-OFL.txt`.
 
 The interface should feel like a warmly lit wooden game table: parchment surfaces, muted ocean blue, pine green, terracotta and wheat accents. Geometry is crisp and tactile, motion is restrained, and the result must not resemble an admin dashboard.
+
+## Camel race: mobile and art direction
+
+Primary use is portrait phones from the iPhone 14 generation, with iPhone 16 / 16 Pro Max full-canvas and browser-area acceptance. The user chose the existing Catan interaction pattern: compact seats and dice above a fitted playfield, a bottom action dock, and Radix disclosures for detailed decisions. The user explicitly rejected a flat 2D board: Camel race uses a real 3D miniature desert with sculpted camels, physical stacks, warm light, a tiled track, pyramid and oasis. Camera gestures never change legality. See ADR-0016 for WebGL and SVG fallback boundaries.
+
+The game's display voice is self-hosted Smiley Sans (得意黑), paired with the existing self-hosted Noto Sans SC Variable for clear body and control text. The user rejected the earlier handwriting-style pairing. Camels are single-piece, beveled wooden meeples: one broad hump and a compact neck, without separate thin limbs, eyes or saddle decorations; 3D pieces, portraits and SVG fallback share one silhouette. Font licenses ship with the fonts. Keep other games' typography unchanged. Each accepted action gets distinct meaningful feedback; emphasize the acting seat, roll outcome and settlements. No past action animation replays on reconnect; reduced motion preserves the static result.

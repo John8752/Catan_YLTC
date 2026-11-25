@@ -17,6 +17,8 @@ const playerSessionStore = createPlayerSessionStore(window.localStorage, seatSlo
 const CatanTable = lazy(() => import("./games/catan/CatanTable.js").then((module) => ({ default: module.CatanTable })));
 const DrawGuessTable = lazy(() => import("./games/draw-guess/DrawGuessTable.js").then((module) => ({ default: module.DrawGuessTable })));
 
+const CamelTable = lazy(() => import("./games/camel-up/CamelTable.js").then((module) => ({ default: module.CamelTable })));
+
 /** Account, room and connection shell. Game-specific controls live in games/<gameId>. */
 export function App() {
   const [account, setAccount] = useState<AccountView | null>(null);
@@ -78,6 +80,7 @@ export function App() {
   const common = { session, busy, error, connectionState, accountControl, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby: handleReplay };
   return <Suspense fallback={<main className="loading-table"><p role="status">正在准备游戏桌面…</p></main>}>{room.gameId === "catan"
     ? <CatanTable key={room.id} {...common} room={room} updates={updates} snapshotEpoch={snapshotEpoch} compactAccountControl={compactAccountControl} />
+    : room.gameId === "camel-up" ? <CamelTable key={room.id} {...common} room={room} snapshotEpoch={snapshotEpoch} />
     : <DrawGuessTable key={room.id} {...common} room={room} />}</Suspense>;
 }
 function errorMessage(error: unknown) { return error instanceof Error ? error.message : "发生了未知错误"; }

@@ -13,7 +13,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    ...["platform", "catan", "draw-guess"].map((scope) => ({ name: scope, testMatch: `**/${scope}/**/*.spec.ts`, use: { ...devices["Desktop Chrome"] } })),
+    ...["platform", "catan", "draw-guess", "camel-up"].map((scope) => ({ name: scope, testMatch: `**/${scope}/**/*.spec.ts`, use: { ...devices["Desktop Chrome"] } })),
   ],
   webServer: [
     {

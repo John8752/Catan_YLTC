@@ -8,6 +8,7 @@ Current product areas:
 
 - **Platform**: [Multi-game roadmap and ownership](./multi-game-plan.md), [ADR-0014](./adr/0014-multi-game-rooms.md), [Accounts](./account-system-plan.md), [Deployment](./deployment.md).
 - **Catan**: the base/extended rules, first-playable plan, map/HUD/trade/effects and transport validation below.
+- **Camel-up**: [Rules](./rules/camel-up.md), [3D playfield decision](./adr/0016-camel-up-three-dimensional-playfield.md), [Verification](./validation/camel-up.md).
 - **Draw-guess**: [Drawing telephone rules](./rules/draw-guess.md), [Multi-game verification](./validation/multi-game.md).
 
 Draw-guess opening drawings, hints and automatic system-host reveal: [Rules update verification](./validation/draw-guess-opening-reveal.md).

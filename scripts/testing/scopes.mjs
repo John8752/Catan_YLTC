@@ -1,5 +1,5 @@
 // Canonical ownership for local regression, inventory checks and CI.
-export const scopes = ["platform", "catan", "draw-guess", "tooling"];
+export const scopes = ["platform", "catan", "draw-guess", "camel-up", "tooling"];
 export const layers = ["core", "protocol", "server", "web", "browser", "tooling"];
 export const packages = {
   core: { cwd: "packages/game-core", name: "@catan/game-core" },
@@ -7,17 +7,20 @@ export const packages = {
   server: { cwd: "apps/server", name: "@catan/server" },
   web: { cwd: "apps/web", name: "@catan/web" },
 };
+export const gameScopes = scopes.filter(scope => scope !== "tooling");
 const group = (scope, layer, paths) => ({ scope, layer, paths });
 export const unitGroups = [
   group("platform", "core", ["packages/game-core/src/primitives/"]),
   group("catan", "core", ["awards", "buildables", "development", "engine", "map", "resources", "rulesets", "trade"].map((name) => `packages/game-core/src/${name}/`).concat("packages/game-core/src/game.test.ts")),
   group("draw-guess", "core", ["packages/game-core/src/draw-guess/"]),
-  ...["platform", "catan", "draw-guess"].map((scope) => group(scope, "protocol", [`packages/protocol/src/${scope}/`])),
+  group("camel-up", "core", ["packages/game-core/src/camel-up/"]),
+  ...gameScopes.map((scope) => group(scope, "protocol", [`packages/protocol/src/${scope}/`])),
   group("platform", "server", ["apps/server/src/platform/", "apps/server/src/auth/", "apps/server/src/database/"]),
-  ...["catan", "draw-guess"].map((scope) => group(scope, "server", [`apps/server/src/games/${scope}/`])),
+  ...["catan", "draw-guess", "camel-up"].map((scope) => group(scope, "server", [`apps/server/src/games/${scope}/`])),
   group("platform", "web", ["apps/web/src/components/", "apps/web/src/lib/", "apps/web/src/hooks/", ...["auth-boundary", "player-session", "room-updates"].map((name) => `apps/web/src/${name}.test.ts`)]),
   group("catan", "web", ["apps/web/src/games/catan/", "apps/web/src/effects/"]),
   group("draw-guess", "web", ["apps/web/src/games/draw-guess/"]),
+  group("camel-up", "web", ["apps/web/src/games/camel-up/"]),
   group("tooling", "tooling", ["tests/architecture/", "scripts/testing/"]),
 ];
 export const matchesPath = (file, path) => path.endsWith("/") ? file.startsWith(path) : file === path;
@@ -26,13 +29,13 @@ export const isBrowser = (file) => file.startsWith("tests/e2e/") && file.endsWit
 export function testOwner(file) {
   if (isBrowser(file)) {
     const scope = file.split("/")[2];
-    return scopes.slice(0, 3).includes(scope) ? [{ scope, layer: "browser" }] : [];
+    return gameScopes.includes(scope) ? [{ scope, layer: "browser" }] : [];
   }
   return isUnit(file) ? unitGroups.filter((g) => g.paths.some((path) => matchesPath(file, path))) : [];
 }
 
 const sharedWeb = ["App.tsx", "main.tsx", "styles.css", "http.ts", "api.ts", "auth-headers.ts", "room-session.ts", "room-updates.ts", "player-session.ts", "components/DisbandRoomControl.tsx", "games/room-sync.ts", "hooks/use-room-connection.ts", "hooks/use-media-query.ts"];
-const allGames = ["platform", "catan", "draw-guess"];
+const allGames = gameScopes;
 /** No catch-all Catan bucket: an unmapped source/test must be assigned explicitly. */
 export function impact(file) {
   const owners = testOwner(file);
@@ -51,6 +54,7 @@ export function impact(file) {
     if (allGames.includes(scope)) return { scopes: [scope], layer: "browser" };
     throw Error(`Assign browser fixture ownership: ${file}`);
   }
+  if (file.startsWith("apps/web/public/games/camel-up/")) return { scopes: ["camel-up"], layer: "web" };
   if (file.endsWith(".md") || [".gitignore", ".gitattributes", ".editorconfig"].includes(file)) return { scopes: [], layer: null };
   // Root scripts/tool versions are test infrastructure. Dependency/lock and app build
   // configuration changes have an explicit integration impact, never an implicit fallback.
@@ -63,6 +67,7 @@ export function impact(file) {
     const source = path.slice(4);
     if (layer === "core") {
       if (source.startsWith("draw-guess/")) return { scopes: ["draw-guess"], layer };
+      if (source.startsWith("camel-up/")) return { scopes: ["camel-up"], layer };
       if (source.startsWith("primitives/")) return { scopes: allGames, layer };
       if (source === "catan.ts" || unitGroups.find((g) => g.scope === "catan" && g.layer === "core").paths.some((p) => matchesPath(file, p))) return { scopes: ["catan"], layer };
       throw Error(`Assign game-core domain ownership: ${file}`);
@@ -70,10 +75,10 @@ export function impact(file) {
     if (layer === "protocol") {
       if (source === "platform/accounts.ts") return { scopes: ["platform"], layer };
       if (source === "platform-stream.ts" || source.startsWith("platform/")) return { scopes: allGames, layer };
-      for (const scope of ["catan", "draw-guess"]) if (source.startsWith(`${scope}/`)) return { scopes: [scope], layer };
+      for (const scope of ["catan", "draw-guess", "camel-up"]) if (source.startsWith(`${scope}/`)) return { scopes: [scope], layer };
       throw Error(`Assign protocol ownership: ${file}`);
     }
-    for (const scope of ["catan", "draw-guess"]) if (source.startsWith(`games/${scope}/`)) return { scopes: [scope], layer };
+    for (const scope of ["catan", "draw-guess", "camel-up"]) if (source.startsWith(`games/${scope}/`)) return { scopes: [scope], layer };
     if (source.startsWith("games/") && source !== "games/room-sync.ts") throw Error(`Assign game ownership: ${file}`);
     if (layer === "web") {
       if (source.startsWith("effects/")) return { scopes: ["catan"], layer };

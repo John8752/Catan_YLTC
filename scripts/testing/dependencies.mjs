@@ -13,6 +13,14 @@ function withoutTesting(manifest) {
 }
 export function manifestImpact(before, after, layer = "all") {
   if (before && after && JSON.stringify(withoutTesting(JSON.parse(before))) === JSON.stringify(withoutTesting(JSON.parse(after)))) return { scopes: ["tooling"], layer: "tooling" };
+  // A new independent subpath does not alter existing consumers' resolution.
+  if (before && after) {
+    const old = JSON.parse(before), next = JSON.parse(after);
+    if (!old.exports?.["./camel-up"] && next.exports?.["./camel-up"] === "./src/camel-up/index.ts") {
+      delete next.exports["./camel-up"];
+      if (JSON.stringify(old) === JSON.stringify(next)) return { scopes: ["camel-up"], layer, build: true };
+    }
+  }
   return { scopes, layer, build: true };
 }
 function withoutTestImporters(text) {

@@ -33,11 +33,11 @@ test("drawing rules expand to their consumers without selecting Catan", () => {
 });
 test("Catan effects are Catan, while shared controls impact both games", () => {
   assert.deepEqual(plan(["apps/web/src/effects/ResourceEffectLayer.tsx"]).scopes, ["catan"]);
-  assert.deepEqual(plan(["apps/web/src/components/ui/button.tsx"]).scopes, ["platform", "catan", "draw-guess"]);
+  assert.deepEqual(plan(["apps/web/src/components/ui/button.tsx"]).scopes, ["platform", "catan", "draw-guess", "camel-up"]);
 });
 test("accounts do not select board gameplay and core primitives include all consumers", () => {
   assert.deepEqual(plan(["apps/server/src/auth/account-service.ts"]).scopes, ["platform"]);
-  assert.deepEqual(plan(["packages/game-core/src/primitives/random.ts"]).scopes, ["platform", "catan", "draw-guess"]);
+  assert.deepEqual(plan(["packages/game-core/src/primitives/random.ts"]).scopes, ["platform", "catan", "draw-guess", "camel-up"]);
 });
 test("mixed changes take a union of scopes without broadening each layer", () => {
   const selected = plan(["apps/server/src/games/draw-guess/routes.ts", "apps/web/src/games/catan/GameResult.tsx"]);
@@ -75,7 +75,7 @@ test("full validation runs each unit file once and does not repeat replay or bou
   assert.deepEqual(selected.scopes, scopes);
 });
 test("each game browser command uses a positive project allowlist", () => {
-  for (const scope of ["platform", "catan", "draw-guess"]) {
+  for (const scope of ["platform", "catan", "draw-guess", "camel-up"]) {
     const commands = commandsFor(plan([], { scope }), { action: "e2e", extra: ["--grep", "@primary-phone"] });
     assert.deepEqual(commands[0].args, ["exec", "playwright", "test", `--project=${scope}`, "--grep", "@primary-phone"]);
   }
@@ -182,4 +182,9 @@ test("CLI manifest comparisons classify only test wiring as tooling", () => {
     assert.deepEqual(dependencyOverrides(directory, ["package.json"])["package.json"].scopes, ["tooling"]);
     assert.equal(dependencyOverrides(directory, ["package.json"], { base: "EMPTY", head: "HEAD" })["package.json"].build, true);
   } finally { assert.equal(dirname(resolve(directory)), resolve(tmpdir())); rmSync(directory, { recursive: true }); }
+});
+
+test("camel-up rules and browser ownership stay isolated", () => {
+  assert.deepEqual(plan(["packages/game-core/src/camel-up/engine.ts"]).scopes, ["camel-up"]);
+  assert.deepEqual(plan(["tests/e2e/camel-up/race.spec.ts"]).browserScopes, ["camel-up"]);
 });

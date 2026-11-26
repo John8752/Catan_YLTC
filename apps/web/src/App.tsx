@@ -21,6 +21,7 @@ const DrawGuessTable = lazy(() => import("./games/draw-guess/DrawGuessTable.js")
 const CarcassonneTable = lazy(() => import("./games/carcassonne/CarcassonneTable.js").then((module) => ({ default: module.CarcassonneTable })));
 
 const CamelTable = lazy(() => import("./games/camel-up/CamelTable.js").then((module) => ({ default: module.CamelTable })));
+const LobbyRoom = lazy(() => import("./lobby-dispatch.js").then(module => ({ default: module.LobbyRoom })));
 
 /** Account, room and connection shell. Game-specific controls live in games/<gameId>. */
 export function App() {
@@ -77,11 +78,12 @@ export function App() {
   async function handleReplay() { if (session && room?.matchId) await runBusy(async () => setRoom(await returnToLobby(session, room.matchId!))); }
   const accountControl = <AccountControl account={account} session={session} onLogin={installAccount} onLogout={clearAccount} onProfile={setAccount} />;
   const compactAccountControl = <AccountControl compact account={account} session={session} onLogin={installAccount} onLogout={clearAccount} onProfile={setAccount} />;
-  if (!session) return <Welcome busy={busy || !authReady} error={error} onCreate={handleCreate} onJoin={handleJoin} accountControl={accountControl} defaultPlayerName={account?.displayName ?? ""} />;
+  if (!session) return <Welcome busy={busy || !authReady} error={error} onCreate={handleCreate} onJoin={handleJoin} accountControl={accountControl} compactAccountControl={compactAccountControl} defaultPlayerName={account?.displayName ?? ""} />;
   if (!room) return <main className="loading-table"><span className="brand-mark" aria-hidden="true">⬡</span><p>{error ?? "正在重新铺好桌面…"}</p>
     <button className="quiet-button" type="button" onClick={clearCurrentSession}>返回大厅选择游戏</button></main>;
   const common = { session, busy, error, connectionState, accountControl, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby: handleReplay };
   function table(view:AnyRoomView){
+    if (view.game === null) return <LobbyRoom key={view.id} {...common} room={view} />;
     switch(view.gameId){
       case "catan":return <CatanTable key={view.id} {...common} room={view} updates={updates} snapshotEpoch={snapshotEpoch} compactAccountControl={compactAccountControl}/>;
       case "draw-guess":return <DrawGuessTable key={view.id} {...common} room={view}/>;

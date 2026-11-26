@@ -1,6 +1,6 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { shuffledByIndex } from "@catan/game-core/primitives";
-import { createPoker, actPoker, nextPokerHand, freshDeck, PokerError, pokerStandings, validatePokerSettings, DEFAULT_POKER_SETTINGS, type Card, type PokerState, type PokerSettings } from "@catan/game-core/texas-holdem";
+import { createPoker, actPoker, nextPokerHand, freshDeck, PokerError, pokerStandings, validatePokerSettings, DEFAULT_POKER_SETTINGS, POKER_PLAYER_LIMITS, type Card, type PokerState, type PokerSettings } from "@catan/game-core/texas-holdem";
 import { projectPoker, type PokerCommand, type PokerRoomView, type PokerSettlementV1 } from "@catan/protocol/texas-holdem";
 import type { RoomBase } from "../../room-base.js";
 import type { MatchRepository } from "../../database/match-repository.js";
@@ -22,9 +22,9 @@ export class PokerRoomGame {
       game: room.game ? projectPoker(room.game, viewer, timer ? { deadlineAt: timer.deadlineAt, durationMs: timer.durationMs, serverNow: this.now() } : null) : null };
   }
   settings(room: PokerRoomRecord, settings: PokerSettings) { this.translate(() => validatePokerSettings(settings)); room.settings = { ...settings }; }
-  capacity() { return 9; }
+  capacity() { return POKER_PLAYER_LIMITS.max; }
   start(room: PokerRoomRecord) {
-    if (room.members.length < 2 || room.members.length > 9) throw new RoomError("NOT_ENOUGH_PLAYERS", "德州扑克需要 2–9 人");
+    if (room.members.length < POKER_PLAYER_LIMITS.min || room.members.length > POKER_PLAYER_LIMITS.max) throw new RoomError("NOT_ENOUGH_PLAYERS", "德州扑克需要 2–9 人");
     const id = randomUUID(); const game = this.translate(() => createPoker(id, room.members.map(({ id, name }) => ({ id, name })), room.settings, this.deck()));
     room.matchId = id; room.startedAt = this.now(); room.game = game; this.sync(room);
   }

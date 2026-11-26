@@ -1,4 +1,5 @@
 import { validateDeck } from "./cards.js";
+import { POKER_PLAYER_LIMITS } from "./types.js";
 import { collectPokerBets, settleHand } from "./settlement.js";
 import { requirePoker, validatePokerSettings, type Card, type PokerSettings, type PokerState, type PokerAction, type PokerLegalActions, type Street } from "./types.js";
 
@@ -68,7 +69,7 @@ function deal(s: PokerState, deck: readonly Card[]) {
 }
 export function createPoker(id: string, players: readonly { id: string; name: string }[], settings: PokerSettings, deck: readonly Card[]): PokerState {
   validatePokerSettings(settings);
-  requirePoker(players.length >= 2 && players.length <= 9 && new Set(players.map((p) => p.id)).size === players.length, "INVALID_PLAYERS", "德州扑克需要 2–9 位不同玩家");
+  requirePoker(players.length >= POKER_PLAYER_LIMITS.min && players.length <= POKER_PLAYER_LIMITS.max && new Set(players.map((p) => p.id)).size === players.length, "INVALID_PLAYERS", "德州扑克需要 2–9 位不同玩家");
   const s: PokerState = { id, revision: 1, settings: { ...settings }, players: players.map((p) => ({ ...p, chips: settings.startingChips, hole: [], folded: false, totalBet: 0, streetBet: 0, lastActedBet: null, startChips: settings.startingChips, eliminatedAt: null, eliminationChips: 0 })), totalChips: players.length * settings.startingChips,
     handNumber: 1, button: 0, smallBlindSeat: 0, bigBlindSeat: 0, smallBlind: 0, bigBlind: 0, deck: [], cursor: 0, board: [], currentBet: 0, minRaise: 0, phase: { kind: "hand-over" }, result: null, lastAction: null, events: [] };
   deal(s, deck); return s;

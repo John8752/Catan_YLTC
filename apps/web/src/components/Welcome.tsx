@@ -1,127 +1,57 @@
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
-import { GAME_CATALOG,DEFAULT_GAME_ID,getGameDefinition,type GameType } from "@catan/protocol/platform";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { GAME_CATALOG, DEFAULT_GAME_ID, getGameDefinition, type GameType } from "@catan/protocol/platform";
+import { Armchair, LogIn, Plus, Users } from "lucide-react";
 import { cn } from "../lib/utils.js";
+import { WorldPreview } from "./lobby/WorldPreview.js";
+import { PRESENTATIONS, entryField } from "./lobby/presentation.js";
 
 export interface WelcomeProps {
-  readonly accountControl?: ReactNode;
-  readonly defaultPlayerName?: string;
-  readonly busy: boolean;
-  readonly error: string | null;
-  readonly onCreate: (playerName: string, gameId: GameType) => void;
-  readonly onJoin: (roomId: string, playerName: string) => void;
+  readonly accountControl?: ReactNode; readonly compactAccountControl?: ReactNode; readonly defaultPlayerName?: string; readonly busy: boolean; readonly error: string | null;
+  readonly onCreate: (playerName: string, gameId: GameType) => void; readonly onJoin: (roomId: string, playerName: string) => void;
 }
-
-const TABLE_LEGENDS = [
-  { name: "wjw", story: "在北岸找第一条路" },
-  { name: "zxc", story: "把砖和木算得明明白白" },
-  { name: "zzx", story: "相信下一次骰声会转运" },
-  { name: "qyp", story: "能把一只羊谈成未来" },
-  { name: "zj", story: "安静地把道路铺向远方" },
-  { name: "yst", story: "专等七点掀翻全桌计划" },
-] as const;
-
-export function Welcome({ busy, error, onCreate, onJoin, accountControl, defaultPlayerName = "" }: WelcomeProps) {
+export function Welcome({ busy, error, onCreate, onJoin, accountControl, compactAccountControl, defaultPlayerName = "" }: WelcomeProps) {
   const [playerName, setPlayerName] = useState("");
   const [gameId, setGameId] = useState<GameType>(DEFAULT_GAME_ID);
-  useEffect(() => { if (defaultPlayerName) setPlayerName(defaultPlayerName); }, [defaultPlayerName]);
   const [roomId, setRoomId] = useState("");
-
-  function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onCreate(playerName, gameId);
-  }
-
-  function handleJoin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onJoin(roomId.trim().toUpperCase(), playerName);
-  }
-
-  return (
-    <main className="welcome-layout">
-      <section className="welcome-copy">
-        <p className="eyebrow">YLTC 桌游小馆 · 朋友到齐就开桌</p>
-        <h1>朋友在语音里，<br />快乐在桌面上。</h1>
-        <p className="welcome-lead">
-          今晚想认真经营一座岛，还是把一句话画到面目全非？选个游戏，发出房间码，和熟悉的人一起玩。
-        </p>
-
-        <div className="mt-7 max-w-[38rem] border-l border-[#efbd79]/45 pl-4" aria-label="今晚的六位开拓者">
-          <p className="mb-2 text-[11px] font-black tracking-[.16em] text-[#efbd79] uppercase">桌边传说</p>
-          <ul className="m-0 grid list-none gap-x-6 gap-y-1.5 p-0 sm:grid-cols-2">
-            {TABLE_LEGENDS.map((legend) => (
-              <li className="flex min-w-0 items-baseline gap-2 text-sm" key={legend.name}>
-                <strong className="w-8 shrink-0 font-sans tracking-wide text-[#fff4d6]">{legend.name}</strong>
-                <span className="truncate text-white/62">{legend.story}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="milestone-note">
-          <span className="whitespace-nowrap">开桌约定</span>
-          <p>创建时选定游戏，房间内不再更换。语音照常用你们熟悉的软件；本站无需麦克风权限。</p>
-        </div>
-      </section>
-
-      <section className="entry-panel" aria-label="创建或加入房间">
-        <div className="entry-heading">
-          <span className="brand-mark" aria-hidden="true">⬡</span>
-          <div>
-            <p className="eyebrow">YLTC 六人局</p>
-            <h2>报上名号，准备开桌</h2>
-          </div>
-        </div>
-
-        <label className="field-label" htmlFor="player-name">显示名称</label>
-        <input
-          id="player-name"
-          className="text-input"
-          value={playerName}
-          maxLength={24}
-          placeholder="例如：wjw"
-          autoComplete="nickname"
-          onChange={(event) => setPlayerName(event.target.value)}
-        />
-
-        <form onSubmit={handleCreate}>
-          <fieldset className="my-4 grid gap-2" disabled={busy}>
-            <legend className="mb-2 text-sm font-bold">选择游戏</legend>
-            {GAME_CATALOG.map((game) => <label key={game.id} className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-left", gameId === game.id ? "border-primary bg-primary/10" : "border-border")}>
-              <input className="mt-1 size-4 shrink-0 accent-primary" type="radio" name="game" value={game.id} checked={gameId === game.id} onChange={() => setGameId(game.id)} />
-              <span className="min-w-0"><span className="flex flex-wrap items-baseline gap-x-3"><strong>{game.name}</strong><small>{game.players}</small></span><span className="mt-1 block text-sm opacity-75">{game.description}</span></span>
-            </label>)}
+  const roomInput = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (defaultPlayerName) setPlayerName(defaultPlayerName); }, [defaultPlayerName]);
+  const game = getGameDefinition(gameId), art = PRESENTATIONS[gameId];
+  function handleCreate(e: FormEvent<HTMLFormElement>) { e.preventDefault(); onCreate(playerName, gameId); }
+  function handleJoin(e: FormEvent<HTMLFormElement>) { e.preventDefault(); onJoin(roomId.trim().toUpperCase(), playerName); }
+  return <main className="min-h-svh overflow-x-clip text-[#f5eddb] selection:bg-[#efc78b] selection:text-[#233c35] motion-safe:transition-colors motion-safe:duration-700" style={{ backgroundColor: art.backdrop }} data-lobby-home>
+    <div className="mx-auto flex min-h-svh max-w-[1560px] flex-col px-[max(1rem,env(safe-area-inset-left),env(safe-area-inset-right))] pt-[max(.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-8 lg:px-12">
+      <header className="flex min-h-12 items-center justify-between gap-2 border-b border-[#f5eddb]/15 pb-3 lg:min-h-20 lg:pb-5">
+        <div className="flex items-center gap-2.5"><Armchair className="size-7 text-[#e2c38e]" strokeWidth={1.5} /><span className="whitespace-nowrap text-sm font-bold tracking-wide sm:text-base">YLTC 桌游小馆</span></div>
+        <div className="flex items-center gap-2 sm:gap-4"><button type="button" onClick={() => roomInput.current?.focus()} className="flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-2 text-sm hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#efc78b]"><LogIn className="size-4" /><span className="hidden sm:inline">输入房间码</span><span className="sm:hidden">加入</span></button><div className="rounded-lg bg-[#f4eddb] text-[#233c35] [&_button]:min-h-10 [&_button]:px-2 [&_button]:text-xs sm:[&_button]:px-3 sm:[&_button]:text-sm"><span className={compactAccountControl ? "hidden sm:block" : "block"}>{accountControl}</span>{compactAccountControl && <span className="block sm:hidden">{compactAccountControl}</span>}</div></div>
+      </header>
+      <div className="grid flex-1 items-center gap-x-10 py-4 lg:grid-cols-[minmax(0,1fr)_350px] lg:py-8 xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-x-16">
+        <section className="min-w-0 lg:self-stretch" aria-label="选择今晚的游戏">
+          <div className="flex items-end justify-between gap-4 lg:pt-4"><div><h1 className="mb-1 text-[clamp(1.8rem,3.3vw,3.25rem)] font-bold leading-tight tracking-tight">今晚，开哪一桌？</h1><p className="mb-0 mt-2 hidden text-base text-[#d9e1d4] sm:block">选个游戏，把朋友叫到桌边。</p></div><span className="mb-1 hidden shrink-0 text-sm text-[#d9e1d4] xl:block">朋友到齐就开桌</span></div>
+          <WorldPreview gameId={gameId} className="h-[clamp(200px,31svh,320px)] sm:h-[360px] lg:h-[clamp(330px,48vh,550px)]" />
+          <fieldset disabled={busy} className="grid grid-cols-5 gap-1.5 sm:gap-3" aria-label="选择游戏">
+            <legend className="sr-only">选择游戏</legend>
+            {GAME_CATALOG.map((item) => { const GameIcon = PRESENTATIONS[item.id].icon, active = gameId === item.id; return <label key={item.id} className={cn("relative flex min-h-[76px] min-w-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border px-1 py-3 text-center motion-safe:transition-colors sm:min-h-24 sm:gap-3 sm:py-4", active ? "border-[#e4c898] bg-[#f2dfb8] text-[#243f37] shadow-[0_6px_18px_#071e2030]" : "border-[#f5eddb]/20 bg-[#f5eddb]/5 text-[#e3e5d9] hover:border-[#f5eddb]/60 hover:bg-[#f5eddb]/10", busy && "cursor-wait opacity-65")}>
+              <input className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0" type="radio" name="game" value={item.id} checked={active} onChange={() => setGameId(item.id)} aria-label={item.name} />
+              <GameIcon className="size-6 sm:size-7" strokeWidth={1.6} aria-hidden="true" /><span className="whitespace-nowrap text-xs font-semibold sm:text-sm">{item.name}</span><span className="pointer-events-none absolute inset-[-3px] rounded-[15px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#f1d29c]" />
+            </label>; })}
           </fieldset>
-          <button className="primary-button" type="submit" disabled={busy || playerName.trim().length === 0}>
-            {busy ? "正在准备桌面…" : getGameDefinition(gameId).createLabel}
-          </button>
-        </form>
-
-        <div className="divider"><span>或加入朋友</span></div>
-
-        <form className="join-form" onSubmit={handleJoin}>
-          <label className="field-label" htmlFor="room-code">六位房间码</label>
-          <div className="join-row">
-            <input
-              id="room-code"
-              className="text-input code-input"
-              value={roomId}
-              maxLength={6}
-              placeholder="A1B2C3"
-              onChange={(event) => setRoomId(event.target.value.toUpperCase())}
-            />
-            <button
-              className="secondary-button"
-              type="submit"
-              disabled={busy || playerName.trim().length === 0 || roomId.trim().length !== 6}
-            >
-              登岛
-            </button>
+        </section>
+        <section className="mt-5 min-w-0 lg:mt-0" aria-label="创建或加入房间">
+          <div className="mb-5 hidden lg:block"><h2 className="mb-3 text-balance text-[2.5rem] font-bold leading-tight">{art.subtitle}</h2></div>
+          <div className="rounded-2xl bg-[#f4eddb] p-4 text-[#233c35] shadow-[0_18px_45px_#041e2230] sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3"><h2 className="mb-0 text-xl font-bold" aria-live="polite">{game.name}</h2><span className="flex shrink-0 items-center gap-1.5 text-sm text-[#566354]"><Users className="size-4" />{game.players}</span></div>
+            <p className="mb-5 text-sm leading-6 text-[#566354]">{game.description}</p>
+            <label className="mb-2 block text-sm font-semibold" htmlFor="player-name">显示名称</label>
+            <input id="player-name" className={entryField} value={playerName} maxLength={24} placeholder="朋友怎么称呼你？" autoComplete="nickname" onChange={(e) => setPlayerName(e.target.value)} disabled={busy} />
+            <form onSubmit={handleCreate} className="mt-3"><button className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#275b50] px-3 text-base font-bold text-[#fff9e9] hover:bg-[#1e4a40] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#275b50]" type="submit" disabled={busy || !playerName.trim()}><Plus className="size-5" />{busy ? "正在准备桌面…" : `创建${game.name}房间`}</button></form>
+            <div className="my-5 flex items-center gap-3 text-xs text-[#687360]"><span className="h-px flex-1 bg-[#d4d2c0]" />朋友已经开桌了？<span className="h-px flex-1 bg-[#d4d2c0]" /></div>
+            <form onSubmit={handleJoin}><label htmlFor="room-code" className="mb-2 block text-sm font-semibold">六位房间码</label><div className="flex gap-2"><input ref={roomInput} id="room-code" className={cn(entryField, "min-w-0 flex-1 font-mono tracking-[.16em] uppercase")} value={roomId} maxLength={6} placeholder="A1B2C3" autoComplete="off" autoCapitalize="characters" onChange={(e) => setRoomId(e.target.value.toUpperCase())} disabled={busy} /><button className="min-h-12 shrink-0 rounded-xl bg-[#ddd1b6] px-4 text-sm font-bold text-[#354b3a] hover:bg-[#d0c3a5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#275b50]" type="submit" disabled={busy || !playerName.trim() || roomId.trim().length !== 6}>加入房间</button></div></form>
+            {error && <p className="mt-4 mb-0 rounded-lg bg-[#f5dacc] p-3 text-sm text-[#853f2b]" role="alert">{error}</p>}
           </div>
-        </form>
-
-        <div className="mt-4 flex justify-center">{accountControl}</div>
-        {error === null ? null : <p className="error-message" role="alert">{error}</p>}
-      </section>
-    </main>
-  );
+          <p className="mt-4 mb-0 text-center text-xs leading-5 text-[#d9e1d4]">无需注册 · 语音请用你们熟悉的软件</p>
+        </section>
+      </div>
+      <footer className="mt-4 hidden items-center justify-between border-t border-[#f5eddb]/15 py-4 text-xs text-[#c5d2c6] lg:flex"><span>小小一张桌，装下今晚的好时光。</span><span>房间创建后，游戏保持不变</span></footer>
+    </div>
+  </main>;
 }

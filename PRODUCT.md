@@ -73,6 +73,8 @@ Accounts are an optional enhancement rather than a new entry requirement. Guest 
 
 ## Visual direction
 
+Platform entry uses an original, lazily loaded Three.js miniature tabletop that changes with the selected game. Room waiting screens share readable DOM membership, room-code, settings and start controls while keeping game-owned previews: Catan's actual server-provided SVG map with zoom/reroll and optional production analysis, drawing telephone's paper presentation, 3D camel/Carcassonne miniatures and a poker table with an undealt deck. A decorative homepage model is never the authoritative match map. See [Lobby design](docs/design/platform-lobby.md).
+
 Platform, Catan and drawing-telephone typography uses self-hosted Noto Sans SC Variable for Chinese headings, body text, controls and board labels, with weight providing hierarchy. Room codes and countdowns may use a monospace stack with the same Chinese fallback. Fontsource's Unicode-range WOFF2 subsets load from the website's own origin with `font-display: swap`; no external font CDN is required. The SIL OFL license ships at `/fonts/NotoSansSC-OFL.txt`.
 
 The interface should feel like a warmly lit wooden game table: parchment surfaces, muted ocean blue, pine green, terracotta and wheat accents. Geometry is crisp and tactile, motion is restrained, and the result must not resemble an admin dashboard.

@@ -58,8 +58,8 @@ test.describe("@draw-guess", () => {
       await host.getByLabel("显示名称", { exact: true }).fill("画册房主");
       await host.getByRole("radio", { name: /传画猜词/ }).check(); await host.getByRole("button", { name: "创建传画猜词房间" }).click();
       await expect(host.getByLabel("房间码", { exact: true })).toBeVisible(); const roomId = (await host.getByLabel("房间码", { exact: true }).textContent())!;
-      await Promise.all(pages.slice(1).map(async (page, i) => { await page.getByLabel("显示名称", { exact: true }).fill(`朋友${i + 1}`); await page.getByLabel("六位房间码").fill(roomId); await page.getByRole("button", { name: "登岛", exact: true }).click(); }));
-      await expect(host.getByText("等待朋友加入 · 6/6 人")).toBeVisible();
+      await Promise.all(pages.slice(1).map(async (page, i) => { await page.getByLabel("显示名称", { exact: true }).fill(`朋友${i + 1}`); await page.getByLabel("六位房间码").fill(roomId); await page.getByRole("button", { name: "加入房间", exact: true }).click(); }));
+      await expect(host.getByRole("region", { name: "落座玩家", exact: true }).getByText("6/6", { exact: true })).toBeVisible();
       await host.getByLabel("猜词时间", { exact: true }).selectOption("90"); await expect(host.getByLabel("猜词时间", { exact: true })).toBeEnabled();
       await host.getByLabel("画画时间", { exact: true }).selectOption("120"); await expect(host.getByRole("button", { name: "开始传画猜词" })).toBeEnabled();
       await host.getByRole("button", { name: "开始传画猜词" }).click();

@@ -27,14 +27,14 @@ test("account registration, wrong login, phone takeover, profile and logout pres
     await expect(computerPage.getByLabel("显示名称", { exact: true })).toHaveValue("北岸旅人");
     const cookie = (await desktop.cookies()).find((cookie) => cookie.name === "catan_account_session")!;
     expect(cookie.httpOnly).toBe(true); expect(cookie.secure).toBe(false); expect(cookie.sameSite).toBe("Strict");
-    await computerPage.getByRole("button", { name: "创建今晚的岛" }).click();
+    await computerPage.getByRole("button", { name: "创建卡坦房间" }).click();
     await expect(computerPage.locator(".room-code")).toBeVisible();
     const roomId = (await computerPage.locator(".room-code").textContent())!.trim();
     const oldSeat = await computerPage.evaluate(() => JSON.parse(localStorage.getItem("catan-yltc-seat")!));
     await guestPage.goto("/");
     await guestPage.getByLabel("显示名称", { exact: true }).fill("游客朋友");
     await guestPage.getByLabel("六位房间码").fill(roomId);
-    await guestPage.getByRole("button", { name: "登岛", exact: true }).click();
+    await guestPage.getByRole("button", { name: "加入房间", exact: true }).click();
     await expect(guestPage.locator(".room-code")).toBeVisible();
     await phonePage.goto("/");
     await login(phonePage, username, "wrong-password");
@@ -42,7 +42,7 @@ test("account registration, wrong login, phone takeover, profile and logout pres
     await phonePage.getByLabel("密码", { exact: false }).fill(password);
     await phonePage.getByRole("dialog").locator('button[type="submit"]').click();
     await expect(phonePage.locator(".room-code")).toHaveText(roomId);
-    await expect(computerPage.getByRole("button", { name: "创建今晚的岛" })).toBeVisible();
+    await expect(computerPage.getByRole("button", { name: "创建卡坦房间" })).toBeVisible();
     await expect(computerPage.getByRole("alert")).toContainText("账号登录已变更");
     const newSeat = await phonePage.evaluate(() => JSON.parse(localStorage.getItem("catan-yltc-seat")!));
     expect(newSeat.playerId).toBe(oldSeat.playerId); expect(newSeat.seatToken).not.toBe(oldSeat.seatToken);
@@ -56,7 +56,7 @@ test("account registration, wrong login, phone takeover, profile and logout pres
     await phonePage.getByRole("button", { name: "保存名称" }).click();
     await expect(phonePage.getByRole("status")).toContainText("显示名称已更新");
     await phonePage.getByRole("button", { name: "退出登录", exact: true }).click();
-    await expect(phonePage.getByRole("button", { name: "创建今晚的岛" })).toBeVisible();
+    await expect(phonePage.getByRole("button", { name: "创建卡坦房间" })).toBeVisible();
     await expect.poll(async () => phonePage.evaluate(() => localStorage.getItem("catan-yltc-seat"))).toBeNull();
     const storage = await phonePage.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }));
     expect(storage).not.toContain(password); expect(storage).not.toContain(cookie.value);

@@ -43,7 +43,7 @@ export function testOwner(file) {
   return isUnit(file) ? unitGroups.filter((g) => g.paths.some((path) => matchesPath(file, path))) : [];
 }
 
-const sharedWeb = ["App.tsx", "main.tsx", "styles.css", "http.ts", "api.ts", "auth-headers.ts", "room-session.ts", "room-updates.ts", "player-session.ts", "components/DisbandRoomControl.tsx", "games/room-sync.ts", "hooks/use-room-connection.ts", "hooks/use-media-query.ts"];
+const sharedWeb = ["App.tsx", "lobby-art.ts", "lobby-dispatch.tsx", "main.tsx", "styles.css", "http.ts", "api.ts", "auth-headers.ts", "room-session.ts", "room-updates.ts", "player-session.ts", "components/DisbandRoomControl.tsx", "games/room-sync.ts", "hooks/use-room-connection.ts", "hooks/use-media-query.ts"];
 const allGames = ["platform", "catan", "draw-guess", "camel-up", "carcassonne", "texas-holdem"];
 /** No catch-all Catan bucket: an unmapped source/test must be assigned explicitly. */
 export function impact(file) {
@@ -93,7 +93,7 @@ export function impact(file) {
     if (source.startsWith("games/") && source !== "games/room-sync.ts") throw Error(`Assign game ownership: ${file}`);
     if (layer === "web") {
       if (source.startsWith("effects/")) return { scopes: ["catan"], layer };
-      if (sharedWeb.includes(source) || source.startsWith("components/ui/") || source.startsWith("lib/")) return { scopes: allGames, layer };
+      if (sharedWeb.includes(source) || source.startsWith("components/ui/") || source.startsWith("components/lobby/") || source.startsWith("lib/")) return { scopes: allGames, layer };
       return { scopes: ["platform"], layer };
     }
     if (source.startsWith("auth/") || source.startsWith("database/") || source.startsWith("platform/")) return { scopes: ["platform"], layer };

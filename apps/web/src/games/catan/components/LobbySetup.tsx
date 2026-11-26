@@ -11,21 +11,22 @@ export interface LobbySetupProps {
   readonly isHost: boolean;
   readonly busy: boolean;
   readonly onReroll: () => void;
+  readonly contained?: boolean;
 }
 
-export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
+export function LobbySetup({ room, isHost, busy, onReroll, contained = false }: LobbySetupProps) {
   // Hooks run before the guard below: the preview map is absent for exactly the
   // renders where the game has started, and bailing out first would change the
   // hook order between those two states.
-  const viewport = useBoardViewport(DEFAULT_BOARD_SCALE);
+  const viewport = useBoardViewport(contained ? 1 : DEFAULT_BOARD_SCALE);
   if (room.previewMap === null) return null;
 
   return (
-    <section className="board-shell lobby-setup" aria-labelledby="lobby-map-title">
+    <section className="board-shell lobby-setup" aria-labelledby="lobby-map-title" style={contained ? { height: "auto", minHeight: 0, width: "100%" } : undefined}>
       <div className="board-heading">
         <div>
-          <p className="eyebrow">今晚的岛屿 · 地图 #{room.settings.mapSeed}</p>
           <h2 id="lobby-map-title">出发吧，开拓者们</h2>
+          <p className="mt-1 mb-0 text-xs font-medium text-[#d4ded1]" data-map-seed>本局地图 #{room.settings.mapSeed}</p>
         </div>
         {isHost ? (
           <Button
@@ -41,7 +42,7 @@ export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
         ) : <span className="phase-chip">等待房主确认</span>}
       </div>
 
-      <div className="board-stage" {...viewport.viewportProps}>
+      <div className="board-stage" {...viewport.viewportProps} style={contained ? { height: "clamp(260px,40svh,380px)", flex: "none", aspectRatio: "auto", minHeight: 0 } : undefined}>
         <div className="board-transform" style={viewport.transformStyle}>
           <svg
             className="board-svg"
@@ -63,7 +64,7 @@ export function LobbySetup({ room, isHost, busy, onReroll }: LobbySetupProps) {
         </div>
         <BoardZoomControls {...viewport.zoom} />
       </div>
-      <MapAnalysisPanel map={room.previewMap} />
+      {contained ? <details className="mt-2 rounded-xl bg-white/5 px-3 py-2"><summary className="cursor-pointer text-sm text-[#f5eddb] focus-visible:outline-2 focus-visible:outline-[#efc78b]">查看地图产能分析</summary><div className="mt-3"><MapAnalysisPanel map={room.previewMap} /></div></details> : <MapAnalysisPanel map={room.previewMap} />}
       <p className="board-instruction">
         开局会原样使用这张地图。重新随机只会更换地图，不会影响已落座玩家。
       </p>

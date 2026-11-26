@@ -1,3 +1,4 @@
+export const POKER_PLAYER_LIMITS = { min: 2, max: 9 } as const;
 export const SUITS = ["S", "H", "D", "C"] as const;
 export const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"] as const;
 export type Card = `${typeof RANKS[number]}${typeof SUITS[number]}`;

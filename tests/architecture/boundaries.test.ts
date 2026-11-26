@@ -130,7 +130,7 @@ function owner(file: string): "catan" | "draw-guess" | "camel-up" | "carcassonne
   if (path.includes("/draw-guess/")) return "draw-guess";
   if (path.includes("/carcassonne/")) return "carcassonne";
   if (path.startsWith("packages/game-core/") || path.includes("/catan/") || path.startsWith("apps/web/src/effects/")) return "catan";
-  if (["apps/web/src/App.tsx", "apps/web/src/games/room-sync.ts", "apps/server/src/app.ts", "apps/server/src/rooms.ts", "apps/server/src/room-types.ts", "apps/server/src/index.ts", "apps/server/src/e2e-server.ts", "packages/protocol/src/platform-stream.ts"].includes(path)) return "dispatch";
+  if (["apps/web/src/App.tsx", "apps/web/src/lobby-art.ts", "apps/web/src/lobby-dispatch.tsx", "apps/web/src/games/room-sync.ts", "apps/server/src/app.ts", "apps/server/src/rooms.ts", "apps/server/src/room-types.ts", "apps/server/src/index.ts", "apps/server/src/e2e-server.ts", "packages/protocol/src/platform-stream.ts"].includes(path)) return "dispatch";
   return "platform";
 }
 
@@ -170,7 +170,7 @@ describe("platform and game dependency boundaries", () => {
     expect([...seen].filter((file) => owner(file) === "catan")).toEqual([]);
   });
   it("dispatches every game explicitly and reserves defaults for unknown-game errors",()=>{
-    for(const path of ["apps/server/src/rooms.ts","apps/web/src/App.tsx","apps/web/src/components/AccountHistory.tsx","apps/web/src/games/room-sync.ts"]){
+    for(const path of ["apps/server/src/rooms.ts","apps/web/src/App.tsx","apps/web/src/lobby-art.ts","apps/web/src/lobby-dispatch.tsx","apps/web/src/components/AccountHistory.tsx","apps/web/src/games/room-sync.ts"]){
       const source=readFileSync(join(repositoryRoot,path),"utf8"),ast=parse(source,{sourceType:"module",plugins:["typescript","jsx"]});
       let switches=0;
       function visit(value:unknown){

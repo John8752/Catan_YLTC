@@ -37,9 +37,9 @@ test("two browsers create, raise, fold, reconnect, finish fixed hands and start 
     await Promise.all(pages.map((p) => p.goto("/")));
     await host.getByLabel("显示名称", { exact: true }).fill("德扑房主"); await host.getByRole("radio", { name: /德州扑克/ }).check();
     await host.getByRole("button", { name: "创建德州扑克房间" }).click();
-    await expect(host.getByRole("heading", { name: /筹码摆好/ })).toBeVisible(); seat = await localSeat(host);
-    await guest.getByLabel("显示名称", { exact: true }).fill("朋友乙"); await guest.getByLabel("六位房间码").fill(seat.roomId); await guest.getByRole("button", { name: "登岛", exact: true }).click();
-    await expect(guest.getByRole("heading", { name: /筹码摆好/ })).toBeVisible();
+    await expect(host.getByRole("heading", { name: "等朋友，一起开桌。" })).toBeVisible(); seat = await localSeat(host);
+    await guest.getByLabel("显示名称", { exact: true }).fill("朋友乙"); await guest.getByLabel("六位房间码").fill(seat.roomId); await guest.getByRole("button", { name: "加入房间", exact: true }).click();
+    await expect(guest.getByRole("heading", { name: "等朋友，一起开桌。" })).toBeVisible();
     await host.getByLabel("约定手数").fill("2"); await host.getByRole("button", { name: "保存设置", exact: true }).click(); await expect(host.getByRole("button", { name: "开始德州扑克" })).toBeEnabled();
     await host.getByRole("button", { name: "开始德州扑克" }).click();
     const first = (await snapshot(request, seat)).game!;
@@ -57,7 +57,7 @@ test("two browsers create, raise, fold, reconnect, finish fixed hands and start 
     await expect(guest.getByRole("region", { name: "你的行动" })).toBeVisible(); await guest.getByRole("button", { name: "弃牌", exact: true }).click();
     await host.getByRole("button", { name: "查看最终排名" }).click(); await expect(host.getByRole("region", { name: "最终排名" })).toBeAttached(); await host.keyboard.press("Escape");
     const final = (await snapshot(request, seat)).game!; expect(final.phase.kind).toBe("finished"); expect(final.players.reduce((n, p) => n + p.chips, 0)).toBe(2000);
-    await host.getByRole("button", { name: "返回大厅再来一局" }).click(); await expect(guest.getByRole("heading", { name: /筹码摆好/ })).toBeVisible();
+    await host.getByRole("button", { name: "返回大厅再来一局" }).click(); await expect(guest.getByRole("heading", { name: "等朋友，一起开桌。" })).toBeVisible();
     await host.getByRole("button", { name: "开始德州扑克" }).click(); await expect(host.getByRole("region", { name: "你的行动" })).toBeVisible();
     expect((await snapshot(request, seat)).matchId).not.toBe(first.id); expect(errors).toEqual([]);
   } finally { if (seat) await request.post(`/api/rooms/${seat.roomId}/disband`, { data: { seatToken: seat.seatToken } }); await Promise.all(contexts.map((c) => c.close())); }

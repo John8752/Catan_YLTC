@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import type { PokerRoomView, PokerSettings } from "@catan/protocol/texas-holdem";
 import { Button } from "../../components/ui/button.js";
 import { cn } from "../../lib/utils.js";
-export function PokerLobby({ room, host, busy, onSettings, onStart, onShuffle }: { room: PokerRoomView; host: boolean; busy: boolean; onSettings: (s: PokerSettings) => Promise<void>; onStart: () => Promise<void>; onShuffle: () => Promise<void> }) {
+export function PokerLobby({ room, host, busy, onSettings, onStart, onShuffle, settingsOnly = false, onDirtyChange }: { room: PokerRoomView; host: boolean; busy: boolean; onSettings: (s: PokerSettings) => Promise<void>; onStart: () => Promise<void>; onShuffle: () => Promise<void>; settingsOnly?: boolean; onDirtyChange?: (dirty: boolean) => void }) {
   const [draft, setDraft] = useState(room.settings), key = JSON.stringify(room.settings);
   useEffect(() => setDraft(JSON.parse(key) as PokerSettings), [key]);
   const changed = JSON.stringify(draft) !== key;
+  useEffect(() => { onDirtyChange?.(changed); }, [changed, onDirtyChange]);
   const field = "min-h-11 w-full rounded-lg border border-[#b4a58b] bg-[#fffdf6] px-3 text-base tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-[#2f6f7a]";
   return <section className="mx-auto w-full max-w-3xl space-y-6 rounded-2xl bg-[#f7ecd6] p-4 text-[#203b35] sm:p-7" aria-label="德州扑克房间设置">
-    <div><h2 className="text-2xl font-bold">筹码摆好，等朋友入座</h2><p className="mt-2 text-sm leading-relaxed text-[#506158]">2–9 人无限注德州扑克。所有筹码仅供朋友间游戏，没有现金价值。断线时保留座位，超时自动过牌或弃牌。</p></div>
-    <ul className="grid grid-cols-3 gap-2" aria-label="房间玩家">{room.members.map((p, i) => <li key={p.id} className="min-w-0 rounded-lg bg-[#e7dbc2] px-3 py-2"><span className="block truncate text-sm font-bold" title={p.name}>{p.name}</span><small className="text-[#526255]">座位 {i + 1}{p.isHost ? " · 房主" : ""}</small></li>)}</ul>
+    {!settingsOnly && <><div><h2 className="text-2xl font-bold">筹码摆好，等朋友入座</h2><p className="mt-2 text-sm leading-relaxed text-[#506158]">2–9 人无限注德州扑克。所有筹码仅供朋友间游戏，没有现金价值。断线时保留座位，超时自动过牌或弃牌。</p></div>
+    <ul className="grid grid-cols-3 gap-2" aria-label="房间玩家">{room.members.map((p, i) => <li key={p.id} className="min-w-0 rounded-lg bg-[#e7dbc2] px-3 py-2"><span className="block truncate text-sm font-bold" title={p.name}>{p.name}</span><small className="text-[#526255]">座位 {i + 1}{p.isHost ? " · 房主" : ""}</small></li>)}</ul></>}
     <form onSubmit={(e) => { e.preventDefault(); void onSettings(draft); }}>
       <fieldset disabled={!host || busy} className="space-y-5">
         <legend className="mb-3 font-bold">本局玩法</legend>
@@ -25,7 +26,7 @@ export function PokerLobby({ room, host, busy, onSettings, onStart, onShuffle }:
         {host && <Button type="submit" variant="outline" className="min-h-11 w-full" disabled={!changed || busy}>保存设置</Button>}
       </fieldset>
     </form>
-    {host ? <div className="flex gap-2"><Button className="min-h-12 flex-1" disabled={busy || changed || room.members.length < 2} onClick={() => void onStart()}>{changed ? "请先保存设置" : "开始德州扑克"}</Button><Button className="min-h-12" variant="outline" disabled={busy || room.members.length < 2} onClick={() => void onShuffle()}>打乱座位</Button></div> : <p role="status">等待房主设置并开始…</p>}
+    {!settingsOnly && (host ? <div className="flex gap-2"><Button className="min-h-12 flex-1" disabled={busy || changed || room.members.length < 2} onClick={() => void onStart()}>{changed ? "请先保存设置" : "开始德州扑克"}</Button><Button className="min-h-12" variant="outline" disabled={busy || room.members.length < 2} onClick={() => void onShuffle()}>打乱座位</Button></div> : <p role="status">等待房主设置并开始…</p>)}
     <p className="text-xs leading-relaxed text-[#506158]">当前 {room.members.length}/9 人。庄位每手移动到下一位有筹码者；单挑时庄位兼小盲。只剩一人有筹码时提前结束。</p>
   </section>;
 }

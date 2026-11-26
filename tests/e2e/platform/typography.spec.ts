@@ -30,7 +30,7 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
       expect(title.height).toBeLessThanOrEqual(lineHeight * 2 + 1);
       expect(failedFonts).toEqual([]);
       await page.getByRole("textbox", { name: "显示名称", exact: true }).fill("静雯和她的朋友们");
-      await expect(page.getByRole("button", { name: "创建今晚的岛", exact: true })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "创建卡坦房间", exact: true })).toBeEnabled();
       await page.screenshot({ path: testInfo.outputPath("welcome-font.png"), fullPage: true, scale: "css" });
     } finally { await context.close(); }
   });
@@ -42,5 +42,5 @@ test("entry remains usable when font downloads fail", async ({ page }) => {
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await page.getByRole("textbox", { name: "显示名称", exact: true }).fill("祥子");
-  await expect(page.getByRole("button", { name: "创建今晚的岛", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "创建卡坦房间", exact: true })).toBeEnabled();
 });

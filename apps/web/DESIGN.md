@@ -163,7 +163,7 @@ The palette combines pine and ocean pigments with warm paper, terracotta and whe
 ### Primary
 
 - **Deep Pine** (`primary`, `primary-foreground`): shared shadcn primary controls and badges.
-- **Table Pine** (`pine`, `pine-soft`): legacy entry controls and the welcome backdrop; the softer shade is their hover state.
+- **Table Pine** (`pine`, `pine-soft`): incumbent material controls; the softer shade is their hover state.
 
 ### Secondary
 
@@ -185,6 +185,8 @@ The palette combines pine and ocean pigments with warm paper, terracotta and whe
 
 Carcassonne's prefixed tokens belong only to its table, mat, paper panels and primary actions. Its artwork has its own grass, stone, roof and selection colors in `TileArt.tsx` and `Board.tsx`; those are renderer materials, not new platform accents. Seat colors come from `src/lib/player-palette.ts`, shared by SVG pieces and DOM swatches, and must remain separate from semantic action colors.
 
+The homepage and waiting shell extend this world with five scene-local backdrops in `src/components/lobby/presentation.ts`: ocean for Catan, paper purple for drawing, sand brown for camel racing, grass green for Carcassonne and felt green for poker. Their procedural model materials remain local to the selected scene. These values do not replace the shared palette or change live-game colors.
+
 **The Seat Identity Rule.** Reuse the canonical player palette for pieces and swatches; an action color never substitutes for a player's color.
 
 ## Typography
@@ -197,10 +199,10 @@ Carcassonne's prefixed tokens belong only to its table, mat, paper panels and pr
 
 ### Hierarchy
 
-- **Display:** the welcome headline role; its desktop clamp is captured above. Existing welcome CSS changes it below its own breakpoints; this is not a universal in-game heading size.
-- **Headline:** the Carcassonne lobby headline role, with tight leading.
+- **Display:** the frontmatter retains the incumbent display token. The current homepage uses a surface-local headline clamp of `1.8rem` to `3.25rem` at `3.3vw`, with tight leading; its desktop game invitation is `2.5rem`. These are homepage compositions, not universal in-game heading sizes.
+- **Headline:** game and room headings use the size appropriate to their own composition; waiting-shell headings grow from `1.25rem` to `1.875rem` at the large breakpoint.
 - **Title:** shared dialog titles, semibold and compact. In-game task headings use bold body-to-title sizes appropriate to their dock.
-- **Body:** the default document text role. Supporting paragraphs often use the label size with relaxed leading; the welcome lead uses a larger size and generous line-height.
+- **Body:** the default document text role. Supporting paragraphs often use the label size with relaxed leading; the homepage lead uses body size.
 - **Label:** shared buttons, tabs, descriptions and compact information.
 - **Caption:** badges and supporting text. Carcassonne also has smaller seat/tool captions; these local density choices do not establish a new shared minimum or type role.
 - **Code:** room codes use the mono stack; scores use tabular numerals where implemented.
@@ -211,7 +213,9 @@ Carcassonne's prefixed tokens belong only to its table, mat, paper panels and pr
 
 The spacing rhythm follows the existing quarter-rem utility scale, including half steps. Shared cards use generous inner spacing; live controls use tighter gaps. Layouts keep the game surface dominant and move secondary content into compact DOM panels or disclosures. The default page has a minimum width of 320 CSS px.
 
-The welcome screen uses an asymmetric two-column composition, a constrained entry form and fluid outer padding; at its existing 820px breakpoint it stacks. Shared dialogs fit inside a two-rem viewport margin, with a wider maximum from the 640px small breakpoint. Do not transplant the welcome composition into a game.
+The homepage places a large miniature exhibit and five-game selection strip beside a constrained entry form from the 1024px large breakpoint. Below that it stacks navigation, exhibit, selection and entry controls. The wrapper is capped at 1560px, uses a small-viewport minimum height and safe-area-aware outer padding. The selection strip remains five columns on phones. Shared dialogs fit inside a two-rem viewport margin, with a wider maximum from the 640px small breakpoint. Do not transplant the homepage composition into a live game.
+
+Waiting rooms share a DOM shell capped at 1480px. From 1024px, preview and membership sit beside a 340px settings column, increasing to 380px at the extra-large breakpoint. Phones stack preview, two-column membership and settings. A fixed paper start footer spans the viewport; bottom content padding and safe-area insets preserve access to the scrollable settings and final seats. The shell passes each game's native preview and settings through without deciding gameplay legality.
 
 Carcassonne uses a full dynamic-viewport-height grid: compact seats, a remaining-height map, then the action dock. Safe-area inset padding is explicit. At the 1024px large breakpoint the dock moves to a 320px right column and outer gaps increase. Its lobby has a separate constrained layout. The map owns pan and pinch; tile geometry, pieces, patterns and previews share the same world transform. Initial map fitting waits for the measured viewport, and later board growth preserves the current view. Current-tile previews grow from 76px to 112px at the desktop breakpoint.
 
@@ -222,6 +226,8 @@ Existing Catan desktop rem scaling is scoped to its live-game layout. It is not 
 ## Elevation & Depth
 
 Depth mixes tonal layering, translucent borders, soft shadows and small material highlights. Parchment panels float above the table; the map mat is inset. SVG pieces and buildings have lit faces and shaded edges. Carcassonne uses top-left highlights and lower-right relief within its artwork, preserving clear square tile edges and a fixed overhead map.
+
+The homepage exhibit uses actual Three.js geometry, an orthographic camera, warm directional lighting and contact shadows on a wooden plinth. It has one short arrival and subtle mouse response, then renders on demand. Reduced motion settles immediately; hidden or offscreen scenes pause ongoing animation. A size change redraws synchronously in the resize-observer delivery so the cleared drawing buffer does not expose a blank frame. Loading or WebGL failure leaves a static SVG-icon preview while DOM forms remain available. This decorative exhibit never substitutes for the room's authoritative map.
 
 ### Shadow Vocabulary
 
@@ -238,7 +244,7 @@ Motion describes a state change. Carcassonne uses short easing-out camera/rotati
 
 Shared utility radii derive from the three-quarter-rem base: compact controls use the medium radius, cards the extra-large radius, and badges a pill. The frontmatter keeps both `xl` and `2xl` names because the inline theme and Tailwind scale currently resolve them to the same value; `3xl` is the larger map container corner. Radius values describe the current base, not immutable pixel dimensions under Catan's scoped rem scaling.
 
-The legacy entry panel has an asymmetric corner and an inset border. Preserve it where it exists; it is not a template for every panel. Carcassonne pairs rounded DOM surfaces with almost-square, slightly beveled SVG tiles. Meeples use their own original curved silhouette and shared seat pigments, with a rotated farmer pose. All map relief scales as part of its geometry.
+Homepage and waiting panels use symmetric rounded paper surfaces; game selectors, fields and local entry controls use compact rounded corners. Legacy asymmetric entry CSS remains in the source but does not describe the current homepage. Carcassonne pairs rounded DOM surfaces with almost-square, slightly beveled SVG tiles. Meeples use their own original curved silhouette and shared seat pigments, with a rotated farmer pose. All map relief scales as part of its geometry.
 
 ## Components
 
@@ -246,7 +252,7 @@ The legacy entry panel has an asymmetric corner and an inset border. Preserve it
 
 Shared buttons are compact and confident: medium-rounded corners, medium-weight label text, inline SVG icons and a standard height of nine spacing units. The size API includes smaller, larger and icon-only variants. Primary uses deep pine; secondary uses warm paper; outline uses a fine border and paper background; ghost removes the resting fill. Outline and ghost hover use the semantic accent. Destructive and link variants retain their specific meanings.
 
-Keyboard focus uses a visible ring with the shared ring color, and disabled controls lose opacity and pointer interaction. Invalid controls use destructive styling. The legacy entry button is larger and heavier; it remains an incumbent entry composition, not the default new shared button.
+Keyboard focus uses a visible ring with the shared ring color, and disabled controls lose opacity and pointer interaction. Invalid controls use destructive styling. Homepage entry and waiting-room start actions use local green fills, bold text and a minimum height of three rem; they remain surface compositions rather than replacements for the shared button variants.
 
 Carcassonne's turn actions override the primary pigment with its scoped action colors and use at least eleven spacing units in height. Its soft confirmation shadow, pressed displacement, pending text/spinner and retry label communicate state. The task heading begins “轮到你，接上这片风景”; no extra eyebrow line precedes it. Tile selection, optional meeple selection and final confirmation remain distinct steps.
 
@@ -260,11 +266,19 @@ The shared card uses a paper fill, thin border, soft shadow, extra-large roundin
 
 ### Inputs / Fields
 
-The welcome entry field uses a translucent light fill, material ink, medium rounding and ocean border/glow focus. Account fields use a compact utility composition with the semantic background and native field behavior. There is no shared Input component today; preserve the existing field contexts instead of documenting an invented primitive.
+The homepage entry field uses a pale paper fill, dark green ink, rounded corners and green border/ring focus. It has a minimum height of three rem; room codes retain the mono stack and increased tracking. Account fields use a compact utility composition with the semantic background and native field behavior. There is no shared Input component today; preserve the existing field contexts instead of documenting an invented primitive.
 
 ### Navigation
 
 Shared Radix tabs use a quiet rounded track and a light selected tab with subtle shadow. The line variant uses an active line and no selected shadow. Hover and keyboard focus remain visible. Room/account menus, dialogs and popovers use the owned Radix-based layer for focus, dismissal and keyboard behavior.
+
+### Homepage Exhibit and Waiting Shell
+
+The homepage has five labeled native radio choices with inline SVG icons, a warm-paper selected state and visible keyboard focus. Game selection changes the local miniature scene and backdrop. Original code-built models provide island, drawing notebook, camel track, tile landscape and poker table presentations without raster composition assets.
+
+Waiting previews preserve each game's medium: Catan displays the server-provided SVG map, fitting ports with terrain and retaining zoom, reroll and an optional production-analysis disclosure; its map number appears as ordinary metadata beneath the heading. Drawing uses a static two-dimensional paper presentation; camel racing and Carcassonne use 3D miniatures; poker uses a 3D felt table with an undealt deck. The homepage poker illustration may show decorative cards; the waiting table does not imply a dealt hand.
+
+Membership tiles derive from projected members and core-owned capacity. They show the host, own seat and seated membership, without inventing readiness or per-player connectivity. Empty seats invite sharing the selectable room code, with a plain-HTTP-compatible copy fallback. Each game supplies its own settings hint: Catan and drawing submit host adjustments immediately; poker edits remain local until explicit save and block start while unsaved; camel racing and Carcassonne describe their fixed rules. The fixed footer keeps the game's start action and missing-player count available. Leave confirmations retain owned Radix dialog behavior.
 
 ### Carcassonne Map Controls and Miniatures
 

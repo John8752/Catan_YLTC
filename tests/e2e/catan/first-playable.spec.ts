@@ -11,14 +11,15 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
   try {
     await Promise.all(pages.map((page) => page.goto("/")));
     await host.getByRole("textbox", { name: "显示名称" }).fill("林");
-    await host.getByRole("button", { name: "创建今晚的岛" }).click();
+    await host.getByRole("button", { name: "创建卡坦房间" }).click();
     const roomCode = (await host.locator(".room-code").textContent())?.trim();
     expect(roomCode).toMatch(/^[A-Z0-9]{6}$/);
 
     await expect(host.getByRole("img", { name: "由十九块六边形地形组成的开局地图预览" })).toBeVisible();
-    // The lobby sits in a slot that clips instead of scrolling, so the map has to
-    // fit what it is given. When it sized itself instead, everything under it --
-    // the production read and the zoom controls -- was pushed out of reach.
+    await host.getByText("查看地图产能分析", { exact: true }).click();
+    await host.getByRole("region", { name: "地图产能分析", exact: true }).evaluate(element => element.scrollIntoView({ block: "center" }));
+    // The native preview stays bounded. Its optional analysis remains reachable
+    // in the scrollable waiting room without losing the map's zoom controls.
     expect(await host.evaluate(() => {
       const within = (element: Element | null) => {
         if (element === null) return "missing";
@@ -30,7 +31,8 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
         zoom: within(document.querySelector(".board-zoom-controls")),
       };
     })).toEqual({ analysis: true, zoom: true });
-    const seedLabel = host.locator(".lobby-setup .eyebrow");
+    await host.getByText("查看地图产能分析", { exact: true }).click();
+    const seedLabel = host.locator(".lobby-setup [data-map-seed]");
     const initialSeedLabel = await seedLabel.textContent();
     await host.getByRole("button", { name: "再次随机" }).click();
     await expect.poll(() => seedLabel.textContent()).not.toBe(initialSeedLabel);
@@ -231,7 +233,7 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
     const extraSeatTab = await contexts[0]?.newPage();
     if (extraSeatTab === undefined) throw new Error("Missing host browser context");
     await extraSeatTab.goto("/?seat=2");
-    await expect(extraSeatTab.getByRole("button", { name: "创建今晚的岛" })).toBeVisible();
+    await expect(extraSeatTab.getByRole("button", { name: "创建卡坦房间" })).toBeVisible();
     await expect(extraSeatTab.locator(".room-code")).toHaveCount(0);
 
     await host.setViewportSize({ width: 390, height: 844 });
@@ -279,7 +281,7 @@ test("three isolated seats can create, join, set up, roll and reconnect", async 
 async function joinRoom(page: Page, name: string, roomCode: string): Promise<void> {
   await page.getByRole("textbox", { name: "显示名称" }).fill(name);
   await page.getByRole("textbox", { name: "六位房间码" }).fill(roomCode);
-  await page.getByRole("button", { name: "登岛" }).click();
+  await page.getByRole("button", { name: "加入房间" }).click();
   await expect(page.locator(".room-code")).toHaveText(roomCode);
 }
 

@@ -21,16 +21,17 @@ describe("welcome story", () => {
     fireEvent.click(screen.getByRole("button", { name: "创建传画猜词房间" }));
     expect(create).toHaveBeenCalledWith("朋友", "draw-guess"); expect(join).not.toHaveBeenCalled();
   });
-  it("welcomes the six-player group with a short legend for every member", () => {
-    render(<Welcome busy={false} error={null} onCreate={vi.fn()} onJoin={vi.fn()} />);
+  it("offers all games and joins a room independently of the selected game", () => {
+    const join = vi.fn();
+    render(<Welcome busy={false} error={null} onCreate={vi.fn()} onJoin={join} />);
 
-    expect(screen.getByRole("heading", { name: "朋友在语音里，快乐在桌面上。" })).toBeTruthy();
-    const legends = screen.getByLabelText("今晚的六位开拓者");
-    for (const name of ["wjw", "zxc", "zzx", "qyp", "zj", "yst"]) {
-      expect(legends.textContent).toContain(name);
-    }
-    expect(screen.getByRole("button", { name: "创建今晚的岛" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "登岛" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "今晚，开哪一桌？" })).toBeTruthy();
+    expect(screen.getAllByRole("radio")).toHaveLength(5);
+    fireEvent.change(screen.getByLabelText("显示名称"), { target: { value: "朋友" } });
+    fireEvent.click(screen.getByRole("radio", { name: "德州扑克" }));
+    fireEvent.change(screen.getByLabelText("六位房间码"), { target: { value: "abc123" } });
+    fireEvent.click(screen.getByRole("button", { name: "加入房间" }));
+    expect(join).toHaveBeenCalledWith("ABC123", "朋友");
   });
   it("creates the independent Carcassonne room from the catalog",()=>{
     const create=vi.fn();render(<Welcome busy={false} error={null} onCreate={create} onJoin={vi.fn()}/>);

@@ -2,7 +2,7 @@ import * as T from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
 export const mat = (color: string, roughness = .7) => new T.MeshStandardMaterial({ color, roughness, metalness: .02 });
-export function mesh(parent: T.Object3D, geometry: T.BufferGeometry, material: T.Material, x = 0, y = 0, z = 0) {
+export function mesh(parent: T.Object3D, geometry: T.BufferGeometry, material: T.Material | T.Material[], x = 0, y = 0, z = 0) {
   const result = new T.Mesh(geometry, material);
   result.position.set(x, y, z); result.castShadow = true; result.receiveShadow = true; parent.add(result); return result;
 }

@@ -42,7 +42,8 @@ export function createWorld(container: HTMLElement, initial: State, onFailure: (
     if (!force && now - lastAt < 32 && !reduced.matches) { raf = requestAnimationFrame(render); return; }
     lastAt = now;
     const progress = reduced.matches ? 1 : Math.min(1, (now - enterAt) / 800), ease = 1 - Math.pow(1 - progress, 4);
-    model.world.position.y = (1 - ease) * -.6; model.world.rotation.y = (1 - ease) * -.24 + pointerX * .045;
+    // Settle from above the podium; rising through it exposes intersecting faces.
+    model.world.position.y = (1 - ease) * .6; model.world.rotation.y = (1 - ease) * -.24 + pointerX * .045;
     model.world.scale.setScalar(.93 + ease * .07);
     base.rotation.y = pointerX * .015; camera.position.y = 12 + pointerY * .3; camera.lookAt(0, .25, 0);
     if (!reduced.matches) {

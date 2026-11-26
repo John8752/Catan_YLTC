@@ -8,7 +8,9 @@ export function makeLobbyModel(parent: T.Group) {
   for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) {
     if (Math.abs(q + r) > 2) continue;
     const x = Math.sqrt(3) * .72 * (q + r / 2), z = 1.5 * .72 * r;
-    const tile = mesh(parent, new T.CylinderGeometry(.71, .71, .18, 6), mat(colors[n % colors.length]!), x, .52, z); tile.rotation.y = Math.PI / 6;
+    // CylinderGeometry already points a hex corner along Z, matching this grid.
+    // A further 30-degree turn makes adjacent top faces physically overlap.
+    mesh(parent, new T.CylinderGeometry(.71, .71, .18, 6), mat(colors[n % colors.length]!), x, .55, z);
     if (n % 5 === 0) { tree(parent, x - .15, z, .75, .62); tree(parent, x + .23, z + .15, .55, .62); }
     if (n % 5 === 2) { const rock = mesh(parent, new T.DodecahedronGeometry(.4, 0), mat("#bfc3b0"), x, .82, z); rock.scale.set(1, 1.2, .8); }
     if (n % 5 === 1) for (let j = 0; j < 4; j++) box(parent, [.08, .27, .12], "#ebd18c", x - .2 + j * .14, .75, z, .03);

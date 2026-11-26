@@ -6,6 +6,8 @@ import type { MatchRepository } from "../../database/match-repository.js";
 import type { RoomBase } from "../../room-base.js";
 import { RoomError } from "../../room-errors.js";
 import type { CarcassonneRoomRecord } from "./room-types.js";
+import type { RoomCommandAck } from "@catan/protocol/platform";
+import { commandAck } from "../../platform/command-ack.js";
 
 export class CarcassonneRoomGame {
   repository: MatchRepository | null = null;
@@ -24,11 +26,12 @@ export class CarcassonneRoomGame {
     room.matchId = matchId; room.startedAt = this.now(); room.appliedCommands.clear();
   }
   reset(room: CarcassonneRoomRecord) { room.game = null; room.matchId = null; room.startedAt = 0; room.appliedCommands.clear(); }
-  command(room: CarcassonneRoomRecord, playerId: string, commandId: string, command: PlaceCommand): CarcassonneRoomView {
+  command(room: CarcassonneRoomRecord, playerId: string, commandId: string, command: PlaceCommand): RoomCommandAck {
     if (!room.game) throw new RoomError("GAME_NOT_STARTED", "游戏尚未开始");
     if (room.game.id !== command.matchId) throw new RoomError("STALE_MATCH", "操作属于上一局，请刷新");
     const key = `${playerId}:${commandId}`;
-    if (room.appliedCommands.has(key)) return this.project(room, playerId);
+    const response = () => commandAck(room, commandId, room.game!);
+    if (room.appliedCommands.has(key)) return response();
     let next;
     try { next = executeCarcassonne(room.game, playerId, command); }
     catch (e) { if (e instanceof CarcassonneError) throw new RoomError(e.code, e.message); throw e; }
@@ -40,6 +43,6 @@ export class CarcassonneRoomGame {
         room.members.flatMap((m) => m.accountId === null ? [] : [{ accountId: m.accountId, playerId: m.id }]));
     }
     room.game = next; room.revision++; room.appliedCommands.add(key); this.notify(room);
-    return this.project(room, playerId);
+    return response();
   }
 }

@@ -24,7 +24,7 @@ import { CatanRoomGame } from "./games/catan/room-game.js";
 import { DrawGuessRoomGame } from "./games/draw-guess/room-game.js";
 import { CarcassonneRoomGame } from "./games/carcassonne/room-game.js";
 import type { PlaceCommand } from "@catan/protocol/carcassonne";
-import type { CarcassonneRoomView } from "@catan/protocol/carcassonne";
+import type { RoomCommandAck } from "@catan/protocol/platform";
 
 /** One authoritative directory and one seat/connection lifecycle for every game. */
 export class RoomRegistry {
@@ -194,7 +194,7 @@ export class RoomRegistry {
     const room = this.drawRoom(this.configurable(roomId, seatToken, revision)); this.drawGuess.settings(room, settings);
     room.revision++; this.notify(room); return this.drawGuess.project(room, room.hostPlayerId);
   }
-  executeCamelCommand(roomId: string, seatToken: string, commandId: string, command: CamelCommand) {
+  executeCamelCommand(roomId: string, seatToken: string, commandId: string, command: CamelCommand): RoomCommandAck {
     const room = this.requireRoom(roomId); const member = this.credential(room, seatToken);
     if (room.gameId !== "camel-up") throw new RoomError("WRONG_GAME", "此操作仅适用于骆驼大赛");
     return this.camel.command(room, member.id, commandId, command);
@@ -203,7 +203,7 @@ export class RoomRegistry {
     const room = this.pokerRoom(this.configurable(roomId, seatToken, revision)); this.poker.settings(room, settings);
     room.revision++; this.notify(room); return this.poker.project(room, room.hostPlayerId);
   }
-  executePokerCommand(roomId: string, seatToken: string, commandId: string, command: PokerCommand) {
+  executePokerCommand(roomId: string, seatToken: string, commandId: string, command: PokerCommand): RoomCommandAck {
     const room = this.pokerRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
     return this.poker.command(room, member.id, commandId, command);
   }
@@ -211,7 +211,7 @@ export class RoomRegistry {
     const room = this.drawRoom(this.requireRoom(roomId)); const member = this.credential(room, seatToken);
     return this.drawGuess.command(room, member.id, commandId, command);
   }
-  executeCarcassonneCommand(roomId: string, seatToken: string, commandId: string, command: PlaceCommand): CarcassonneRoomView {
+  executeCarcassonneCommand(roomId: string, seatToken: string, commandId: string, command: PlaceCommand): RoomCommandAck {
     const room = this.requireRoom(roomId);
     if (room.gameId !== "carcassonne") throw new RoomError("WRONG_GAME", "此操作仅适用于卡卡颂");
     return this.carcassonne.command(room, this.credential(room, seatToken).id, commandId, command);

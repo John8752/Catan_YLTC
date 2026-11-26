@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { expect,test } from "@playwright/test";
 import { primaryPhoneCases } from "../viewport-cases.js";
 import { chooseCandidate,fixture,openFixture } from "./fixtures.js";
+import type { CarcassonneRoomView } from "../../../packages/protocol/src/carcassonne/index.js";
 
 test('keyboard region controls highlight field, road and city in the 3D scene',async({browser})=>{
   const run=await openFixture(browser,1440,900,fixture());
@@ -33,7 +34,9 @@ test('invalid rotation, retry receipts and camera movement stay safe @primary-ph
       if(ids.length===1){await route.abort('failed');return;}
       accepted=true;
       const c=body.command,tile={id:`${c.x},${c.y}`,type:room.game!.currentTile!,x:c.x,y:c.y,rotation:c.rotation};
-      await route.fulfill({json:{...room,revision:room.revision+1,game:{...room.game!,revision:room.game!.revision+1,currentTile:'B',board:[...room.game!.board,tile],meeples:[...room.game!.meeples,{playerId:'p1',tileId:tile.id,featureId:c.meeple}],phase:{kind:'turn',playerId:'p2',turn:2},placements:[]}}});
+      const next:CarcassonneRoomView={...room,revision:room.revision+1,game:{...room.game!,revision:room.game!.revision+1,currentTile:'B',board:[...room.game!.board,tile],meeples:[...room.game!.meeples,{playerId:'p1',tileId:tile.id,featureId:c.meeple}],phase:{kind:'turn',playerId:'p2',turn:2},placements:[]}};
+      run.push(next);
+      await route.fulfill({json:{type:'command_ack',commandId:body.commandId,gameId:next.gameId,roomId:next.id,matchId:next.matchId,roomRevision:next.revision,gameRevision:next.game!.revision}});
     });
     await page.getByRole('button',{name:'完成回合',exact:true}).click();
     await expect(page.getByRole('button',{name:'重试提交',exact:true})).toBeEnabled();

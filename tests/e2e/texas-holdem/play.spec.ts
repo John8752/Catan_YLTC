@@ -10,7 +10,7 @@ async function snapshot(request: APIRequestContext, s: RoomSession): Promise<Pok
 async function command(request: APIRequestContext, s: RoomSession, action: PokerAction | { type: "next-hand" }) {
   const g = (await snapshot(request, s)).game!;
   const r = await request.post(`/api/rooms/${s.roomId}/texas-holdem/commands`, { data: { seatToken: s.seatToken, commandId: `e2e-${g.id}-${g.revision}-${s.playerId}`, command: { matchId: g.id, expectedRevision: g.revision, handNumber: g.handNumber, action } } });
-  expect(r.ok(), await r.text()).toBe(true); return r.json() as Promise<PokerRoomView>;
+  expect(r.ok(), await r.text()).toBe(true); expect((await r.json()).type).toBe("command_ack"); return snapshot(request, s);
 }
 async function setup(request: APIRequestContext, count: number, settings = defaults) {
   const host: RoomSession = await (await request.post("/api/rooms", { data: { playerName: "房主" + "长".repeat(22), gameId: "texas-holdem" } })).json();
@@ -47,7 +47,10 @@ test("two browsers create, raise, fold, reconnect, finish fixed hands and start 
     await expect(guest.getByRole("region", { name: "你的行动" })).toHaveCount(0);
     const otherSeat = await localSeat(guest), otherView = (await snapshot(request, otherSeat)).game!;
     expect(otherView.players.find((p) => p.id === seat!.playerId)!.hole).toBeNull();
-    await host.getByRole("button", { name: "加注", exact: true }).click(); await host.getByLabel("加注总额", { exact: true }).fill("60"); await host.getByRole("button", { name: "确认加注" }).click();
+    await host.getByRole("button", { name: "加注", exact: true }).click(); await host.getByLabel("加注总额", { exact: true }).fill("60");
+    const receipt = host.waitForResponse(r => r.url().endsWith('/texas-holdem/commands') && r.request().method() === 'POST');
+    await host.getByRole("button", { name: "确认加注" }).click();
+    expect((await (await receipt).json()).type).toBe('command_ack');
     await expect(guest.getByRole("button", { name: "跟注 40", exact: true })).toBeVisible();
     await guest.getByRole("button", { name: "弃牌", exact: true }).click();
     await expect(host.getByRole("region", { name: "本手结算" })).toBeVisible();
@@ -188,7 +191,10 @@ for (const reduced of [false, true]) test(`accepted action motion, reconnect bas
   };
   try {
     await page.getByRole("button", { name: "开始德州扑克" }).click();
-    await expect.poll(async () => (await read()).filter((s) => s.kind === "card").length).toBeGreaterThan(0);
+    // The shared waiting room mounts this table on its first snapshot, which is
+    // a quiet baseline. Later live hands must still animate (asserted below).
+    await expect(page.getByRole("region", { name: "你的行动" })).toBeVisible();
+    expect((await read()).filter((s) => s.kind === "card")).toEqual([]);
     await capture("raise", async () => { await page.getByRole("button", { name: "加注", exact: true }).click(); await page.getByLabel("加注总额", { exact: true }).fill("60"); await page.getByRole("button", { name: "确认加注", exact: true }).click(); });
     await command(request, guest, { type: "call" }); await command(request, guest, { type: "check" });
     await expect(page.getByRole("button", { name: "过牌", exact: true })).toBeVisible(); await page.getByRole("button", { name: "过牌", exact: true }).click();
@@ -196,6 +202,7 @@ for (const reduced of [false, true]) test(`accepted action motion, reconnect bas
     await expect(page.getByRole("button", { name: "跟注 40", exact: true })).toBeVisible();
     await capture("fold", async () => { await page.getByRole("button", { name: "弃牌", exact: true }).click(); });
     await page.getByRole("button", { name: "发下一手", exact: true }).click();
+    await expect.poll(async () => (await read()).filter((s) => s.kind === "card").length).toBeGreaterThan(0);
     await command(request, guest, { type: "all-in" });
     await expect(page.getByRole("button", { name: /^跟注/ })).toBeVisible(); await page.getByRole("button", { name: /^跟注/ }).click(); await settle();
     const samples = await read(), actions = new Set(samples.map((s) => s.action));

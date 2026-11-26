@@ -41,3 +41,4 @@ export type AnyRoomServerMessage =
 
 export * from "./accounts.js";
 export * from "./messages.js";
+export type { RoomCommandAck } from "./command-ack.js";

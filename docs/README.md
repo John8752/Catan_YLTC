@@ -52,6 +52,8 @@ Transport optimization validation: [Cached maps and command acknowledgements](./
 
 Incremental history validation: [Room events and complete public history](./validation/room-transport-phase2.md).
 
+Multi-game synchronization: [Carcassonne/Camel deltas and three-game command ACKs](./validation/game-state-deltas.md), [ADR-0019](./adr/0019-game-state-deltas.md).
+
 Roll controls and audio validation: [Mobile actions and distinct game sounds](./validation/roll-actions-and-sounds.md).
 
 Mobile disclosure validation: [Compact controls and negotiation](./validation/mobile-organization.md).

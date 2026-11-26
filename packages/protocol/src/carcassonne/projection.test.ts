@@ -18,4 +18,11 @@ describe("carcassonne player projection", () => {
     expect(view.board).not.toBe(state.board);
     expect(view.players[0]).not.toBe(state.players[0]);
   });
+  it("keeps cached public derivations independent of caller mutations and other viewers", () => {
+    const fresh = createCarcassonne("cached", state.players, 918), first = projectCarcassonne(fresh, "a");
+    (first.regions[0]!.refs as string[]).push("injected");
+    (first.placements[0]!.meepleOptions as string[]).push("injected");
+    expect(JSON.stringify(projectCarcassonne(fresh, "a"))).not.toContain("injected");
+    expect(projectCarcassonne(fresh, "b").placements).toEqual([]);
+  });
 });

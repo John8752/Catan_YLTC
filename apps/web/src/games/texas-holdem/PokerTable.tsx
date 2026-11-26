@@ -16,7 +16,10 @@ import { PokerResults } from "./PokerResults.js";
 import { PokerPlayfield } from "./PokerPlayfield.js";
 import { pokerSeatPositions } from "./seat-layout.js";
 import { usePokerMotion } from "./use-poker-motion.js";
+import type { RoomUpdates } from "../../room-updates.js";
+import { confirmRoomCommand } from "../../lib/command-confirmation.js";
 interface Props {
+  updates: RoomUpdates;
   room: PokerRoomView; session: PlayerSession; busy: boolean; error: string | null; connectionState: "connecting" | "live" | "offline"; accountControl: ReactNode; snapshotEpoch: number;
   setRoom: (r: AnyRoomView) => void; runBusy: (fn: () => Promise<void>) => Promise<void>; handleStart: () => Promise<void>; handleLeave: () => Promise<void>; handleDisband: () => Promise<void>; onReturnToLobby: () => Promise<void>;
 }
@@ -25,7 +28,7 @@ function useRemaining(game: PokerView | null) {
   useEffect(() => { if (!d) { setRemaining(0); return; } const until = Date.now() + Math.max(0, d.deadlineAt - d.serverNow); const tick = () => setRemaining(Math.max(0, Math.ceil((until - Date.now()) / 1000))); tick(); const timer = window.setInterval(tick, 250); return () => window.clearInterval(timer); }, [d?.deadlineAt, d?.serverNow]);
   return remaining;
 }
-export function PokerTable({ room, session, busy, error, connectionState, accountControl, snapshotEpoch, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby }: Props) {
+export function PokerTable({ updates, room, session, busy, error, connectionState, accountControl, snapshotEpoch, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby }: Props) {
   const game = room.game, host = room.hostPlayerId === session.playerId, remaining = useRemaining(game), stage = useRef<HTMLDivElement>(null), [height, setHeight] = useState(600);
   const [skin, setSkin] = useState<"green" | "midnight">("green"), [results, setResults] = useState(false);
   const points = pokerSeatPositions(game?.players.map((p) => p.id) ?? [], session.playerId, height);
@@ -35,7 +38,14 @@ export function PokerTable({ room, session, busy, error, connectionState, accoun
   const connected = connectionState === "live", finished = game?.phase.kind === "finished", acting = game?.phase.kind === "betting" && game.phase.actorId === session.playerId;
   const actorId = game?.phase.kind === "betting" ? game.phase.actorId : null, actorName = game?.players.find((p) => p.id === actorId)?.name ?? "玩家";
   async function refreshOnError(fn: () => Promise<PokerRoomView>) { await runBusy(async () => { try { setRoom(await fn()); } catch (e) { try { setRoom(await getRoom(session)); } catch { /* Connection banner handles recovery. */ } throw e; } }); }
-  async function action(a: PokerAction | { type: "next-hand" }) { if (!game) return; await refreshOnError(() => sendPokerCommand(session, randomId(), { matchId: game.id, handNumber: game.handNumber, expectedRevision: game.revision, action: a })); }
+  async function action(a: PokerAction | { type: "next-hand" }) {
+    if (!game) return;
+    const commandId = randomId();
+    await runBusy(async () => {
+      try { await confirmRoomCommand(updates, session, await sendPokerCommand(session, commandId, { matchId: game.id, handNumber: game.handNumber, expectedRevision: game.revision, action: a }), { gameId: "texas-holdem", matchId: game.id, commandId, connected }); }
+      catch (error) { try { setRoom(await getRoom(session)); } catch { /* Connection banner handles recovery. */ } throw error; }
+    });
+  }
   async function settings(s: PokerSettings) { await refreshOnError(() => savePokerSettings(session, room.revision, s)); }
   return <main className={cn("flex min-h-dvh flex-col bg-[#081c16] px-[max(.5rem,env(safe-area-inset-left),env(safe-area-inset-right))] pb-[max(.5rem,env(safe-area-inset-bottom))] pt-[max(.25rem,env(safe-area-inset-top))] text-[#e7eee3] selection:bg-[#d7bd83] selection:text-[#10291f]", game && "h-dvh min-h-[540px] overflow-hidden")}>
     <header className="mx-auto flex w-full max-w-5xl shrink-0 items-center gap-2">

@@ -4,7 +4,7 @@ import { registerCatanRoutes } from "./games/catan/routes.js";
 import { registerPokerRoutes } from "./games/texas-holdem/routes.js";
 import { registerDrawGuessRoutes } from "./games/draw-guess/routes.js";
 import { registerCarcassonneRoutes } from "./games/carcassonne/routes.js";
-import { createRoomEventEncoder, ROOM_EVENT_TRANSPORT, createRoomStreamEncoder, ROOM_MAP_TRANSPORT } from "@catan/protocol/catan";
+import { createPlatformRoomEncoder, usesCatanEvents } from "@catan/protocol/transport";
 import { playerNameSchema, startRoomSchema, playerColorSchema, shuffleRoomMembersSchema, leaveRoomSchema } from "./route-schemas.js";
 import { SqliteDatabase } from "./database/sqlite-database.js";
 import { SqliteAccountRepository } from "./database/sqlite-account-repository.js";
@@ -247,7 +247,7 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
       try {
         const seatToken = z.string().min(1).parse(request.query.seatToken);
         const after = z.coerce.number().int().nonnegative().safe().optional().parse(request.query.afterRevision);
-        return reply.code(200).send(registry.getRoom(request.params.roomId, seatToken, request.query.transport === ROOM_EVENT_TRANSPORT ? after ?? null : undefined));
+        return reply.code(200).send(registry.getRoom(request.params.roomId, seatToken, usesCatanEvents(request.query.transport) ? after ?? null : undefined));
       } catch (error) {
         return sendError(reply, error);
       }
@@ -265,13 +265,13 @@ export async function buildApp(registry: RoomRegistry | undefined = undefined, o
       try {
         const roomId = z.string().min(1).parse(request.query.roomId);
         const seatToken = z.string().min(1).parse(request.query.seatToken);
-        const incremental = request.query.transport === ROOM_EVENT_TRANSPORT;
-        const encode = incremental ? createRoomEventEncoder() : request.query.transport === ROOM_MAP_TRANSPORT ? createRoomStreamEncoder() : null;
+        const incremental = usesCatanEvents(request.query.transport);
+        const encode = createPlatformRoomEncoder(request.query.transport);
         const unsubscribe = registry.subscribe(
           roomId,
           seatToken,
           (room) => {
-            socket.send(JSON.stringify(encode && room.gameId === "catan" ? encode(room) : { type: "room_state", room }));
+            socket.send(JSON.stringify(encode(room)));
           },
           () => {
             // Say why before closing, or the client just sees a dropped socket and

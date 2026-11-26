@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { freshDeck, DEFAULT_POKER_SETTINGS } from "@catan/game-core/texas-holdem";
 import type { PokerAction, PokerCommand, PokerRoomView } from "@catan/protocol/texas-holdem";
-import type { MatchRecord, RoomSession } from "@catan/protocol/platform";
+import type { MatchRecord, RoomSession, RoomCommandAck } from "@catan/protocol/platform";
 import { RoomRegistry } from "../../rooms.js";
 import { buildApp } from "../../app.js";
 const registries: RoomRegistry[] = [];
@@ -87,9 +87,9 @@ describe("texas-holdem server", () => {
       expect((await post({ ...c, deck: freshDeck() })).statusCode).toBe(400);
       expect((await post({ ...c, action: { type: "raise", to: 21 } })).statusCode).toBe(400);
       expect((await post(c)).statusCode).toBe(200);
-      const retry = (await post(c)).json<PokerRoomView>(), current = view(r, host);
-      expect({ ...retry.game, deadline: null }).toEqual({ ...current.game, deadline: null });
-      expect(retry.game!.deadline!.deadlineAt).toBe(current.game!.deadline!.deadlineAt);
+      const retry = (await post(c)).json<RoomCommandAck>(), current = view(r, host);
+      expect(retry).toMatchObject({ type: "command_ack", matchId: current.matchId, roomRevision: current.revision, gameRevision: current.game!.revision, handNumber: current.game!.handNumber });
+      expect(retry).not.toHaveProperty("game");expect(current.game!.deadline!.deadlineAt).toBeGreaterThan(Date.now());
       expect(() => send(r, seats[1]!, { type: "next-hand" })).toThrow();
       expect(() => r.updatePokerSettings(host.roomId, host.seatToken, view(r, host).revision, DEFAULT_POKER_SETTINGS)).toThrow();
       const other = r.createRoom("卡坦", null, "catan");

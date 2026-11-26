@@ -9,6 +9,11 @@ function fixture(board: PlacedTile[], currentTile = "E", deck = ["B"]): Carcasso
 const command = (x: number, y: number, rotation = 0, meeple: string | null = null) => ({ type: "place" as const, matchId: "match", turn: 1, x, y, rotation, meeple });
 
 describe("carcassonne base engine", () => {
+  it("stores only canonical tile fields when placement is a full command", () => {
+    const state = createCarcassonne("match", players, 42), p = legalPlacements(state.board, state.currentTile!)[0]!;
+    const next = executeCarcassonne(state, "a", { ...command(p.x, p.y, p.rotation), extra: "untrusted" } as ReturnType<typeof command>);
+    expect(next.board[1]).toEqual({ id: `${p.x},${p.y}`, type: state.currentTile, x: p.x, y: p.y, rotation: p.rotation });
+  });
   it("has exactly the 72 standard tiles including a single fixed starting D", () => {
     expect(TILE_CATALOG).toHaveLength(24);
     expect(TILE_CATALOG.reduce((n, t) => n + t.count, 0)).toBe(72);

@@ -6,6 +6,8 @@ import type { RoomBase } from "../../room-base.js";
 import type { CamelRoomRecord } from "./room-types.js";
 import type { MatchRepository } from "../../database/match-repository.js";
 import { RoomError } from "../../room-errors.js";
+import type { RoomCommandAck } from "@catan/protocol/platform";
+import { commandAck } from "../../platform/command-ack.js";
 export class CamelRoomGame {
   repository: MatchRepository | null = null;
   constructor(private readonly now: () => number, private readonly notify: (room: CamelRoomRecord) => void,
@@ -26,11 +28,12 @@ export class CamelRoomGame {
     room.matchId = id; room.startedAt = this.now();
   }
   reset(room: CamelRoomRecord) { room.game = null; room.matchId = null; room.startedAt = 0; room.appliedCommands.clear(); }
-  command(room: CamelRoomRecord, playerId: string, commandId: string, command: CamelCommand): CamelRoomView {
+  command(room: CamelRoomRecord, playerId: string, commandId: string, command: CamelCommand): RoomCommandAck {
     const state = room.game; if (!state) throw new RoomError("GAME_NOT_STARTED", "游戏尚未开始");
     if (command.matchId !== state.id) throw new RoomError("STALE_MATCH", "操作属于上一局，请刷新");
     const key = `${playerId}:${commandId}`;
-    if (room.appliedCommands.has(key)) return this.project(room, playerId);
+    const response = () => commandAck(room, commandId, room.game!);
+    if (room.appliedCommands.has(key)) return response();
     if (command.expectedRevision !== state.revision) throw new RoomError("STALE_REVISION", "赛场已更新，请重新操作");
     if (state.phase.kind !== "racing" || state.phase.activePlayerId !== playerId) throw new RoomError("INVALID_REQUEST", "请等待自己的行动回合");
     let roll: RollInput | undefined;
@@ -43,6 +46,6 @@ export class CamelRoomGame {
       this.repository.save({ gameId: "camel-up", matchId: next.id, dataVersion: 1, startedAt: room.startedAt, finishedAt: this.now(), data },
         room.members.flatMap(m => m.accountId === null ? [] : [{ accountId: m.accountId, playerId: m.id }]));
     }
-    room.game = next; room.revision++; room.appliedCommands.add(key); this.notify(room); return this.project(room, playerId);
+    room.game = next; room.revision++; room.appliedCommands.add(key); this.notify(room); return response();
   }
 }

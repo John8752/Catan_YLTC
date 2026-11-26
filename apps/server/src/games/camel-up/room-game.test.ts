@@ -14,7 +14,7 @@ describe("camel-up authoritative room adapter", () => {
     expect(() => adapter.command(room, "p1", "wrong", command)).toThrow(); expect(pick).toHaveBeenCalledTimes(count);
     adapter.command(room, "p0", "once", command); const after = pick.mock.calls.length;
     const duplicate = adapter.command(room, "p0", "once", command);
-    expect(duplicate.game?.revision).toBe(1); expect(pick).toHaveBeenCalledTimes(after); expect(notify).toHaveBeenCalledTimes(1);
+    expect(duplicate.gameRevision).toBe(1); expect(pick).toHaveBeenCalledTimes(after); expect(notify).toHaveBeenCalledTimes(1);
     expect(() => adapter.command(room, "p1", "new", command)).toThrow();
     expect(() => adapter.command(room, "p0", "once", { ...command, matchId: "old" })).toThrow();
   });
@@ -45,7 +45,8 @@ describe("camel-up authoritative room adapter", () => {
       for (const seat of [a, b, c]) expect(JSON.stringify(started)).not.toContain(seat.seatToken);
       const changes: unknown[] = []; const unsubscribe = registry.subscribe(a.roomId, b.seatToken, r => changes.push(r));
       const response = await app.inject({ method: "POST", url: `/api/rooms/${a.roomId}/camel-up/commands`, payload: { seatToken: a.seatToken, commandId: "bet", command: { type: "finish-bet", camel: "purple", kind: "winner", matchId: started.matchId, expectedRevision: 0 } } });
-      expect(response.statusCode).toBe(200); expect(response.json().game.ownFinishBets).toHaveLength(1);
+      expect(response.statusCode).toBe(200); expect(response.json().type).toBe("command_ack");
+      const own = registry.getRoom(a.roomId, a.seatToken); if (own.gameId !== "camel-up") throw Error(); expect(own.game!.ownFinishBets).toHaveLength(1);
       const recovered = registry.getRoom(a.roomId, c.seatToken); expect(recovered.gameId).toBe("camel-up");
       if (recovered.gameId !== "camel-up") throw Error(); expect(recovered.game?.ownFinishBets).toEqual([]); expect(recovered.game?.revealedFinishBets).toBeNull(); expect(changes).toHaveLength(2);
       expect(() => registry.executeDrawCommand(a.roomId, a.seatToken, "x", { type: "reroll", matchId: started.matchId!, taskId: "x" } as never)).toThrow();

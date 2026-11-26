@@ -6,6 +6,8 @@ import type { RoomBase } from "../../room-base.js";
 import type { MatchRepository } from "../../database/match-repository.js";
 import { RoomError } from "../../room-errors.js";
 import type { PokerRoomRecord } from "./room-types.js";
+import type { RoomCommandAck } from "@catan/protocol/platform";
+import { commandAck } from "../../platform/command-ack.js";
 
 interface Timer { key: string; deadlineAt: number; durationMs: number; handle: ReturnType<typeof setTimeout> }
 export class PokerRoomGame {
@@ -29,16 +31,17 @@ export class PokerRoomGame {
     room.matchId = id; room.startedAt = this.now(); room.game = game; this.sync(room);
   }
   reset(room: PokerRoomRecord) { this.cancel(room.id); room.game = null; room.matchId = null; room.startedAt = 0; room.appliedCommands.clear(); }
-  command(room: PokerRoomRecord, playerId: string, commandId: string, c: PokerCommand): PokerRoomView {
+  command(room: PokerRoomRecord, playerId: string, commandId: string, c: PokerCommand): RoomCommandAck {
     const s = room.game;
     if (!s) throw new RoomError("GAME_NOT_STARTED", "游戏尚未开始");
     if (c.matchId !== s.id) throw new RoomError("STALE_MATCH", "操作属于上一局，请刷新");
     const key = `${playerId}:${commandId}`;
-    if (room.appliedCommands.has(key)) return this.project(room, playerId);
+    const response = () => commandAck(room, commandId, room.game!);
+    if (room.appliedCommands.has(key)) return response();
     if (c.expectedRevision !== s.revision || c.handNumber !== s.handNumber) throw new RoomError("STALE_REVISION", "牌桌已更新，请根据当前状态操作");
     if (c.action.type === "next-hand" && playerId !== room.hostPlayerId) throw new RoomError("ONLY_HOST_CAN_START", "只有房主可以提前发下一手");
     const next = this.translate(() => c.action.type === "next-hand" ? nextPokerHand(s, this.deck()) : actPoker(s, playerId, c.action));
-    this.commit(room, next); room.appliedCommands.add(key); this.sync(room); this.notify(room); return this.project(room, playerId);
+    this.commit(room, next); room.appliedCommands.add(key); this.sync(room); this.notify(room); return response();
   }
   private commit(room: PokerRoomRecord, next: PokerState) {
     if (next.phase.kind === "finished" && room.game?.phase.kind !== "finished" && this.repository) {

@@ -1,6 +1,7 @@
 import { clickGameTool } from "./game-tools.js";
 import { expect, test, type WebSocketRoute } from "@playwright/test";
-import { createRoomEventEncoder, ROOM_EVENT_TRANSPORT, type GameHistoryPage, type RoomView } from "../../../packages/protocol/src/catan/index.js";
+import { createRoomEventEncoder, type GameHistoryPage, type RoomView } from "../../../packages/protocol/src/catan/index.js";
+import { PLATFORM_ROOM_TRANSPORT } from "../../../packages/protocol/src/platform-stream.js";
 import { fixture } from "./fixtures.js";
 import { iPhone16BrowserAreaCases } from "../viewport-cases.js";
 
@@ -34,7 +35,7 @@ for (const viewport of [{ name: "desktop", width: 1280, height: 800, options: {}
       await route.fulfill({ json: history(Math.max(0, before - 51), before - 1) });
     });
     await page.routeWebSocket(/\/ws\?/, (route) => {
-      expect(new URL(route.url()).searchParams.get("transport")).toBe(ROOM_EVENT_TRANSPORT);
+      expect(new URL(route.url()).searchParams.get("transport")).toBe(PLATFORM_ROOM_TRANSPORT);
       connections++; socket = route; encode = createRoomEventEncoder();
       route.send(JSON.stringify(encode(view(through - 50, through))));
     });

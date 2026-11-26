@@ -18,8 +18,11 @@ import { TileArt, MeepleArt, FEATURE_LABELS } from "./TileArt.js";
 import { RoomMenu } from "./RoomMenu.js";
 import { TurnDock } from "./TurnDock.js";
 import "./map.css";
+import type { RoomUpdates } from "../../room-updates.js";
+import { confirmRoomCommand } from "../../lib/command-confirmation.js";
 
 interface Props {
+  readonly updates:RoomUpdates;
   readonly room:CarcassonneRoomView;readonly session:PlayerSession;readonly busy:boolean;readonly error:string|null;
   readonly connectionState:'connecting'|'live'|'offline';readonly accountControl:ReactNode;
   readonly setRoom:(r:AnyRoomView)=>void;readonly runBusy:(action:()=>Promise<void>)=>Promise<void>;
@@ -52,7 +55,7 @@ export function CarcassonneTable(props:Props) {
     if(requestRef.current?.signature!==signature)requestRef.current={signature,id:randomId()};
     const requestId=requestRef.current.id;
     await runBusy(async()=>{
-      try{setRoom(await sendCarcassonneCommand(session,requestId,command));}
+      try{await confirmRoomCommand(props.updates,session,await sendCarcassonneCommand(session,requestId,command),{gameId:"carcassonne",matchId:game.id,commandId:requestId,connected:connectionState==='live'});}
       catch(e){try{setRoom(await getRoom(session));}catch{/* Keep the editable preview while offline. */}throw e;}
     });
   }

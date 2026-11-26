@@ -28,7 +28,7 @@ describe("carcassonne authoritative room", () => {
     const command:PlaceCommand={type:'place',matchId:'match',turn:1,x:1,y:0,rotation:0,meeple:'m0'};
     expect(()=>adapter.command(room,'a','final',command)).toThrow(/storage/);
     expect(room.game.board).toHaveLength(1);expect(room.appliedCommands.size).toBe(0);expect(notifications).toBe(0);
-    const done=adapter.command(room,'a','final',command);expect(done.game!.phase.kind).toBe('finished');
+    const done=adapter.command(room,'a','final',command);expect(done.type).toBe('command_ack');expect(room.game.phase.kind).toBe('finished');
     adapter.command(room,'a','final',command);expect(writes).toBe(2);expect(notifications).toBe(1);
   });
   it("serves isolated HTTP moves, broadcasts, rejects invalid actors and deduplicates retries", async () => {
@@ -44,10 +44,10 @@ describe("carcassonne authoritative room", () => {
       expect(view(registry, host).game!.board).toHaveLength(1);
       const payload = { seatToken: host.seatToken, commandId: "move-1", command };
       const response = await app.inject({ method: "POST", url, payload }); expect(response.statusCode).toBe(200);
-      expect(response.json<CarcassonneRoomView>().game!.board).toHaveLength(2);
+      expect(response.json().type).toBe('command_ack');expect(view(registry,host).game!.board).toHaveLength(2);
       expect(seen.at(-1)?.game?.revision).toBe(2);
       const retry = await app.inject({ method: "POST", url, payload }); expect(retry.statusCode).toBe(200);
-      expect(retry.json<CarcassonneRoomView>().revision).toBe(response.json<CarcassonneRoomView>().revision);
+      expect(retry.json()).toEqual(response.json());
       expect(seen).toHaveLength(2);
       const forged = await app.inject({ method: "POST", url, payload: { ...payload, commandId: "forged", command: { ...command, rotation: 9 } } });
       expect(forged.statusCode).toBe(400);

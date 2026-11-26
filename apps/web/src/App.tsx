@@ -87,9 +87,9 @@ export function App() {
     switch(view.gameId){
       case "catan":return <CatanTable key={view.id} {...common} room={view} updates={updates} snapshotEpoch={snapshotEpoch} compactAccountControl={compactAccountControl}/>;
       case "draw-guess":return <DrawGuessTable key={view.id} {...common} room={view}/>;
-      case "camel-up":return <CamelTable key={view.id} {...common} room={view} snapshotEpoch={snapshotEpoch}/>;
-      case "carcassonne":return <CarcassonneTable key={view.id} {...common} room={view}/>;
-      case "texas-holdem":return <PokerTable key={view.id} {...common} room={view} snapshotEpoch={snapshotEpoch}/>;
+      case "camel-up":return <CamelTable key={view.id} {...common} room={view} updates={updates} snapshotEpoch={snapshotEpoch}/>;
+      case "carcassonne":return <CarcassonneTable key={view.id} {...common} room={view} updates={updates}/>;
+      case "texas-holdem":return <PokerTable key={view.id} {...common} room={view} updates={updates} snapshotEpoch={snapshotEpoch}/>;
       default:return unregisteredGame(view);
     }
   }

@@ -7,6 +7,7 @@ import type { Region } from "@catan/game-core/carcassonne";
 import { PLAYER_SVG_COLORS } from "../../../lib/player-palette.js";
 import { featureAnchor } from "../TileArt.js";
 import { box,clay,mesh,pawnModel,release,tileModel,UNIT } from "./models.js";
+import { KeyedObjects } from "./keyed-objects.js";
 
 export interface SceneState {
   game:CarcassonneView;selected:LegalPlacement|null;rotation:number;meeple:string|null;step:"tile"|"meeple";busy:boolean;valid:boolean;inspected:Region|null;
@@ -64,6 +65,7 @@ export function createArena(container:HTMLElement,initial:SceneState,callbacks:C
   let targetWorld:{target:Omit<Target,"x"|"y">;point:T.Vector3}[]=[],previousBoard=new Set(initial.game.board.map(t=>t.id));
   const arrivals=new Map<T.Group,number>();let previewGroup:T.Group|null=null,previewSignature="",previewAngle=0;
   const pawnArrivals=new Map<T.Group,{start:number;floor:number;tile:T.Group|null}>();
+  const pawnObjects=new KeyedObjects(pieces,g=>pawnArrivals.delete(g)),candidateObjects=new KeyedObjects(ghosts);
   let previousPawns=new Set(initial.game.meeples.map(m=>`${m.tileId}/${m.featureId}/${m.playerId}`)),previousPreviewPawn="",screenTargets:Target[]=[],lastFrame:SceneFrame|null=null;
   let flight:{start:number;from:T.Vector3;to:T.Vector3;targetFrom:T.Vector3;targetTo:T.Vector3;zoomFrom:number;zoomTo:number}|null=null;
   let gesture:{x:number;y:number;moved:boolean}|null=null,activePointers=new Set<number>();
@@ -99,7 +101,6 @@ export function createArena(container:HTMLElement,initial:SceneState,callbacks:C
     camera.zoom=T.MathUtils.clamp(Math.min((width-56)/spanX,(height-138)/spanY),.045,board.length===1?1:4.5);camera.updateProjectionMatrix();controls.update();invalidate();
   }
   function focus(x:number,y:number){const target=new T.Vector3(x*UNIT,0,y*UNIT),position=camera.position.clone().add(target.clone().sub(controls.target));flyTo(position,target,Math.min(2.2,Math.max(1,height/270)));}
-  function clear(group:T.Group){while(group.children.length)release(group.children[0]!);}
   function update(next:SceneState){
     state=next;const {game}=next;
     const refs=next.inspected?[...next.inspected.refs,...game.regions.filter(r=>next.inspected!.completedCityIds.includes(r.id)).flatMap(r=>r.refs)]:[];
@@ -112,12 +113,17 @@ export function createArena(container:HTMLElement,initial:SceneState,callbacks:C
       scene.add(g);tiles.set(tile.id,{group:g,signature});
       if(!previousBoard.has(tile.id)&&!reduced.matches)arrivals.set(g,performance.now());
     }
-    previousBoard=currentIds;clear(pieces);clear(ghosts);pawnArrivals.clear();targetWorld=[];
+    previousBoard=currentIds;pawnObjects.begin();candidateObjects.begin();targetWorld=[];
     for(const pawn of game.meeples){
       const tile=game.board.find(t=>t.id===pawn.tileId)!;const a=featureAnchor(tile.type,pawn.featureId,tile.rotation),player=game.players.find(p=>p.id===pawn.playerId)!;
-      const g=pawnModel(PLAYER_SVG_COLORS[player.color],pawn.featureId.startsWith("f")),kind=tileDefinition(tile.type).features.find(f=>f.id===pawn.featureId)!.kind;
-      g.position.x=tile.x*UNIT+(a.x-50)*.02;g.position.z=tile.y*UNIT+(a.y-50)*.02;g.position.y+=kind==='city'?.055:kind==='monastery'?.035:0;pieces.add(g);
-      if(!previousPawns.has(`${pawn.tileId}/${pawn.featureId}/${pawn.playerId}`)&&!reduced.matches)pawnArrivals.set(g,{start:performance.now(),floor:g.position.y,tile:tiles.get(pawn.tileId)!.group});
+      const key=`${pawn.tileId}/${pawn.featureId}/${pawn.playerId}`;
+      const g=pawnObjects.use(key,`${player.color}/${tile.type}/${tile.rotation}`,()=>{
+        const object=pawnModel(PLAYER_SVG_COLORS[player.color],pawn.featureId.startsWith("f")),kind=tileDefinition(tile.type).features.find(f=>f.id===pawn.featureId)!.kind;
+        object.position.x=tile.x*UNIT+(a.x-50)*.02;object.position.z=tile.y*UNIT+(a.y-50)*.02;object.position.y+=kind==='city'?.055:kind==='monastery'?.035:0;
+        if(!previousPawns.has(key)&&!reduced.matches)pawnArrivals.set(object,{start:performance.now(),floor:object.position.y,tile:tiles.get(pawn.tileId)!.group});
+        return object;
+      });
+      const arrival=pawnArrivals.get(g);if(arrival)arrival.tile=tiles.get(pawn.tileId)!.group;
     }
     previousPawns=new Set(game.meeples.map(m=>`${m.tileId}/${m.featureId}/${m.playerId}`));
     const active=game.phase.kind==="turn"&&game.phase.playerId===game.you.id,preview=active?next.selected:null;
@@ -126,9 +132,13 @@ export function createArena(container:HTMLElement,initial:SceneState,callbacks:C
       for(const cell of cells){
         if(preview?.x===cell.x&&preview.y===cell.y)continue;
         const match=game.placements.find(p=>p.x===cell.x&&p.y===cell.y&&p.rotation===((next.rotation%4)+4)%4)??cell;
-        const plate=box(ghosts,"#aabd83",1.91,.025,1.91,cell.x*UNIT,-.075,cell.y*UNIT,.035);plate.material.transparent=true;plate.material.opacity=.55;plate.castShadow=false;plate.userData.placement=match;
-        // Four little corner brackets sit on the tabletop rather than a screen-space grid.
-        for(const sx of [-1,1])for(const sz of [-1,1]){box(ghosts,"#67805b",.24,.015,.035,cell.x*UNIT+sx*.8,-.053,cell.y*UNIT+sz*.8,.005);box(ghosts,"#67805b",.035,.015,.24,cell.x*UNIT+sx*.8,-.053,cell.y*UNIT+sz*.8,.005);}
+        const marker=candidateObjects.use(`${cell.x},${cell.y}`,"candidate",()=>{
+          const group=new T.Group();group.position.set(cell.x*UNIT,0,cell.y*UNIT);
+          const plate=box(group,"#aabd83",1.91,.025,1.91,0,-.075,0,.035);plate.material.transparent=true;plate.material.opacity=.55;plate.castShadow=false;group.userData.plate=plate;
+          for(const sx of [-1,1])for(const sz of [-1,1]){box(group,"#67805b",.24,.015,.035,sx*.8,-.053,sz*.8,.005);box(group,"#67805b",.035,.015,.24,sx*.8,-.053,sz*.8,.005);}
+          return group;
+        });
+        (marker.userData.plate as T.Mesh).userData.placement=match;
         targetWorld.push({target:{id:`${cell.x},${cell.y}`,kind:"candidate",label:`落点 ${cell.x},${cell.y}`,placement:match},point:new T.Vector3(cell.x*UNIT,.12,cell.y*UNIT)});
       }
     }
@@ -140,12 +150,16 @@ export function createArena(container:HTMLElement,initial:SceneState,callbacks:C
       }
       previewGroup!.position.set(preview.x*UNIT,.14,preview.y*UNIT);
       if(next.step==="meeple")for(const id of preview.meepleOptions){const a=featureAnchor(game.currentTile,id,next.rotation);targetWorld.push({target:{id,kind:"meeple",label:`在预览板块放置随从 ${id}`},point:new T.Vector3(preview.x*UNIT+(a.x-50)*.02,.72,preview.y*UNIT+(a.y-50)*.02)});}
-      if(next.meeple&&preview.meepleOptions.includes(next.meeple)){const own=game.players.find(p=>p.id===game.you.id)!,a=featureAnchor(game.currentTile,next.meeple,next.rotation),g=pawnModel(PLAYER_SVG_COLORS[own.color],next.meeple.startsWith("f")),kind=tileDefinition(game.currentTile).features.find(f=>f.id===next.meeple)!.kind;
-        g.position.x=preview.x*UNIT+(a.x-50)*.02;g.position.z=preview.y*UNIT+(a.y-50)*.02;g.position.y+=.14+(kind==='city'?.055:kind==='monastery'?.035:0);pieces.add(g);
+      if(next.meeple&&preview.meepleOptions.includes(next.meeple)){const own=game.players.find(p=>p.id===game.you.id)!,a=featureAnchor(game.currentTile,next.meeple,next.rotation),kind=tileDefinition(game.currentTile).features.find(f=>f.id===next.meeple)!.kind;
         const key=`${preview.x}/${preview.y}/${next.meeple}/${next.rotation}`;
-        if(key!==previousPreviewPawn&&!reduced.matches)pawnArrivals.set(g,{start:performance.now(),floor:g.position.y,tile:null});previousPreviewPawn=key;
+        pawnObjects.use(`preview/${key}`,own.color,()=>{
+          const g=pawnModel(PLAYER_SVG_COLORS[own.color],next.meeple!.startsWith("f"));
+          g.position.x=preview.x*UNIT+(a.x-50)*.02;g.position.z=preview.y*UNIT+(a.y-50)*.02;g.position.y+=.14+(kind==='city'?.055:kind==='monastery'?.035:0);
+          if(key!==previousPreviewPawn&&!reduced.matches)pawnArrivals.set(g,{start:performance.now(),floor:g.position.y,tile:null});return g;
+        });previousPreviewPawn=key;
       }else previousPreviewPawn="";
     }else{previousPreviewPawn="";if(previewGroup){release(previewGroup);previewGroup=null;previewSignature="";}}
+    pawnObjects.end();candidateObjects.end();container.dataset.carcPawnBuilds=String(pawnObjects.created);container.dataset.carcCandidateBuilds=String(candidateObjects.created);
     if(first&&width>1){first=false;if(game.board.length>1)fit();}invalidate();
   }
   function frame(){

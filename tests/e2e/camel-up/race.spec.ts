@@ -35,7 +35,10 @@ test("three seats place private bets, reconnect, finish and replay", async ({ br
     for (const seat of seats) expect(publicView).not.toContain(seat.seatToken);
     expect(publicView).not.toContain('"seatToken"');
     expect(publicView).not.toContain('"accountId"');
-    await host.getByRole("tab", { name: "终局卡" }).click(); await host.getByRole("button", { name: "蓝驼", exact: true }).click();
+    await host.getByRole("tab", { name: "终局卡" }).click();
+    const receipt = host.waitForResponse(r => r.url().endsWith('/camel-up/commands') && r.request().method() === 'POST');
+    await host.getByRole("button", { name: "蓝驼", exact: true }).click();
+    expect((await (await receipt).json()).type).toBe('command_ack');
     await expect(host.locator("[data-camel-feedback=finish-bet]")).toContainText("秘密押注");
     await expect(other.getByRole("heading", { name: "轮到你了" })).toBeVisible();
     expect((await snapshot(other, seats[1]!)).game?.ownFinishBets).toEqual([]);
@@ -50,7 +53,7 @@ test("three seats place private bets, reconnect, finish and replay", async ({ br
     while (room.game?.phase.kind === "racing" && step < 500) {
       const activeId = room.game.phase.activePlayerId, active = seats.find(s => s.playerId === activeId)!;
       const response = await request.post(`/api/rooms/${active.roomId}/camel-up/commands`, { data: { seatToken: active.seatToken, commandId: `finish-${step++}`, command: { type: "roll", matchId: room.matchId, expectedRevision: room.game.revision } } });
-      expect(response.ok()).toBe(true); room = await response.json();
+      expect(response.ok()).toBe(true); expect((await response.json()).type).toBe("command_ack"); room = await snapshot(host, seats[0]!);
     }
     expect(room.game?.phase.kind).toBe("finished");
     for (const { page } of tabs) await expect(page.getByLabel("最终金币排名")).toBeVisible();
@@ -138,7 +141,7 @@ test("portrait action film covers rolls, tickets, private bets, tiles, partnersh
       const personal = await snapshot(page, seat); const legal = personal.game!.legal;
       const action = type === "ticket" ? { type, camel: legal.tickets[0]!.camel } : type === "finish-bet" ? { type, camel: legal.finishCards[0]!, kind: "winner" } : type === "tile" ? { type, space: legal.tileSpaces[0]!, side: "cheer" } : type === "partner" ? { type, playerId: legal.partners.at(-1)! } : { type };
       const response = await request.post(`/api/rooms/${seat.roomId}/camel-up/commands`, { data: { seatToken: seat.seatToken, commandId: `film-${index}`, command: { ...action, matchId: room.matchId, expectedRevision: room.game.revision } } });
-      expect(response.ok()).toBe(true); room = await response.json();
+      expect(response.ok()).toBe(true); expect((await response.json()).type).toBe("command_ack"); room = await snapshot(page, host);
       await expect(page.locator(`[data-camel-feedback=${type}]`)).toBeVisible(); await expect(page.locator("[data-camel-feedback]")).toHaveCount(0, { timeout: 5000 });
     }
     expect(room.game!.leg).toBe(2); await page.screenshot({ path: info.outputPath("phone-polished.png"), scale: "css" });

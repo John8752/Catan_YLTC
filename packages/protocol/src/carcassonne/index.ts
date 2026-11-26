@@ -21,13 +21,19 @@ export interface CarcassonneSettlementV1 {
   readonly players: readonly { readonly id: string; readonly name: string; readonly score: number; readonly rank: number }[];
 }
 /** Never include seed, deck order, room credentials or unpublished client previews. */
+const derived = new WeakMap<CarcassonneState, { regions: readonly Region[]; placements?: readonly LegalPlacement[] }>();
 export function projectCarcassonne(state: CarcassonneState, viewerId: string): CarcassonneView {
   if (!state.players.some((p) => p.id === viewerId)) throw new Error("Unknown Carcassonne viewer");
-  const placements = state.phase.kind === "turn" && state.phase.playerId === viewerId && state.currentTile
-    ? legalPlacements(state.board, state.currentTile).map((p) => ({ ...p, meepleOptions: [...previewPlacement(state, viewerId, p).meepleOptions] })) : [];
+  // Core states are immutable. Public topology and the actor's choices are computed
+  // once per state, while every caller still receives independent transport values.
+  let cached = derived.get(state);
+  if (!cached) { cached = { regions: regions(state.board, state.meeples) }; derived.set(state, cached); }
+  const active = state.phase.kind === "turn" && state.phase.playerId === viewerId && state.currentTile;
+  if (active && !cached.placements) cached.placements = legalPlacements(state.board, state.currentTile!).map(p => ({ ...p, meepleOptions: [...previewPlacement(state, viewerId, p).meepleOptions] }));
+  const placements = active ? cached.placements!.map(p => ({ ...p, meepleOptions: [...p.meepleOptions] })) : [];
   return { id: state.id, revision: state.revision, you: { id: viewerId }, phase: { ...state.phase },
     players: state.players.map((p) => ({ ...p, availableMeeples: 7 - state.meeples.filter((m) => m.playerId === p.id).length })),
-    board: state.board.map((t) => ({ ...t })), meeples: state.meeples.map((m) => ({ ...m })), currentTile: state.currentTile,
+    board: state.board.map(({ id, type, x, y, rotation }) => ({ id, type, x, y, rotation })), meeples: state.meeples.map((m) => ({ ...m })), currentTile: state.currentTile,
     remainingTiles: state.deck.length + Number(state.currentTile !== null), discardedCount: state.discarded.length,
-    placements, regions: regions(state.board, state.meeples), scores: state.scores.map((s) => ({ ...s, playerIds: [...s.playerIds], tileIds: [...s.tileIds] })) };
+    placements, regions: cached.regions.map(r => ({ ...r, refs: [...r.refs], tileIds: [...r.tileIds], followers: { ...r.followers }, winnerIds: [...r.winnerIds], completedCityIds: [...r.completedCityIds] })), scores: state.scores.map((s) => ({ ...s, playerIds: [...s.playerIds], tileIds: [...s.tileIds] })) };
 }

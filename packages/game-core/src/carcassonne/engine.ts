@@ -14,7 +14,7 @@ export function createCarcassonne(id: string, players: readonly Omit<Carcassonne
 export function previewPlacement(state: CarcassonneState, playerId: string, placement: Placement): { readonly tile: PlacedTile; readonly meepleOptions: readonly string[] } {
   assertActor(state, playerId);
   if (!state.currentTile || !validPlacement(state.board, state.currentTile, placement)) throw new CarcassonneError("ILLEGAL_PLACEMENT", "这里无法拼接当前板块，请检查相邻边");
-  const tile: PlacedTile = { ...placement, id: coordinateId(placement.x, placement.y), type: state.currentTile };
+  const tile: PlacedTile = { x: placement.x, y: placement.y, rotation: placement.rotation, id: coordinateId(placement.x, placement.y), type: state.currentTile };
   if (state.meeples.filter((m) => m.playerId === playerId).length >= 7) return { tile, meepleOptions: [] };
   const groups = regions([...state.board, tile], state.meeples);
   return { tile, meepleOptions: rotatedFeatures(tile.type, tile.rotation).filter((f) => {

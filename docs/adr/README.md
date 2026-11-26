@@ -25,3 +25,4 @@ Add a new ADR when reversing an accepted decision. Do not silently rewrite the h
 - [ADR-0017: Carcassonne real-time 3D miniatures](0017-carcassonne-three-renderer.md)
 
 - [ADR-0018: Explicit game dispatch without fallbacks](./0018-exhaustive-game-capabilities.md) — accepted
+- [ADR-0019: Player-safe game deltas and command acknowledgements](./0019-game-state-deltas.md) — accepted

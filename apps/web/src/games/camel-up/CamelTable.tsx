@@ -20,13 +20,16 @@ import { RaceBoard } from "./RaceBoard.js";
 import { RaceActions } from "./RaceActions.js";
 import { CamelPiece } from "./CamelPiece.js";
 import { sendCamelCommand } from "./api.js";
+import type { RoomUpdates } from "../../room-updates.js";
+import { confirmRoomCommand } from "../../lib/command-confirmation.js";
 interface Props {
+  updates: RoomUpdates;
   snapshotEpoch: number; room: CamelRoomView; session: PlayerSession; busy: boolean; error: string | null;
   connectionState: "connecting" | "live" | "offline"; accountControl: ReactNode;
   setRoom: (room: AnyRoomView) => void; runBusy: (action: () => Promise<void>) => Promise<void>;
   handleStart: () => Promise<void>; handleLeave: () => Promise<void>; handleDisband: () => Promise<void>; onReturnToLobby: () => Promise<void>;
 }
-export function CamelTable({ snapshotEpoch, room, session, busy, error, connectionState, accountControl, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby }: Props) {
+export function CamelTable({ updates, snapshotEpoch, room, session, busy, error, connectionState, accountControl, setRoom, runBusy, handleStart, handleLeave, handleDisband, onReturnToLobby }: Props) {
   const mobile = useMediaQuery("(max-width: 1023px)");
   const game = room.game, host = room.hostPlayerId === session.playerId, finished = game?.phase.kind === "finished";
   const actionOrigin = useRef<DOMRect | null>(null);
@@ -42,7 +45,7 @@ export function CamelTable({ snapshotEpoch, room, session, busy, error, connecti
     actionOrigin.current = document.activeElement?.getBoundingClientRect() ?? null;
     const command = { ...next, matchId: game.id, expectedRevision: game.revision };
     void runBusy(async () => {
-      try { setRoom(await sendCamelCommand(session, randomId(), command)); }
+      try { const commandId = randomId(); await confirmRoomCommand(updates, session, await sendCamelCommand(session, commandId, command), { gameId: "camel-up", matchId: game.id, commandId, connected: connectionState === "live" }); }
       catch (error) { setRoom(await getRoom(session)); throw error; }
     });
   }

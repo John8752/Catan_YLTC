@@ -49,17 +49,17 @@ export function DrawWork({ game, session, onRoom, compactGuess = false }: { read
     </DialogContent>
   </Dialog>;
   return <section className={cn("flex min-h-0 min-w-0 flex-1 flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2 sm:p-3", compactGuess && "gap-1 sm:p-2")} aria-label="本轮任务">
-    <div className="flex shrink-0 items-center justify-between gap-2"><h2 className="text-base font-bold">{task.kind === "opening" ? page.kind === "opening" && page.word ? "画出这个词" : "先选一个词，再开始画" : task.kind === "drawing" ? "把这句话画出来" : "这幅画在说什么？"}</h2><Deadline game={game} /></div>
+    <div className="flex shrink-0 items-center justify-between gap-2"><h2 className="text-base font-semibold">{task.kind === "opening" ? page.kind === "opening" && page.word ? "画出这个词" : "先选一个词，再开始画" : task.kind === "drawing" ? "把这句话画出来" : "这幅画在说什么？"}</h2><Deadline game={game} /></div>
     {task.input && (page.kind === "text" ? <GuessPicture content={task.input} /> : <div className="shrink-0"><PageDisplay content={task.input} /></div>)}
-    {page.kind === "opening" && page.word && <div className="flex shrink-0 items-center justify-between gap-2 rounded-xl bg-amber-50 px-3"><p aria-label="本轮题目" className="min-w-0 break-words text-lg font-bold">{page.word}</p><Button variant="ghost" disabled={draft.locked} className="min-h-11 shrink-0" onClick={() => setChoosing(true)}>换词</Button></div>}
+    {page.kind === "opening" && page.word && <div className="flex shrink-0 items-center justify-between gap-2 rounded-xl bg-amber-50 px-3"><p aria-label="本轮题目" className="min-w-0 break-words text-lg font-semibold">{page.word}</p><Button variant="ghost" disabled={draft.locked} className="min-h-11 shrink-0" onClick={() => setChoosing(true)}>换词</Button></div>}
     {page.kind !== "text" ? <DrawingCanvas data={page} onChange={(drawing) => draft.change({ ...page, ...drawing })} disabled={draft.locked || (page.kind === "opening" && !page.word)} /> : <>
       <div className="flex shrink-0 items-center justify-between gap-2 rounded-lg bg-amber-50 px-2 py-1 text-sm text-amber-900">
         <p aria-label="字数提示">{task.hintLength === null ? "凭想象猜，字数不限" : `提示：${task.hintLength} 个字`}</p>
         <span className="shrink-0" aria-live="polite">已输入 {length}{task.hintLength !== null && ` / ${task.hintLength}`} 字</span>
       </div>
       <div className="flex shrink-0 gap-2">
-        {/* Override the unlayered legacy font reset; sub-16px fields trigger iOS focus zoom. */}
-        <input aria-label="你的猜测" aria-describedby="guess-length" aria-invalid={wrongLength && length > 0} className="h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-[max(16px,1rem)]! text-slate-900 outline-offset-2 focus-visible:outline-2" maxLength={80} value={page.text} disabled={draft.locked} onChange={(event) => draft.change({ kind: "text", text: event.target.value })} placeholder="输入你的猜测" />
+        {/* Keep text entry at 16px or above to avoid iOS focus zoom. */}
+        <input aria-label="你的猜测" aria-describedby="guess-length" aria-invalid={wrongLength && length > 0} className="h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-[max(16px,1rem)] text-slate-900 outline-offset-2 focus-visible:outline-2" maxLength={80} value={page.text} disabled={draft.locked} onChange={(event) => draft.change({ kind: "text", text: event.target.value })} placeholder="输入你的猜测" />
         <Button className="h-11 shrink-0 px-3" disabled={empty || wrongLength || draft.submitting} onClick={() => void draft.submit()}>{draft.submitting ? "正在交稿…" : draft.locked ? "重试提交" : "完成并提交"}</Button>
       </div>
       <p id="guess-length" className={cn("shrink-0 text-xs", wrongLength ? "text-amber-800" : "text-slate-600", compactGuess && "sr-only")}>{task.hintLength === null ? "最多 80 字。" : "字数相同才能交稿。"}{"空白不计，标点计字。"}{wrongLength && "超时仍不符会记为缺页。"}</p>

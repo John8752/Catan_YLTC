@@ -1,12 +1,5 @@
-@font-face {
-  font-family: "YLTC Smiley Sans";
-  src: url("/games/camel-up/fonts/SmileySans-UI.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
 /* Game-local typography, including its Radix portals. Other games keep their fonts. */
-.camel-font { font-family: "Noto Sans SC Variable", sans-serif; }
+.camel-font { font-family: var(--font-sans); }
 .camel-font :is(h1, h2, h3) { font-family: "YLTC Smiley Sans", "Noto Sans SC Variable", sans-serif; font-weight: 400; letter-spacing: 0; }
 @keyframes camel-action-reveal {
   0% { opacity: 0; transform: translateY(9px) scale(.92); filter: blur(3px); }

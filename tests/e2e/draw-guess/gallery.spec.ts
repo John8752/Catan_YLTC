@@ -95,11 +95,22 @@ for (const device of [{ name: "desktop", options: { viewport: { width: 1280, hei
         previousPositions = nextPositions;
         if (cursor === 2 || cursor === 7) await page.screenshot({ path: testInfo.outputPath(`reveal-${cursor}.png`), scale: "css" });
         if (cursor === 2) {
-          await page.evaluate(() => scrollTo({ top: 100, behavior: "instant" }));
-          const previousY = await page.evaluate(() => scrollY);
+          const previousY = await page.evaluate(async () => {
+            scrollTo({ top: 100, behavior: "instant" });
+            // Cancel the reveal's smooth follow and let compositor scroll updates settle.
+            let previous = scrollY, stable = 0;
+            for (let frame = 0; frame < 120; frame++) {
+              await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+              stable = scrollY === previous ? stable + 1 : 0;
+              previous = scrollY;
+              if (stable === 3) return previous;
+            }
+            throw new Error("Gallery scroll did not settle before the reaction check");
+          });
           publish({ ...room, game: { ...room.game!, albums: room.game!.albums.map((album) => ({ ...album, pages: album.pages.map((entry) => ({ ...entry, reactions: { up: 1, down: 0 } })) })) } });
           await expect(page.getByRole("button", { name: "点赞，1 次", exact: true })).toHaveCount(2);
           expect(await page.evaluate(() => scrollY)).toBe(previousY);
+          expect(await positions()).toEqual(previousPositions);
         }
         if (cursor === 7) {
           await page.reload();

@@ -112,6 +112,17 @@ for (const device of primaryPhoneCases) test(`nine-seat legible cards and dock �
       const table = (await page.getByRole("region", { name: "公共牌桌", exact: true }).boundingBox())!;
       expect(board.y).toBeGreaterThanOrEqual(table.y); expect(board.y + board.height).toBeLessThanOrEqual(table.y + table.height);
       const avatars = await page.locator("[data-poker-avatar]").all(); expect(avatars).toHaveLength(9);
+      for (const badge of await page.locator("[data-poker-role]").all()) {
+        await expect(badge).toHaveCSS("font-size", "12px");
+        // Back cards share the avatar; they must not paint over either role character.
+        expect(await badge.evaluate((element) => {
+          const b = element.getBoundingClientRect();
+          return [b.left + 4, b.right - 4].every((x) => {
+            const top = document.elementFromPoint(x, b.top + b.height / 2);
+            return top === element || element.contains(top);
+          });
+        })).toBe(true);
+      }
       for (const avatar of avatars) {
         const b = (await avatar.boundingBox())!; expect(b.x).toBeGreaterThanOrEqual(0); expect(b.x + b.width).toBeLessThanOrEqual(page.viewportSize()!.width);
         expect(b.y).toBeGreaterThanOrEqual(table.y); expect(b.y + b.height).toBeLessThanOrEqual(table.y + table.height);

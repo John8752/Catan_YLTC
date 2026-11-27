@@ -2,12 +2,36 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/noto-sans-sc/wght.css";
 
+/* Curated, static headings only. Body and player content retain full CJK coverage. */
+@font-face {
+  font-family: "YLTC Table Serif";
+  src: url("/fonts/YLTCTableSerif-Semibold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "YLTC Smiley Sans";
+  src: url("/games/camel-up/fonts/SmileySans-UI.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 @custom-variant phone-landscape (@media (min-width: 600px) and (max-width: 1023px) and (max-height: 500px));
 
 @theme inline {
   --font-sans: "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "YLTC Table Serif", "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-camel: "YLTC Smiley Sans", "Noto Sans SC Variable", "PingFang SC", sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Noto Sans SC Variable", monospace;
+  --text-body: 1rem;
+  --text-body--line-height: 1.65;
+  --text-ui: .875rem;
+  --text-ui--line-height: 1.5;
+  --text-caption: .8125rem;
+  --text-caption--line-height: 1.5;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -91,6 +115,7 @@
 
 body {
   margin: 0;
+  line-height: 1.6;
   min-width: 320px;
   min-height: 100vh;
   background:
@@ -99,14 +124,16 @@ body {
     #d8c8a6;
 }
 
-button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .52; }
 
 h1, h2, p { margin-top: 0; }
-h1, h2 { font-family: var(--font-sans); letter-spacing: -.015em; }
 @layer base {
-  h1, h2 { font-weight: 700; }
+  /* Keep resets below utilities; unlayered font shorthand overrides role classes. */
+  button, input, select, textarea { font: inherit; }
+  h1, h2, h3 { font-family: var(--font-sans); font-weight: 600; line-height: 1.35; letter-spacing: 0; text-wrap: balance; }
+  p { text-wrap: pretty; }
+  strong, b { font-weight: 600; }
 }
 
 .eyebrow {
@@ -161,7 +188,7 @@ h1, h2 { font-family: var(--font-sans); letter-spacing: -.015em; }
 .entry-heading h2 { margin: 0; font-size: 1.7rem; }
 .brand-mark { color: var(--terracotta); font-size: 2.7rem; line-height: 1; }
 
-.field-label { display: block; margin: .9rem 0 .45rem; font-size: .78rem; font-weight: 800; color: #52625f; }
+.field-label { display: block; margin: .9rem 0 .45rem; font-size: .78rem; font-weight: 500; color: #52625f; }
 .text-input {
   width: 100%;
   border: 1px solid rgba(40,62,59,.22);
@@ -172,7 +199,7 @@ h1, h2 { font-family: var(--font-sans); letter-spacing: -.015em; }
   outline: none;
 }
 .text-input:focus { border-color: var(--ocean); box-shadow: 0 0 0 3px rgba(47,111,122,.14); }
-.code-input { letter-spacing: .16em; font-weight: 800; text-transform: uppercase; }
+.code-input { letter-spacing: .16em; font-weight: 600; text-transform: uppercase; }
 
 .primary-button, .secondary-button, .quiet-button {
   border: 0;
@@ -358,11 +385,11 @@ h1, h2 { font-family: var(--font-sans); letter-spacing: -.015em; }
   box-shadow: var(--shadow);
 }
 .room-code-block { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
-.connection-dot { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .72rem; font-weight: 800; }
+.connection-dot { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .72rem; font-weight: 500; }
 .connection-dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #9b8d79; }
 .connection-dot.is-live::before { background: #3c8f6c; box-shadow: 0 0 0 4px rgba(60,143,108,.12); }
 .connection-dot.is-connecting::before { background: var(--wheat); }
-.section-label { display: flex; justify-content: space-between; margin: 0 0 .7rem; color: #66716b; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.section-label { display: flex; justify-content: space-between; margin: 0 0 .7rem; color: #66716b; font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 .player-row { display: flex; align-items: center; gap: .7rem; padding: .7rem 0; border-bottom: 1px solid var(--line); }
 .player-pawn { width: 14px; height: 19px; border-radius: 7px 7px 3px 3px; box-shadow: inset 0 1px rgba(255,255,255,.4), 0 2px 4px rgba(0,0,0,.16); }
 .color-terracotta { background: #c94f3d; }.color-ocean { background: #3e6fb0; }.color-pine { background: #36afa6; }.color-wheat { background: #d6a12b; }.color-plum { background: #805a9d; }.color-charcoal { background: #e3dccb; }.color-coral { background: #c95c7b; }.color-orange { background: #d9782d; }.color-navy { background: #274c77; }.color-emerald { background: #2f8f62; }.color-lavender { background: #a579b7; }.color-graphite { background: #4a5052; }
@@ -483,14 +510,14 @@ h1, h2 { font-family: var(--font-sans); letter-spacing: -.015em; }
 .hex-content,.hex-tile polygon,.token,.piece-building-body { transform-box: fill-box; transform-origin: center; }
 .board-instruction { margin: .35rem 0 0; color: #f4e6c5; font-weight: 700; text-align: center; }
 .resolution-form { display: grid; gap: .65rem; }.dice-result { font-weight: 800; color: #6d422b; }
-.action-stack { display: grid; gap: .55rem; }.build-buttons { display: grid; grid-template-columns: repeat(3,1fr); gap: .35rem; }.build-button { border: 1px solid rgba(91,67,38,.25); border-radius: 8px; padding: .52rem .25rem; background: #f4e7ca; color: #4f3b28; font-weight: 750; cursor: pointer; }.build-button.is-active { color: #fff; background: #9a5239; box-shadow: 0 0 0 2px rgba(154,82,57,.2); }
+.action-stack { display: grid; gap: .55rem; }.build-buttons { display: grid; grid-template-columns: repeat(3,1fr); gap: .35rem; }.build-button { border: 1px solid rgba(91,67,38,.25); border-radius: 8px; padding: .52rem .25rem; background: #f4e7ca; color: #4f3b28; font-weight: 600; cursor: pointer; }.build-button.is-active { color: #fff; background: #9a5239; box-shadow: 0 0 0 2px rgba(154,82,57,.2); }
 .robber-map-prompt,.robber-victim-picker { display: grid; gap: .35rem; color: var(--sidebar-ink, #31453f); }
 .robber-map-prompt p,.robber-victim-picker p { margin: 0; color: var(--sidebar-muted, #69716b); font-size: .76rem; line-height: 1.45; }
 .robber-victim-picker { grid-template-columns: minmax(0,1fr) auto; align-items: center; }
 .robber-victim-picker small { grid-column: 1 / -1; }
 .robber-victim-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem; }
-.trade-details { border: 1px solid rgba(78,57,35,.18); border-radius: 9px; padding: .45rem; }.trade-details summary { cursor: pointer; font-weight: 800; }.trade-forms,.trade-form,.trade-card { display: grid; gap: .45rem; }.trade-forms { margin-top: .55rem; }.trade-form { padding-top: .45rem; border-top: 1px dashed rgba(78,57,35,.2); }.resource-amount { display: grid; grid-template-columns: 3rem 1fr 3.3rem; gap: .3rem; align-items: center; }.resource-amount select,.resource-amount input { min-width: 0; padding: .35rem; border: 1px solid rgba(78,57,35,.22); border-radius: 7px; background: #fffaf0; }.trade-card { padding: .55rem; border-radius: 9px; background: #f4e7ca; }
-.development-details { border: 1px solid rgba(78,57,35,.18); border-radius: 9px; padding: .45rem; }.development-details summary { cursor: pointer; font-weight: 800; }.development-stack { display: grid; gap: .4rem; margin-top: .5rem; }.development-card { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .35rem; align-items: center; padding: .4rem; border-radius: 8px; background: #efe1ba; }.development-card select { min-width: 4rem; padding: .3rem; }
+.trade-details { border: 1px solid rgba(78,57,35,.18); border-radius: 9px; padding: .45rem; }.trade-details summary { cursor: pointer; font-weight: 600; }.trade-forms,.trade-form,.trade-card { display: grid; gap: .45rem; }.trade-forms { margin-top: .55rem; }.trade-form { padding-top: .45rem; border-top: 1px dashed rgba(78,57,35,.2); }.resource-amount { display: grid; grid-template-columns: 3rem 1fr 3.3rem; gap: .3rem; align-items: center; }.resource-amount select,.resource-amount input { min-width: 0; padding: .35rem; border: 1px solid rgba(78,57,35,.22); border-radius: 7px; background: #fffaf0; }.trade-card { padding: .55rem; border-radius: 9px; background: #f4e7ca; }
+.development-details { border: 1px solid rgba(78,57,35,.18); border-radius: 9px; padding: .45rem; }.development-details summary { cursor: pointer; font-weight: 600; }.development-stack { display: grid; gap: .4rem; margin-top: .5rem; }.development-card { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .35rem; align-items: center; padding: .4rem; border-radius: 8px; background: #efe1ba; }.development-card select { min-width: 4rem; padding: .3rem; }
 /* The drawer shares a 2- or 3-column action row, so a closed summary is about a
    hundred pixels wide and every card row overflowed it. An open drawer takes the
    whole row instead and pushes the other actions down. */
@@ -534,7 +561,7 @@ h1, h2 { font-family: var(--font-sans); letter-spacing: -.015em; }
 .result-table tbody th .result-player-color { margin-right: .45rem; }
 .result-resource-value { display: inline-flex; align-items: center; justify-content: center; gap: .25rem; }
 .result-resource-value svg { width: 1.25rem; height: 1.25rem; color: #fff5d6; --resource-icon-primary: #f5ead0; --resource-icon-secondary: #c9b888; --resource-icon-outline: #24443f; --resource-icon-highlight: #fff; }
-.history-panel { border-top: 1px solid rgba(78,57,35,.15); padding-top: .55rem; }.history-panel summary { cursor: pointer; font-weight: 800; }.history-panel ol { max-height: 10rem; overflow: auto; margin: .5rem 0 0; padding-left: 1.3rem; font-size: .76rem; }.history-panel li { margin-bottom: .28rem; }
+.history-panel { border-top: 1px solid rgba(78,57,35,.15); padding-top: .55rem; }.history-panel summary { cursor: pointer; font-weight: 600; }.history-panel ol { max-height: 10rem; overflow: auto; margin: .5rem 0 0; padding-left: 1.3rem; font-size: .76rem; }.history-panel li { margin-bottom: .28rem; }
 .toast-error { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 10; margin: 0; box-shadow: var(--shadow); }
 .loading-table { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 1rem; color: var(--pine); }
 

@@ -35,37 +35,51 @@ colors:
   carcassonne-action-ink: "#fff6dc"
 typography:
   display:
-    fontFamily: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif'
-    fontSize: "clamp(2.5rem, 4vw, 4.5rem)"
-    fontWeight: 700
-    lineHeight: 1.18
-    letterSpacing: "-.015em"
+    fontFamily: '"YLTC Table Serif", "Noto Sans SC Variable", "PingFang SC", sans-serif'
+    fontSize: "clamp(1.875rem, 3.1vw, 3rem)"
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: ".015em"
   headline:
-    fontFamily: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif'
+    fontFamily: '"YLTC Table Serif", "Noto Sans SC Variable", "PingFang SC", sans-serif'
     fontSize: "1.875rem"
-    fontWeight: 700
-    lineHeight: 1.25
-    letterSpacing: "-.015em"
+    fontWeight: 600
+    lineHeight: 1.5
+    letterSpacing: ".01em"
+  camel-display:
+    fontFamily: '"YLTC Smiley Sans", "Noto Sans SC Variable", "PingFang SC", sans-serif'
+    fontWeight: 400
+    lineHeight: 1.35
+  invitation:
+    fontFamily: '"YLTC Table Serif", "Noto Sans SC Variable", "PingFang SC", sans-serif'
+    fontSize: "2.25rem"
+    fontWeight: 600
+    lineHeight: 1.5
+  game-name:
+    fontFamily: '"YLTC Table Serif", "Noto Sans SC Variable", "PingFang SC", sans-serif'
+    fontSize: "1.375rem"
+    fontWeight: 600
+    lineHeight: 1.5
   title:
     fontFamily: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif'
     fontSize: "1.125rem"
     fontWeight: 600
-    lineHeight: 1
+    lineHeight: 1.375
   body:
     fontFamily: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif'
     fontSize: "1rem"
     fontWeight: 400
-    lineHeight: 1.5
+    lineHeight: 1.65
   label:
     fontFamily: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif'
     fontSize: ".875rem"
     fontWeight: 500
-    lineHeight: "1.25rem"
+    lineHeight: 1.5
   caption:
     fontFamily: '"Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif'
-    fontSize: ".75rem"
-    fontWeight: 500
-    lineHeight: "1rem"
+    fontSize: ".8125rem"
+    fontWeight: 400
+    lineHeight: 1.5
   code:
     fontFamily: 'ui-monospace, "SFMono-Regular", Consolas, "Noto Sans SC Variable", monospace'
 rounded:
@@ -145,14 +159,14 @@ components:
 
 **Creative North Star: "A warmly lit wooden game table"**
 
-Wood grain, parchment, pine, muted ocean blue and earthen accents establish a familiar place for friends to play. Chinese typography stays in one self-hosted family; weight and space carry hierarchy. Crisp geometry and tangible material cues give controls and pieces presence without displacing the game surface.
+Wood grain, parchment, pine, muted ocean blue and earthen accents establish a familiar place for friends to play. Chinese body text uses one self-hosted sans family; a restrained serif display face and Camel Up’s established Smiley Sans add personality to headings. Crisp geometry and tangible material cues give controls and pieces presence without displacing the game surface.
 
 This document records the implemented shared web system. Each game retains its own renderer, density and visual vocabulary. Carcassonne applies this world through a deep green mat and original miniature SVG relief; its local colors, portrait composition and tile workflow are scoped to that surface. They do not replace Catan's island or draw-guess's canvas presentation.
 
 **Key Characteristics:**
 
 - Natural pigments and light paper against dark tabletop surfaces.
-- One Chinese type family with compact, readable DOM controls.
+- Shared sans body and controls, with display faces reserved for invitations and game names.
 - Material depth connected to pieces, panels and actions.
 - Game-owned composition and restrained state feedback.
 
@@ -191,23 +205,25 @@ The homepage and waiting shell extend this world with five scene-local backdrops
 
 ## Typography
 
-**Display Font:** Noto Sans SC Variable with PingFang SC, Microsoft YaHei and system sans fallbacks.
-**Body Font:** the same family, loaded from the site's own origin with font-display swap.
+**Display Font:** YLTC Table Serif, a local weight-600 Noto Serif SC subset for curated static homepage invitations and game names. Its 23 KB asset, heading inventory, pinned source and license are recorded under `public/fonts`. Camel Up retains local Smiley Sans at weight 400 for its headings and game names.
+**Body Font:** Noto Sans SC Variable, loaded from the site's own origin with font-display swap, with PingFang SC and Microsoft YaHei fallbacks. User content always retains this full Chinese family.
 **Label/Mono Font:** the same sans for labels; the source mono stack for room codes and numeric utilities.
 
-**Character:** Clear contemporary Chinese lettering anchors the material setting. Hierarchy comes from scale, weight and density rather than a separate display face.
+**Character:** Warm display lettering complements the wooden table. Regular body text, medium labels and semibold functional headings keep the game controls calm and readable. Do not make every line bold or give every game a different body family.
 
 ### Hierarchy
 
-- **Display:** the frontmatter retains the incumbent display token. The current homepage uses a surface-local headline clamp of `1.8rem` to `3.25rem` at `3.3vw`, with tight leading; its desktop game invitation is `2.5rem`. These are homepage compositions, not universal in-game heading sizes.
-- **Headline:** game and room headings use the size appropriate to their own composition; waiting-shell headings grow from `1.25rem` to `1.875rem` at the large breakpoint.
-- **Title:** shared dialog titles, semibold and compact. In-game task headings use bold body-to-title sizes appropriate to their dock.
-- **Body:** the default document text role. Supporting paragraphs often use the label size with relaxed leading; the homepage lead uses body size.
-- **Label:** shared buttons, tabs, descriptions and compact information.
-- **Caption:** badges and supporting text. Carcassonne also has smaller seat/tool captions; these local density choices do not establish a new shared minimum or type role.
-- **Code:** room codes use the mono stack; scores use tabular numerals where implemented.
+- **Display:** homepage headline uses `clamp(1.875rem, 3.1vw, 3rem)` with 1.4 leading; its game invitation uses 2.25rem with 1.5 leading. These are surface-local compositions.
+- **Headline:** static game names use the display face; waiting-shell game names grow from 1.125rem to 1.5rem. Camel Up uses its existing Smiley Sans voice.
+- **Title:** functional headings and shared dialog titles stay in sans at weight 600, with comfortable leading. Task text and player-provided words stay in the full sans family.
+- **Body:** `text-body` is 16px / 1.65, weight 400. Supporting paragraphs may use `text-ui` with relaxed leading.
+- **Label:** `text-ui` is 14px / 1.5; buttons and labels use weight 500. Primary game actions may use 600.
+- **Caption:** `text-caption` is 13px / 1.5 for supporting information. Dense seat/map annotations may retain local 12px or world-unit sizes; they are not the default body role.
+- **Code:** room codes use mono; scores use tabular numerals. Input fields that open a phone keyboard retain at least 16px.
 
-**The One Family Rule.** Use Noto Sans SC for Chinese headings, controls and board labels; reserve the mono stack for code-like identifiers and numeric utilities.
+**The Role Rule.** Keep Chinese controls and player content in Noto Sans SC. Limit display faces to static invitations/game names and Camel Up's established heading voice. Extend the heading inventory and regenerate the subset when changing serif display copy. Put element defaults in Tailwind's base layer so component sizes, weights and families work; keep semantic text sizes registered in the class merger.
+
+Catan's terrain, ports, labels and pieces continue to share their world scale. Typography work must not compensate individual map labels in screen pixels. Poker ranks and suit shapes keep their game-specific card scale and red/black distinction.
 
 ## Layout
 

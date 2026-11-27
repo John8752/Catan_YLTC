@@ -36,13 +36,13 @@ export function DrawGuessTable({ room, session, busy, error, connectionState, ac
   return <main style={guessViewport.style} className={cn("bg-[#f5f1e9] px-[max(.5rem,env(safe-area-inset-left),env(safe-area-inset-right))] pb-[max(.5rem,env(safe-area-inset-bottom))] pt-[max(.5rem,env(safe-area-inset-top))] text-slate-900", drawing || guessing ? "h-dvh" : "min-h-svh", guessing && "overflow-hidden")}>
     <div className={cn("mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-3", (drawing || guessing) && "h-full min-h-0 gap-2")}>
       {game ? <header className={cn("flex shrink-0 items-center justify-between gap-2", guessViewport.compact && "hidden")}>
-        <div><h1 className="text-sm font-bold">传画猜词{working && <span className="ml-2 font-normal text-slate-600">第 {game.phase.step + 1} / {game.totalSteps} 轮</span>}</h1>{connectionState !== "live" && <p role="status" className="text-xs text-amber-800">{connectionState === "connecting" ? "正在重连…" : "离线 · 草稿仍可编辑"}</p>}</div>
+        <div><h1 className="font-display text-lg font-semibold">传画猜词{working && <span className="ml-2 font-sans text-caption font-normal text-slate-600">第 {game.phase.step + 1} / {game.totalSteps} 轮</span>}</h1>{connectionState !== "live" && <p role="status" className="text-xs text-amber-800">{connectionState === "connecting" ? "正在重连…" : "离线 · 草稿仍可编辑"}</p>}</div>
         <Dialog><DialogTrigger asChild><Button variant="ghost" className="min-h-11 px-2 text-xs">{working ? `${game.progress.filter((p) => p.submitted).length}/${room.members.length} 已交稿 · 房间` : "房间信息"}</Button></DialogTrigger>
           <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto"><DialogHeader><DialogTitle>房间信息</DialogTitle><DialogDescription>房间码 {room.id} · {connectionState === "live" ? "已连接" : "连接恢复中"}</DialogDescription></DialogHeader>{players}{controls}</DialogContent>
         </Dialog>
       </header> : <>
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-        <div><p className="text-xs tracking-widest text-slate-500">YLTC 桌游小馆</p><h1 className="text-xl font-black">传画猜词</h1></div>
+        <div><p className="text-xs tracking-widest text-slate-500">YLTC 桌游小馆</p><h1 className="font-display text-xl font-semibold">传画猜词</h1></div>
         <div className="text-right"><p className="font-mono text-lg font-bold" aria-label="房间码">{room.id}</p><p className={cn("text-xs", connectionState === "live" ? "text-green-700" : "text-amber-800")}>{connectionState === "live" ? "已连接" : connectionState === "connecting" ? "正在重连…" : "离线 · 草稿仍可编辑"}</p></div>
       </header>
       <p className="text-sm font-bold">等待朋友加入 · {room.members.length}/6 人</p>

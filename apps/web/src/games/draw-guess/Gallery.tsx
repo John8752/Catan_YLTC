@@ -39,12 +39,12 @@ export function Gallery({ room, session, onRoom, isHost, busy, onReplay }: { rea
   }, [revealCursor, selectedOwner, finished]);
   const name = (id: string) => game.players.find((m) => m.id === id)?.name ?? "朋友";
   return <section className="grid min-w-0 gap-4" aria-label="画册揭晓">
-    <header className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><h2 ref={heading} tabIndex={-1} className="text-xl font-bold outline-none">{finished ? "本场画册已全部揭晓" : "准备好了？一起揭晓！"}</h2>
+    <header className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><h2 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">{finished ? "本场画册已全部揭晓" : "准备好了？一起揭晓！"}</h2>
       <p className="mt-2 text-sm text-slate-600">系统主持人每 {REVEAL_INTERVAL_MS / 1000} 秒揭晓一棒，沿着下方一起看接力。</p>
       <p className="mt-2 text-sm text-slate-600">每页都能 👍 点赞或 👎 喝倒彩，可以连点，按点击次数累计。</p>
     </header>
     {albums.map((album, albumIndex) => <div key={album.ownerId} data-album-owner={album.ownerId} className="grid min-w-0 gap-6 rounded-3xl border border-stone-200 bg-[#faf7ef] p-3 sm:p-5" aria-label={`${name(album.ownerId)} 的接力`}>
-      <h3 className="break-words text-lg font-bold text-amber-900">{name(album.ownerId)} 的画册</h3>
+      <h3 className="break-words text-lg font-semibold text-amber-900">{name(album.ownerId)} 的画册</h3>
       {album.pages.map((page, index) => {
         const latest = albumIndex === albums.length - 1 && index === album.pages.length - 1;
         return <article key={page.step} tabIndex={-1} ref={latest ? newest : undefined} className="grid min-w-0 scroll-my-3 content-start gap-4 outline-none" aria-label={`第 ${index + 1} 页`}>

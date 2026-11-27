@@ -80,7 +80,7 @@ for (const viewport of [...primaryPhoneCases, iPhone14BrowserAreaCase]) test(`si
     await button.click(); await expect(page.getByRole("dialog")).not.toBeVisible(); await expect(page.getByRole("heading", { name: "等待朋友行动" })).toBeVisible();
     await expect(page.getByTestId("three-arena")).toHaveAttribute("data-renderer", "three");
     await page.evaluate(() => document.fonts.ready);
-    expect(await page.evaluate(() => [...document.fonts].filter(font => /YLTC/.test(font.family)).every(font => font.status === "loaded"))).toBe(true);
+    expect(await page.evaluate(() => [...document.fonts].some(font => /YLTC Smiley Sans/.test(font.family) && font.status === "loaded"))).toBe(true);
     await page.screenshot({ path: info.outputPath("phone-race.png"), fullPage: true, scale: "css" });
     await page.getByRole("button", { name: "玩法", exact: true }).click(); await expect(page.getByRole("dialog")).toBeVisible(); await page.getByRole("dialog").getByRole("button", { name: "关闭" }).click();
     // Browser bars changing the available height and an explicit safe-area inset.

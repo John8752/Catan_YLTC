@@ -19,8 +19,8 @@ export function TurnDock({game,selected,rotation,step,meeple,busy,offline,valid,
         {game.currentTile&&<TileArt type={game.currentTile} rotation={rotation}/>}
       </svg>
       <div className="min-w-0 flex-1">
-        <h2 className="text-base font-bold text-[#2b4635] lg:text-lg" aria-live="polite">{active?step==='tile'?'轮到你，接上这片风景':'派一名随从，或留待下回':`${game.players.find((p)=>game.phase.kind==='turn'&&p.id===game.phase.playerId)?.name??'朋友'}正在落子`}</h2>
-        <p className="mt-1 text-xs leading-relaxed text-[#697052]">{active?step==='tile'?selected?valid?'相邻边已匹配，可以继续。':'这个朝向接不上，试试旋转。':'点地图上的虚线空位，再调整朝向。':options.length?'农夫会留到终局，其他随从完成区域后收回。':own.availableMeeples===0?'随从已全部派出，本回合只放板块。':'可选区域已被占领，本回合不放随从。':'可以拖动地图，点击地形查看连接与归属。'}</p>
+        <h2 className="text-base font-semibold text-[#2b4635] lg:text-lg" aria-live="polite">{active?step==='tile'?'轮到你，接上这片风景':'派一名随从，或留待下回':`${game.players.find((p)=>game.phase.kind==='turn'&&p.id===game.phase.playerId)?.name??'朋友'}正在落子`}</h2>
+        <p className="mt-1 text-caption leading-relaxed text-[#697052]">{active?step==='tile'?selected?valid?'相邻边已匹配，可以继续。':'这个朝向接不上，试试旋转。':'点地图上的虚线空位，再调整朝向。':options.length?'农夫会留到终局，其他随从完成区域后收回。':own.availableMeeples===0?'随从已全部派出，本回合只放板块。':'可选区域已被占领，本回合不放随从。':'可以拖动地图，点击地形查看连接与归属。'}</p>
       </div>
     </div>
     {active&&<>

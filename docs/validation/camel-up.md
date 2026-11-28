@@ -81,3 +81,11 @@
 - 协议回归显式注入额外敏感字段，确认投影丢弃；服务端与真实三座位浏览器流程确认视图不含任何座位凭证或账号标识。
 - `pnpm validate:camel-up --build` 通过；`pnpm test:e2e:camel-up --grep 'three seats'` 通过。
 - 暂存文件检查排除了浏览器产物、数据库和日志。上游 OFL 原文有三处行尾空格，按原文保留；排除 `*-OFL.txt` 的 `git diff --cached --check` 通过。
+
+## 2026-11-28 movement readability
+
+Camel-up web presentation now waits 650ms for the die and advances along the projected track one space per 420ms, with a hop at each step. Stacked pieces share timing; reduced-motion users receive immediate endpoints. Rules and transport are unchanged.
+
+Validation: `pnpm validate:camel-up --layer web` passed (typecheck, four game tests, architecture and insecure-context guards). `pnpm test:e2e:camel-up --grep 'three seats place'` passed in desktop Chromium, including movement start/end and reconnect. Physical devices and iOS Safari were not tested.
+
+`pnpm test:e2e:camel-up --grep 'portrait action film'` also passed in Chromium using the repository's first primary phone case (iPhone 16 portrait full-canvas, 393×852 CSS px).

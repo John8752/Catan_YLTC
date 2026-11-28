@@ -44,6 +44,8 @@ test("three seats place private bets, reconnect, finish and replay", async ({ br
     expect((await snapshot(other, seats[1]!)).game?.ownFinishBets).toEqual([]);
     await other.getByRole("button", { name: "领取绿驼赛段票" }).click();
     await tabs[2]!.page.getByRole("button", { name: /摇动金字塔/ }).click();
+    await expect(host.getByTestId("three-arena")).toHaveAttribute("data-moving", "true");
+    await expect(host.getByTestId("three-arena")).toHaveAttribute("data-moving", "false", { timeout: 8000 });
     await host.reload(); await expect(host.getByText("暗投冠军 · 蓝驼", { exact: true })).toBeVisible();
     await expect(host.locator("[data-camel-feedback]")).toHaveCount(0);
     await expect(host.getByTestId("three-arena")).toHaveAttribute("data-renderer", "three");

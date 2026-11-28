@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { movementFrame } from "./movement.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Camel } from "@catan/game-core/camel-up";
 import type { CamelGameView } from "@catan/protocol/camel-up";
@@ -54,7 +55,7 @@ export function createArena(container: HTMLDivElement, initial: ArenaState, onFa
   for (const camel of ["blue", "green", "yellow", "red", "purple", "black", "white"] as const) { const model = makeCamel(camel); world.add(model); camels.set(camel, model); }
   const spectators = new THREE.Group(); world.add(spectators);
   let state = initial, frame = 0, disposed = false, moving = false, first = true, actionAt = -10_000, effectRevision = -1, stackPadding = 0;
-  let targets = new Map<Camel, { position: THREE.Vector3; from: THREE.Vector3; rotation: number; at: number }>();
+  let targets = new Map<Camel, { position: THREE.Vector3; from: THREE.Vector3; rotation: number; at: number; fromSpace: number; toSpace: number }>();
   const die = new THREE.Group(); world.add(die); die.visible = false;
   const dieMaterial = clay("#e8bd64", .3);
   roundBox(die, [.85, .85, .85], dieMaterial, [0, 0, 0], .13);
@@ -63,13 +64,18 @@ export function createArena(container: HTMLDivElement, initial: ArenaState, onFa
   function draw() { if (!disposed) renderer.render(scene, camera); }
   function animate() {
     if (disposed) return;
-    let remains = false;
+    let remains = false, travelling = false;
     const now = performance.now(), elapsed = now - actionAt;
     for (const [camel, target] of targets) {
       const model = camels.get(camel)!;
-      const progress = reduced.matches ? 1 : Math.min(1, (now - target.at) / 720), ease = 1 - Math.pow(1 - progress, 3);
+      const step = movementFrame(target.fromSpace, target.toSpace, now - target.at, reduced.matches);
+      const progress = step.progress, ease = progress;
       model.position.lerpVectors(target.from, target.position, ease);
-      if (progress < 1 && target.from.distanceTo(target.position) > .01) { model.position.y += .48 * Math.sin(progress * Math.PI); remains = true; }
+      if (progress < 1 && target.from.distanceTo(target.position) > .01) { const index = Math.max(0, Math.min(15, step.space - 1));
+        const a = track[Math.floor(index)]!, b = track[Math.ceil(index)]!, t = index % 1;
+        model.position.x = a.x + (b.x - a.x) * t;
+        model.position.z = a.z + (b.z - a.z) * t;
+        model.position.y += step.hop; remains = true; travelling = true; }
       model.scale.setScalar(1 + (progress > .8 && progress < 1 ? .045 * Math.sin((progress - .8) * Math.PI * 5) : 0));
       const emphasized = state.effect?.camel === camel && elapsed < 1800;
       const fur = model.userData.fur as THREE.MeshStandardMaterial;
@@ -93,6 +99,7 @@ export function createArena(container: HTMLDivElement, initial: ArenaState, onFa
       die.rotation.set(reduced.matches ? .3 : (1 - t) * Math.PI * 4 + .3, reduced.matches ? .5 : (1 - t) * Math.PI * 3 + .5, .15);
       die.scale.setScalar(elapsed > 1450 ? Math.max(.01, (1700 - elapsed) / 250) : 1);
     } else { die.visible = false; pyramid.rotation.z = 0; }
+    container.dataset.moving = String(travelling);
     draw(); if (remains) frame = requestAnimationFrame(animate); else moving = false;
   }
   function disposeObject(root: THREE.Object3D) {
@@ -103,6 +110,7 @@ export function createArena(container: HTMLDivElement, initial: ArenaState, onFa
   }
   function update(next: ArenaState) {
     const changed = next.game?.revision !== state.game?.revision || first;
+    const previousStacks = state.game?.stacks ?? defaultStacks;
     state = next;
     const tallest = Math.max(1, ...Object.values(state.game?.stacks ?? defaultStacks).map(stack => stack.length));
     const padding = Math.max(0, tallest - 3) * 1.1;
@@ -116,7 +124,7 @@ export function createArena(container: HTMLDivElement, initial: ArenaState, onFa
         // Feet rest on the previous camel’s broad hump, rather than floating.
         const position = new THREE.Vector3(pos.x, .44 + layer * CAMEL_STACK_STEP, pos.z);
         const rotation = Math.atan2(Math.cos(pos.angle) * 6.25, Math.sin(pos.angle) * 5.48) + (camel === "black" || camel === "white" ? Math.PI : 0);
-        if (changed) targets.set(camel, { position, from: first || reduced.matches ? position.clone() : model.position.clone(), rotation, at: performance.now() }); model.rotation.y = rotation;
+        if (changed) targets.set(camel, { position, from: first || reduced.matches ? position.clone() : model.position.clone(), rotation, at: performance.now(), fromSpace: first ? Number(rawSpace) : Number(Object.entries(previousStacks).find(([, camels]) => camels.includes(camel))?.[0] ?? rawSpace), toSpace: Number(rawSpace) }); model.rotation.y = rotation;
         if (first || reduced.matches) model.position.copy(position);
       });
     }
